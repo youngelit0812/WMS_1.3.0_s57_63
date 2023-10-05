@@ -1,0 +1,7 @@
+{
+	"PortForHTTP": 8080,
+    "PortForHTTPS": 8081,
+    "rebuildCharts": 1,
+    "ENCDirPath": "./ENCs/",
+    "IMGFilePath": "./ENC_IMG."        
+}
