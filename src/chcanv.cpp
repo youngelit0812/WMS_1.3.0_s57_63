@@ -1928,6 +1928,17 @@ int ChartCanvas::GetCanvasChartNativeScale() {
   return ret;
 }
 
+ChartBase *ChartCanvas::GetChartAtCursor() {
+  ChartBase *target_chart;
+  if (m_singleChart && (m_singleChart->GetChartFamily() == CHART_FAMILY_VECTOR))
+    target_chart = m_singleChart;
+  else if (VPoint.b_quilt)
+    target_chart = m_pQuilt->GetChartAtPix(VPoint, wxPoint(mouse_x, mouse_y));
+  else
+    target_chart = NULL;
+  return target_chart;
+}
+
 ChartBase *ChartCanvas::GetOverlayChartAtCursor() {
   ChartBase *target_chart;
   if (VPoint.b_quilt)
@@ -4873,6 +4884,8 @@ void ChartCanvas::DrawCanvasData(LLBBox &llbBox, int nWidth, int nHeight, std::v
 	//  If the ViewPort is skewed or rotated, we may be able to use the cached
 	//  rotated bitmap.
 	bool b_rcache_ok = false;
+	if (fabs(VPoint.skew) > 0.01 || fabs(VPoint.rotation) > 0.01) b_rcache_ok = true;
+
 	//  Make a special VP
 	if (VPoint.b_MercatorProjectionOverride) VPoint.SetProjectionType(PROJECTION_MERCATOR);
 	ViewPort svp = VPoint;
@@ -5259,7 +5272,39 @@ void ChartCanvas::DrawCanvasData(LLBBox &llbBox, int nWidth, int nHeight, std::v
 		m_bDisplayGrid = false;
 	}
 
-	GenerateImageFile(&mscratch_dc, nWidth, nHeight, sIMGFilePath, bPNGFlag);
+	LLBBox llbViewPortBox = VPoint.GetBBox();
+	double dVPMinLat = llbViewPortBox.GetMinLat();
+	double dVPMaxLat = llbViewPortBox.GetMaxLat();
+	double dVPMinLon = llbViewPortBox.GetMinLon();
+	double dVPMaxLon = llbViewPortBox.GetMaxLon();
+
+	double dMinLat = llbBox.GetMinLat();
+	double dMaxLat = llbBox.GetMaxLat();
+	double dMinLon = llbBox.GetMinLon();
+	double dMaxLon = llbBox.GetMaxLon();
+
+	int nLeft = 0, nTop = 0, nRight = mscratch_dc.GetSize().x, nBottom = mscratch_dc.GetSize().y;
+
+	double dPixelPerDegreeForLat = (nBottom - nTop) / abs(dVPMaxLat - dVPMinLat);
+	double dPixelPerDegreeForLon = (nRight - nLeft) / abs(dVPMaxLon - dVPMinLon);
+	
+	if (dMinLat > dVPMinLat) {
+		nTop = abs(dMinLat - dVPMinLat) * dPixelPerDegreeForLat;
+	}
+
+	if (dMinLon > dVPMinLon) {
+		nLeft = abs(dMinLon - dVPMinLon) * dPixelPerDegreeForLon;
+	}
+
+	if (dMaxLat < dVPMaxLat) {
+		nBottom = nBottom - (abs(dVPMaxLat - dMaxLat) * dPixelPerDegreeForLat);
+	}
+
+	if (dMaxLon < dVPMaxLon) {
+		nRight = nRight - (abs(dVPMaxLon - dMaxLon) * dPixelPerDegreeForLon);		
+	}
+
+	GenerateImageFile(&mscratch_dc, nLeft, nTop, nRight, nBottom, nWidth, nHeight, sIMGFilePath, bPNGFlag);
 
 	temp_dc.SelectObject(wxNullBitmap);
 	mscratch_dc.SelectObject(wxNullBitmap);
@@ -5298,19 +5343,13 @@ void ChartCanvas::GenerateImageFile(wxBitmap &xBitmap, int nWidth, int nHeight, 
 	}
 }
 
-void ChartCanvas::GenerateImageFile(wxMemoryDC *pMemDC, int nTargetWidth, int nTargetHeight, std::string& sIMGFilePath, bool bPNGFlag) {
-	int nDCWidth = pMemDC->GetSize().x;
-	int nDCHeight = pMemDC->GetSize().y;
-
+void ChartCanvas::GenerateImageFile(wxMemoryDC *pMemDC, int nLeft, int nTop, int nRight, int nBottom, int nTargetWidth, int nTargetHeight, std::string& sIMGFilePath, bool bPNGFlag) {
 	wxBitmap xbTargetBitmap(nTargetWidth, nTargetHeight, -1);
 	wxMemoryDC xMemDC;
 	xMemDC.SelectObject(xbTargetBitmap);
-
-	double dXScale = nDCWidth / nTargetWidth;
-	double dYScale = nDCHeight / nTargetHeight;
-
+	
 	if (nTargetHeight > 1) {
-		xMemDC.StretchBlit(0, 0, nTargetWidth, nTargetHeight, pMemDC, 0, 0, nDCWidth, nDCHeight);	
+		xMemDC.StretchBlit(0, 0, nTargetWidth, nTargetHeight, pMemDC, nLeft, nTop, nRight - nLeft, nBottom - nTop);	
 	}
 	xMemDC.SelectObject(wxNullBitmap);
 
@@ -5320,8 +5359,8 @@ void ChartCanvas::GenerateImageFile(wxMemoryDC *pMemDC, int nTargetWidth, int nT
 
 		wxFileOutputStream xFileOutput(sIMGFilePath);
 		if (xFileOutput.IsOk()) {
-      if (bPNGFlag) xImage.SaveFile(xFileOutput, wxBITMAP_TYPE_PNG);
-      else xImage.SaveFile(xFileOutput, wxBITMAP_TYPE_JPEG);
+			if (bPNGFlag) xImage.SaveFile(xFileOutput, wxBITMAP_TYPE_PNG);
+			else xImage.SaveFile(xFileOutput, wxBITMAP_TYPE_JPEG);
 		}
 	}
 }

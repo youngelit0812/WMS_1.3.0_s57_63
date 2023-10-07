@@ -521,14 +521,15 @@ void OCPNPlatform::Initialize_1(void) {
 }
 
 void OCPNPlatform::Initialize_2(void) {
-	//  Set a global toolbar scale factor
-	auto configdir = wxFileName(GetPrivateDataDir());
-	if (!configdir.DirExists()) {
-		if (!configdir.Mkdir()) {
-			auto msg = std::string("Cannot create config directory: ");
-			wxLogWarning(msg + configdir.GetFullPath());
-		}
-	}
+  //  Set a global toolbar scale factor
+  g_toolbar_scalefactor = GetToolbarScaleFactor(g_GUIScaleFactor);
+  auto configdir = wxFileName(GetPrivateDataDir());
+  if (!configdir.DirExists()) {
+    if (!configdir.Mkdir()) {
+      auto msg = std::string("Cannot create config directory: ");
+      wxLogWarning(msg + configdir.GetFullPath());
+    }
+  }
 }
 
 void OCPNPlatform::Initialize_3(void) {
@@ -687,8 +688,6 @@ bool OCPNPlatform::IsGLCapable() {
 #if defined(CLI)
   return false;
 #else
-
-	return false;
 
   if(g_bdisable_opengl)
     return false;
@@ -1630,4 +1629,33 @@ void OCPNColourPickerCtrl::OnPaint(wxPaintEvent &event) {
                    m_bitmap.GetHeight());
 
   event.Skip();
+}
+
+double OCPNPlatform::GetToolbarScaleFactor(int GUIScaleFactor) {
+	double rv = 1.0;
+	double premult = 1.0;
+
+	if (g_bresponsive) {
+		//  Get the basic size of a tool icon
+		ocpnStyle::Style* style = g_StyleManager->GetCurrentStyle();
+		wxSize style_tool_size = style->GetToolSize();
+		double tool_size = style_tool_size.x;
+
+		// unless overridden by user, we declare the "best" tool size
+		// to be roughly 9 mm square.
+		double target_size = 9.0;  // mm
+
+		double basic_tool_size_mm = tool_size / GetDisplayDPmm();
+		premult = target_size / basic_tool_size_mm;
+	}
+
+	// Adjust the scale factor using the global GUI scale parameter
+	double postmult = exp(GUIScaleFactor * (0.693 / 5.0));  //  exp(2)
+
+	rv = premult * postmult;
+	rv = wxMin(rv, 3.0);  //  Clamp at 3.0
+	rv = wxMax(rv, 0.5);  //  and at 0.5
+
+	rv /= g_BasePlatform->GetDisplayDIPMult(gFrame);
+	return rv;
 }

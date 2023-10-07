@@ -1,4 +1,4 @@
 # CMake generation dependency list for this directory.
 C:/Program Files/CMake/share/cmake-3.26/Modules/FetchContent.cmake
 C:/Program Files/CMake/share/cmake-3.26/Modules/FetchContent/CMakeLists.cmake.in
-D:/ocpn_work/OpenCPN-master/libs/rapidjson/CMakeLists.txt
+D:/openCPN_temp/libs/rapidjson/CMakeLists.txt

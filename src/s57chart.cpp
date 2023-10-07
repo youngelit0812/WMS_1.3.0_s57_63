@@ -187,8 +187,7 @@ static void PrepareForRender(ViewPort *pvp, s52plib *plib) {
                     pvp->rv_rect,
                     pvp->GetBBox(),
                     pvp->ref_scale,
-                    0.                    
-                      );
+                    0);
  plib->PrepareForRender();
 
 }
@@ -384,7 +383,7 @@ void s57chart::SetColorScheme(ColorScheme cs, bool bApplyImmediate) {
   ClearRenderedTextCache();
 
   //      Setup the proper thumbnail bitmap pointer
-  //ChangeThumbColor(cs);
+  ChangeThumbColor(cs);
 }
 
 void s57chart::ChangeThumbColor(ColorScheme cs) {
@@ -3254,8 +3253,8 @@ bool s57chart::CreateHeaderDataFromENC(void) {
   m_Chart_Scale = GetENCScale();
 
   wxString nice_name;
-  //GetChartNameFromTXT(m_TempFilePath, nice_name);
-  //m_Name = nice_name;
+  GetChartNameFromTXT(m_TempFilePath, nice_name);
+  m_Name = nice_name;
 
   return true;
 }
@@ -6142,6 +6141,33 @@ const char *MyCSVGetField(const char *pszFilename, const char *pszKeyFieldName,
 //
 //------------------------------------------------------------------------
 
+//----------------------------------------------------------------------------------
+// Get Chart Extents
+//----------------------------------------------------------------------------------
+
+bool s57_GetChartExtent(const wxString &FullPath, Extent *pext) {
+  //   Fix this  find extents of which?? layer??
+  /*
+   OGRS57DataSource *poDS = new OGRS57Dat	aSource;
+   poDS->Open(pFullPath, TRUE);
+
+   if( poDS == NULL )
+   return false;
+
+   OGREnvelope Env;
+   S57Reader   *poReader = poDS->GetModule(0);
+   poReader->GetExtent(&Env, true);
+
+   pext->NLAT = Env.MaxY;
+   pext->ELON = Env.MaxX;
+   pext->SLAT = Env.MinY;
+   pext->WLON = Env.MinX;
+
+   delete poDS;
+   */
+  return false;
+}
+
 void s57_DrawExtendedLightSectors(ocpnDC &dc, ViewPort &viewport,
                                   std::vector<s57Sector_t> &sectorlegs) {
   float rangeScale = 0.0;
@@ -6709,125 +6735,104 @@ bool s57_ProcessExtendedLightSectors(ChartCanvas *cc,
 bool s57_GetVisibleLightSectors(ChartCanvas *cc, double lat, double lon,
                                 ViewPort &viewport,
                                 std::vector<s57Sector_t> &sectorlegs) {
-  //if (!cc) return false;
+  if (!cc) return false;
 
-  //static float lastLat, lastLon;
+  static float lastLat, lastLon;
 
-  //if (!ps52plib) return false;
+  if (!ps52plib) return false;
 
-  //ChartPlugInWrapper *target_plugin_chart = NULL;
-  //s57chart *Chs57 = NULL;
+  ChartPlugInWrapper *target_plugin_chart = NULL;
+  s57chart *Chs57 = NULL;
 
-  //// Find the chart that is currently shown at the given lat/lon
-  //wxPoint calcPoint = viewport.GetPixFromLL(lat, lon);
-  //ChartBase *target_chart;
-  //if (cc->m_singleChart && (cc->m_singleChart->GetChartFamily() == CHART_FAMILY_VECTOR))
-  //  target_chart = cc->m_singleChart;
-  //else if (viewport.b_quilt)
-  //  target_chart = cc->m_pQuilt->GetChartAtPix(viewport, calcPoint);
-  //else
-  //  target_chart = NULL;
+  // Find the chart that is currently shown at the given lat/lon
+  wxPoint calcPoint = viewport.GetPixFromLL(lat, lon);
+  ChartBase *target_chart;
+  if (cc->m_singleChart && (cc->m_singleChart->GetChartFamily() == CHART_FAMILY_VECTOR))
+    target_chart = cc->m_singleChart;
+  else if (viewport.b_quilt)
+    target_chart = cc->m_pQuilt->GetChartAtPix(viewport, calcPoint);
+  else
+    target_chart = NULL;
 
-  //if (target_chart) {
-  //  if ((target_chart->GetChartType() == CHART_TYPE_PLUGIN) &&
-  //      (target_chart->GetChartFamily() == CHART_FAMILY_VECTOR))
-  //    target_plugin_chart = dynamic_cast<ChartPlugInWrapper *>(target_chart);
-  //  else
-  //    Chs57 = dynamic_cast<s57chart *>(target_chart);
-  //}
+  if (target_chart) {
+    Chs57 = dynamic_cast<s57chart *>(target_chart);
+  }
 
-  //bool newSectorsNeedDrawing = false;
+  bool newSectorsNeedDrawing = false;
 
-  //if (target_plugin_chart || Chs57) {
-  //  ListOfObjRazRules *rule_list = NULL;
-  //  ListOfPI_S57Obj *pi_rule_list = NULL;
+  if (target_plugin_chart || Chs57) {
+    ListOfObjRazRules *rule_list = NULL;
+    ListOfPI_S57Obj *pi_rule_list = NULL;
 
-  //  // Go get the array of all objects at the cursor lat/lon
-  //  float selectRadius = 16 / (viewport.view_scale_ppm * 1852 * 60);
+    // Go get the array of all objects at the cursor lat/lon
+    float selectRadius = 16 / (viewport.view_scale_ppm * 1852 * 60);
 
-  //  if (Chs57)
-  //    rule_list =
-  //        Chs57->GetLightsObjRuleListVisibleAtLatLon(lat, lon, &viewport);
-  //  else if (target_plugin_chart)
-  //    pi_rule_list = g_pi_manager->GetLightsObjRuleListVisibleAtLatLon(
-  //        target_plugin_chart, lat, lon, viewport);
+    if (Chs57) rule_list = Chs57->GetLightsObjRuleListVisibleAtLatLon(lat, lon, &viewport);    
 
-  //  newSectorsNeedDrawing = s57_ProcessExtendedLightSectors(
-  //      cc, target_plugin_chart, Chs57, rule_list, pi_rule_list, sectorlegs);
+    newSectorsNeedDrawing = s57_ProcessExtendedLightSectors(cc, target_plugin_chart, Chs57, rule_list, pi_rule_list, sectorlegs);
 
-  //  if (rule_list) {
-  //    rule_list->Clear();
-  //    delete rule_list;
-  //  }
+    if (rule_list) {
+      rule_list->Clear();
+      delete rule_list;
+    }
 
-  //  if (pi_rule_list) {
-  //    pi_rule_list->Clear();
-  //    delete pi_rule_list;
-  //  }
-  //}
+    if (pi_rule_list) {
+      pi_rule_list->Clear();
+      delete pi_rule_list;
+    }
+  }
 
-  //return newSectorsNeedDrawing;
-  return false;
+  return newSectorsNeedDrawing;
 }
 
-bool s57_CheckExtendedLightSectors(ChartCanvas *cc, int mx, int my,
-                                   ViewPort &viewport,
-                                   std::vector<s57Sector_t> &sectorlegs) {
-  //if (!cc) return false;
+bool s57_CheckExtendedLightSectors(ChartCanvas *cc, int mx, int my, ViewPort &viewport, std::vector<s57Sector_t> &sectorlegs) {
+  if (!cc) return false;
 
-  //double cursor_lat, cursor_lon;
-  //static float lastLat, lastLon;
+  double cursor_lat, cursor_lon;
+  static float lastLat, lastLon;
 
-  //if (!ps52plib || !ps52plib->m_bExtendLightSectors) return false;
+  if (!ps52plib || !ps52plib->m_bExtendLightSectors) return false;
 
-  //ChartPlugInWrapper *target_plugin_chart = NULL;
-  //s57chart *Chs57 = NULL;
+  ChartPlugInWrapper *target_plugin_chart = NULL;
+  s57chart *Chs57 = NULL;
 
-  //ChartBase *target_chart = cc->GetChartAtCursor();
-  //if (target_chart) {
-  //  if ((target_chart->GetChartType() == CHART_TYPE_PLUGIN) &&
-  //      (target_chart->GetChartFamily() == CHART_FAMILY_VECTOR))
-  //    target_plugin_chart = dynamic_cast<ChartPlugInWrapper *>(target_chart);
-  //  else
-  //    Chs57 = dynamic_cast<s57chart *>(target_chart);
-  //}
+  ChartBase *target_chart = cc->GetChartAtCursor();
+  if (target_chart) {    
+      Chs57 = dynamic_cast<s57chart *>(target_chart);
+  }
 
-  //cc->GetCanvasPixPoint(mx, my, cursor_lat, cursor_lon);
+  cc->GetCanvasPixPoint(mx, my, cursor_lat, cursor_lon);
 
-  //if (lastLat == cursor_lat && lastLon == cursor_lon) return false;
+  if (lastLat == cursor_lat && lastLon == cursor_lon) return false;
 
-  //lastLat = cursor_lat;
-  //lastLon = cursor_lon;
-  //bool newSectorsNeedDrawing = false;
+  lastLat = cursor_lat;
+  lastLon = cursor_lon;
+  bool newSectorsNeedDrawing = false;
 
-  //if (target_plugin_chart || Chs57) {
-  //  ListOfObjRazRules *rule_list = NULL;
-  //  ListOfPI_S57Obj *pi_rule_list = NULL;
+  if (target_plugin_chart || Chs57) {
+    ListOfObjRazRules *rule_list = NULL;
+    ListOfPI_S57Obj *pi_rule_list = NULL;
 
-  //  // Go get the array of all objects at the cursor lat/lon
-  //  float selectRadius = 16 / (viewport.view_scale_ppm * 1852 * 60);
+    // Go get the array of all objects at the cursor lat/lon
+    float selectRadius = 16 / (viewport.view_scale_ppm * 1852 * 60);
 
-  //  if (Chs57)
-  //    rule_list = Chs57->GetObjRuleListAtLatLon(
-  //        cursor_lat, cursor_lon, selectRadius, &viewport, MASK_POINT);
-  //  else if (target_plugin_chart)
-  //    pi_rule_list = g_pi_manager->GetPlugInObjRuleListAtLatLon(
-  //        target_plugin_chart, cursor_lat, cursor_lon, selectRadius, viewport);
+    if (Chs57)
+      rule_list = Chs57->GetObjRuleListAtLatLon(cursor_lat, cursor_lon, selectRadius, &viewport, MASK_POINT);
+    
 
-  //  newSectorsNeedDrawing = s57_ProcessExtendedLightSectors(
-  //      cc, target_plugin_chart, Chs57, rule_list, pi_rule_list, sectorlegs);
+    newSectorsNeedDrawing = s57_ProcessExtendedLightSectors(
+        cc, target_plugin_chart, Chs57, rule_list, pi_rule_list, sectorlegs);
 
-  //  if (rule_list) {
-  //    rule_list->Clear();
-  //    delete rule_list;
-  //  }
+    if (rule_list) {
+      rule_list->Clear();
+      delete rule_list;
+    }
 
-  //  if (pi_rule_list) {
-  //    pi_rule_list->Clear();
-  //    delete pi_rule_list;
-  //  }
-  //}
+    if (pi_rule_list) {
+      pi_rule_list->Clear();
+      delete pi_rule_list;
+    }
+  }
 
-  //return newSectorsNeedDrawing;
-  return false;
+  return newSectorsNeedDrawing;
 }

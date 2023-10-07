@@ -109,6 +109,7 @@ public:
 
   void SetDisplaySizeMM(double size);
   unsigned int GetSelectRadiusPix();
+  double GetToolbarScaleFactor(int GUIScaleFactor);
 
   void PositionAISAlert(wxWindow *alert_window);
   float GetChartScaleFactorExp(float scale_linear);

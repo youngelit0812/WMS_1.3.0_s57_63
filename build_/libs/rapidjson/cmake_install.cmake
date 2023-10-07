@@ -1,8 +1,8 @@
-# Install script for directory: D:/ocpn_work/OpenCPN-master/libs/rapidjson
+# Install script for directory: D:/openCPN_temp/libs/rapidjson
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
-  set(CMAKE_INSTALL_PREFIX "D:/ocpn_work/OpenCPN-master/build/MinSizeRel")
+  set(CMAKE_INSTALL_PREFIX "D:/openCPN_temp/build/MinSizeRel")
 endif()
 string(REGEX REPLACE "/$" "" CMAKE_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
 

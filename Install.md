@@ -4,8 +4,15 @@
   Ubuntu 22.04.2 LTS and Windows 7+
 
 ## Steps - Windows
+### Steps - Run with Pre-Built executable file.
+* In "bin" directory, run the "WMSServer.exe" in "command prompt".
+
+### Steps - Obtain a executable file by compile source codes.
 * At first, unzip the "modules.7z" and "cache.7z" files.
-* Run "x86 Native Tools Command Prompt" of Visual Studio.
+* Install Visual Studio 2019 and cmake version 3.26.4.
+* After installed cmake, append the following path into system environment's path.
+   cmake_path/bin/cmake.exe(cmake_path is path of cmake installed in your system)
+* Run "x86 Native Tools Command Prompt" of Visual Studio 2019.
 * Go to the project path.
 * Run the following commands.
   - mkdir build

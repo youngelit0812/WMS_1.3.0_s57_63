@@ -1,13 +1,13 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="16.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <CustomBuild Include="D:\ocpn_work\OpenCPN-master\build\CMakeFiles\9830fe3e1e373ef43f20ee8551ab9e17\INSTALL_force.rule">
+    <CustomBuild Include="D:\openCPN_temp\build\CMakeFiles\bffbc69a53456f34cf83afce52b3cc66\INSTALL_force.rule">
       <Filter>CMake Rules</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="CMake Rules">
-      <UniqueIdentifier>{57B325E2-05B2-361C-A254-8D49ECDF28F3}</UniqueIdentifier>
+      <UniqueIdentifier>{1D23F8E1-AA07-3656-A8B0-3202465E078F}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

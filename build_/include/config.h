@@ -64,7 +64,7 @@
 #define VERSION_MAJOR 5
 #define VERSION_MINOR 9
 #define VERSION_PATCH 0
-#define VERSION_DATE "2023-08-31"
+#define VERSION_DATE "2023-10-06"
 #define VERSION_FULL "5.9.0"
 #define PACKAGE_VERSION "5.9.0"
 

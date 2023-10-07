@@ -1245,19 +1245,19 @@ void SetN2kPGN129039(tN2kMsg &N2kMsg, uint8_t MessageID, tN2kAISRepeat Repeat, u
 inline void SetN2kAISClassBPosition(tN2kMsg &N2kMsg, uint8_t MessageID, tN2kAISRepeat Repeat, uint32_t UserID,
                         double Latitude, double Longitude, bool Accuracy, bool RAIM,
                         uint8_t Seconds, double COG, double SOG, tN2kAISTransceiverInformation AISTransceiverInformation,
-                        double Heading, tN2kAISUnit Unit, bool bDisplay, bool DSC, bool Band, bool Msg22, tN2kAISMode Mode,
+                        double Heading, tN2kAISUnit Unit, bool Display, bool DSC, bool Band, bool Msg22, tN2kAISMode Mode,
                         bool State) {
   SetN2kPGN129039(N2kMsg, MessageID, Repeat, UserID, Latitude, Longitude, Accuracy, RAIM, Seconds,
-                    COG, SOG, AISTransceiverInformation, Heading, Unit, bDisplay, DSC, Band, Msg22, Mode, State);
+                    COG, SOG, AISTransceiverInformation, Heading, Unit, Display, DSC, Band, Msg22, Mode, State);
 }
 
 // Previous inline version for backwards compatibility, using N2kaischannel_A_VDL_reception(0) as default value
 inline void SetN2kAISClassBPosition(tN2kMsg &N2kMsg, uint8_t MessageID, tN2kAISRepeat Repeat, uint32_t UserID,
                         double Latitude, double Longitude, bool Accuracy, bool RAIM,
                         uint8_t Seconds, double COG, double SOG, double Heading, tN2kAISUnit Unit,
-                        bool bDisplay, bool DSC, bool Band, bool Msg22, tN2kAISMode Mode, bool State) {
+                        bool Display, bool DSC, bool Band, bool Msg22, tN2kAISMode Mode, bool State) {
   SetN2kPGN129039(N2kMsg, MessageID, Repeat, UserID, Latitude, Longitude, Accuracy, RAIM, Seconds,
-                    COG, SOG, N2kaischannel_A_VDL_reception, Heading, Unit, bDisplay, DSC, Band, Msg22, Mode, State);
+                    COG, SOG, N2kaischannel_A_VDL_reception, Heading, Unit, Display, DSC, Band, Msg22, Mode, State);
 }
 
 bool ParseN2kPGN129039(const tN2kMsg &N2kMsg, uint8_t &MessageID, tN2kAISRepeat &Repeat, uint32_t &UserID,
@@ -1269,19 +1269,19 @@ bool ParseN2kPGN129039(const tN2kMsg &N2kMsg, uint8_t &MessageID, tN2kAISRepeat 
 inline bool ParseN2kAISClassBPosition(const tN2kMsg &N2kMsg, uint8_t &MessageID, tN2kAISRepeat &Repeat, uint32_t &UserID,
                         double &Latitude, double &Longitude, bool &Accuracy, bool &RAIM,
                         uint8_t &Seconds, double &COG, double &SOG, tN2kAISTransceiverInformation &AISTransceiverInformation,
-                        double &Heading, tN2kAISUnit &Unit, bool &bDisplay, bool &DSC, bool &Band, bool &Msg22, tN2kAISMode &Mode,
+                        double &Heading, tN2kAISUnit &Unit, bool &Display, bool &DSC, bool &Band, bool &Msg22, tN2kAISMode &Mode,
                         bool &State) {
-  return ParseN2kPGN129039(N2kMsg, MessageID, Repeat, UserID, Latitude, Longitude, Accuracy, RAIM, Seconds, COG, SOG, AISTransceiverInformation, Heading, Unit, bDisplay, DSC, Band, Msg22, Mode, State);
+  return ParseN2kPGN129039(N2kMsg, MessageID, Repeat, UserID, Latitude, Longitude, Accuracy, RAIM, Seconds, COG, SOG, AISTransceiverInformation, Heading, Unit, Display, DSC, Band, Msg22, Mode, State);
 }
 
 // Previous inline version for backwards compatibility, using temporary value to parse unused paramter
 inline bool ParseN2kAISClassBPosition(const tN2kMsg &N2kMsg, uint8_t &MessageID, tN2kAISRepeat &Repeat, uint32_t &UserID,
                         double &Latitude, double &Longitude, bool &Accuracy, bool &RAIM,
                         uint8_t &Seconds, double &COG, double &SOG, double &Heading, tN2kAISUnit &Unit,
-                        bool &bDisplay, bool &DSC, bool &Band, bool &Msg22, tN2kAISMode &Mode, bool &State) {
+                        bool &Display, bool &DSC, bool &Band, bool &Msg22, tN2kAISMode &Mode, bool &State) {
   tN2kAISTransceiverInformation AISTransceiverInformation; // for backwards compatibility
   return ParseN2kPGN129039(N2kMsg, MessageID, Repeat, UserID, Latitude, Longitude, Accuracy,
-                            RAIM, Seconds, COG, SOG, AISTransceiverInformation, Heading, Unit, bDisplay, DSC, Band, Msg22, Mode, State);
+                            RAIM, Seconds, COG, SOG, AISTransceiverInformation, Heading, Unit, Display, DSC, Band, Msg22, Mode, State);
 }
 
 //*****************************************************************************

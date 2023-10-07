@@ -10,10 +10,16 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
 link_directories(${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
 
+#add_definitions(-g -O2 )
+
 IF (NOT WIN32 AND NOT APPLE)
   ADD_DEFINITIONS( "-Wall -Wno-unused -fexceptions -rdynamic" )
   ADD_DEFINITIONS( " -g -fno-strict-aliasing -O2")
 ENDIF(NOT WIN32 AND NOT APPLE)
+
+IF(QT_ANDROID)
+  ADD_DEFINITIONS( " -fPIC")
+ENDIF(QT_ANDROID)
 
 INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/include)
 INCLUDE_DIRECTORIES(include)
@@ -36,6 +42,8 @@ ENDIF(CMAKE_HOST_WIN32)
 SET(GLU_SOURCES
     libutil/error.c
     libutil/glue.c
+#    libutil/quad.c
+#    libutil/mipmap.c
     libutil/project.c
     libutil/registry.c
     libtess/tess.c

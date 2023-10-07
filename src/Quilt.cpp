@@ -688,13 +688,6 @@ ChartBase *Quilt::GetOverlayChartAtPix(ViewPort &VPoint, wxPoint p) {
 }
 
 void Quilt::InvalidateAllQuiltPatchs(void) {
-  /*
-      if( m_bbusy )
-          return;
-
-      m_bbusy = true;
-      m_bbusy = false;
-  */
   return;
 }
 
@@ -2492,9 +2485,9 @@ bool Quilt::DoRenderQuiltRegionViewOnDC(wxMemoryDC &dc, ViewPort &vp, OCPNRegion
       while (chart) {
         bool okToRender = true;
 
-		if (chart->GetChartProjectionType() != PROJECTION_MERCATOR && vp.b_MercatorProjectionOverride) {
-			okToRender = false;
-		}
+        if (chart->GetChartProjectionType() != PROJECTION_MERCATOR &&
+            vp.b_MercatorProjectionOverride)
+          okToRender = false;
 
         if (!okToRender) {
           chart = GetNextChart();

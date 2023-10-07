@@ -161,7 +161,7 @@ public:
   bool CheckGroup(int igroup);
   void canvasRefreshGroupIndex(void);
   void canvasChartsRefresh(int dbi_hint);
-  void GenerateImageFile(wxMemoryDC*, int, int, std::string&, bool);
+  void GenerateImageFile(wxMemoryDC*, int, int, int, int, int, int, std::string&, bool);
   void GenerateImageFile(wxImage&, std::string&, bool);
   void GenerateImageFile(wxBitmap&, int, int, std::string&, bool);
 
@@ -229,7 +229,7 @@ public:
   ViewPort &GetVP();
   ViewPort *GetpVP() { return &VPoint; }
   void SetVP(ViewPort &);
-
+  ChartBase* GetChartAtCursor();
   ChartBase *GetOverlayChartAtCursor();
   Piano *GetPiano() { return m_Piano; }
   int GetPianoHeight();
