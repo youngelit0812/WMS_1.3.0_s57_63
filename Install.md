@@ -6,6 +6,7 @@
 ## Steps - Windows
 ### Steps - Run with Pre-Built executable file.
 * In "bin" directory, run the "WMSServer.exe" in "command prompt".
+  Wait until the message "Press Enter to stop the server or '!' to restart the server..." is displayed.
 
 ### Steps - Obtain a executable file by compile source codes.
 * At first, unzip the "modules.7z" and "cache.7z" files.
@@ -49,6 +50,7 @@ The "project_path" is path in which the "CMakeLists.txt" file exists.
 
 ## Pre-Run Steps
 * Copy all ENC files into the directory indicated in "config.json" file.
+* Should modify the port number for HTTP and HTTPS in "config.json" file
 
 ## Test
 * Open the Web Browser.
@@ -56,7 +58,7 @@ The "project_path" is path in which the "CMakeLists.txt" file exists.
 * Test with the following URL
 
 For HTTP
-  http://localhost:8080/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=grid,depths&STYLES=&CRS=4326&BBOX=41,49,41.5,49.5&WIDTH=651&HEIGHT=740&FORMAT=image/png
+  http://localhost:8080/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=grid,depths&CRS=4326&BBOX=41,49,41.5,49.5&WIDTH=651&HEIGHT=740&FORMAT=image/png
 
 For HTTPS
-  https://localhost:8081/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=grid,depths&STYLES=&CRS=4326&BBOX=41,49,41.5,49.5&WIDTH=651&HEIGHT=740&FORMAT=image/png
+  https://localhost:8081/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=grid,depths&CRS=4326&BBOX=41,49,41.5,49.5&WIDTH=651&HEIGHT=740&FORMAT=image/png

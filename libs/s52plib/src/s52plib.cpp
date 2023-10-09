@@ -3234,8 +3234,8 @@ bool s52plib::RenderRasterSymbol(ObjRazRules *rzRules, Rule *prule, wxPoint &r,
 int s52plib::RenderSY(ObjRazRules *rzRules, Rules *rules, bool bCSFlag, bool bLHShowFlag, bool bBUOYShowFlag, bool bAIShowFlag) {
   float angle = 0;
   double orient;
-
-  if (!bLHShowFlag && ((strncmp(rzRules->obj->FeatureName, "LIGHTS", 6) == 0) || (strncmp(rzRules->obj->FeatureName, "BCNSPP", 6) == 0))) {
+  
+  /*if (!bLHShowFlag && ((strncmp(rzRules->obj->FeatureName, "LIGHTS", 6) == 0) || (strncmp(rzRules->obj->FeatureName, "BCNSPP", 6) == 0))) {
     return 0;
   }
 
@@ -3245,7 +3245,7 @@ int s52plib::RenderSY(ObjRazRules *rzRules, Rules *rules, bool bCSFlag, bool bLH
                           (strncmp(rzRules->obj->FeatureName, "BOYINB", 6) == 0) || (strncmp(rzRules->obj->FeatureName, "BOYCAR", 6) == 0))) {
       return 0;
     }
-  }
+  }*/
 
   if (rules->razRule != NULL) {
     if (rules->INSTstr[8] == ',')  // supplementary parameter assumed to be angle, seen in LIGHTSXX
@@ -6369,9 +6369,9 @@ int s52plib::RenderObjectToGLText(const wxGLContext &glcc, ObjRazRules *rzRules)
 int s52plib::DoRenderObject(wxDC *pdcin, ObjRazRules *rzRules, bool bCSShowFlag, bool bSY_LHShowFlag, bool bBUOYShowFlag, bool bLDESCRShowFlag, bool bAIShowFlag, bool bSlvisShowFlag) {  
   if (!ObjectRenderCheckRules(rzRules, true)) return 0;
 
-  if (!bAIShowFlag && (strncmp(rzRules->obj->FeatureName, "ACHPNT", 6) == 0)) {
-    return 1;
-  }
+  // if (!bAIShowFlag && (strncmp(rzRules->obj->FeatureName, "ACHPNT", 6) == 0)) {
+  //   return 1;
+  // }
 
   m_pdc = pdcin;  // use this DC
   Rules *rules = rzRules->LUP->ruleList;
@@ -6418,28 +6418,25 @@ int s52plib::DoRenderObject(wxDC *pdcin, ObjRazRules *rzRules, bool bCSShowFlag,
         while (NULL != rules) {          
           switch (rules->ruleType) {
             case RUL_TXT_TX:
-              if (bCSShowFlag) RenderTX(rzRules, rules);
+              RenderTX(rzRules, rules);
               break;
             case RUL_TXT_TE:
-              if (bCSShowFlag) RenderTE(rzRules, rules);
+              RenderTE(rzRules, rules);
               break;
             case RUL_SYM_PT:
               RenderSY(rzRules, rules, true, bSY_LHShowFlag, bBUOYShowFlag);              
               break;
             case RUL_SIM_LN:
-              {
-                if (m_pdc) {
-                  if (bCSShowFlag) RenderLS(rzRules, rules);
-                } else {
-                  if (bCSShowFlag) RenderGLLS(rzRules, rules);
-                }
-                break;  // LS
-              }
+              if (m_pdc)
+                RenderLS(rzRules, rules);
+              else
+                RenderGLLS(rzRules, rules);
+              break;  // LS
             case RUL_COM_LN:
-              if (bCSShowFlag) RenderLC(rzRules, rules);
+              RenderLC(rzRules, rules);
               break;
             case RUL_MUL_SG:
-              if (bCSShowFlag) RenderMPS(rzRules, rules);
+              RenderMPS(rzRules, rules);
               break;  // MultiPoint Sounding
             case RUL_ARC_2C:
               RenderCARC(rzRules, rules);
@@ -6448,10 +6445,10 @@ int s52plib::DoRenderObject(wxDC *pdcin, ObjRazRules *rzRules, bool bCSShowFlag,
             default:
               break;  // no rule type (init)
           }
-
           rules_last = rules;
           rules = rules->next;
-        }        
+        }
+
         rules = rules_last;
         break;
       }

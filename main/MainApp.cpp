@@ -1161,6 +1161,8 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart) {
 	InitializeUserColors();
 
 	if ((g_nframewin_x > 100) && (g_nframewin_y > 100) && (g_nframewin_x <= cw) && (g_nframewin_y <= ch)) {
+		cw = g_nframewin_x;
+		ch = g_nframewin_y;
 		new_frame_size.Set(g_nframewin_x, g_nframewin_y);
 	}
 	else {
@@ -1356,7 +1358,6 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart) {
 	}
 #endif
 
-	if (g_start_fullscreen) gFrame->ToggleFullScreen();
 	//  
 	gFrame->Raise();
 	gFrame->GetPrimaryCanvas()->Enable();
@@ -1452,12 +1453,25 @@ bool MainApp::UpdateFrameCanvas(std::string& sBBox, int nWidth, int nHeight, std
 	nLayerIndex = GetLayerIndex(sLayers);
 	if (nLayerIndex >= 0) vnLayers.push_back(nLayerIndex);
 
-	gFrame->CenterView(gFrame->GetPrimaryCanvas(), llbBox);
+	ChartCanvas* pCC = gFrame->GetPrimaryCanvas();
+	//pCC->SetSize(nWidth, nHeight);
+	gFrame->CenterView(pCC, llbBox, nWidth, nHeight);
 	gFrame->DoChartUpdate();
 	gFrame->ChartsRefresh();
 
-	gFrame->GetPrimaryCanvas()->m_b_paint_enable = true;
-	gFrame->GetPrimaryCanvas()->DrawCanvasData(llbBox, nWidth, nHeight, vnLayers, sIMGFilePath, bPNGFlag);
+	//gFrame->ResizeManually(nWidth, nHeight);
+	//adjust bbox with viewport's size
+	/*wxPoint xMin, xMax, xCenter;
+	pCC->GetCanvasPointPix(dMinLat, dMinLon, &xMin);
+	pCC->GetCanvasPointPix(dMaxLat, dMaxLon, &xMax);
+	pCC->GetCanvasPointPix((dMaxLat + dMinLat) / 2, (dMaxLon + dMinLon) / 2, &xCenter);
+
+	int nVWidth, nVHeight;
+	nVWidth = pCC->GetVP().pix_width;
+	nVHeight = pCC->GetVP().pix_height;*/
+
+	pCC->m_b_paint_enable = true;
+	pCC->DrawCanvasData(llbBox, nWidth, nHeight, vnLayers, sIMGFilePath, bPNGFlag);
 
 	return true;
 }

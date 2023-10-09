@@ -1806,6 +1806,7 @@ bool s57chart::RenderRegionViewOnDCNoText(wxMemoryDC &dc, const ViewPort &VPoint
 
   bool b_text = ps52plib->GetShowS57Text();
   ps52plib->m_bShowS57Text = false;
+  //ps52plib->m_bShowLdisText = bLDESCRShowFlag;
   bool b_ret = DoRenderRegionViewOnDC(dc, VPoint, Region, false, bCSShowFlag, bLHShowFlag, bBUOYShowFlag, bLDESCRShowFlag, bAIShowFlag, bSlvisShowFlag);
   ps52plib->m_bShowS57Text = b_text;
 

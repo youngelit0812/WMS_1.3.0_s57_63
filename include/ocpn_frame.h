@@ -192,7 +192,7 @@ public:
   bool SetGlobalToolbarViz(bool viz);
 
   void MouseEvent(wxMouseEvent &event);
-  void CenterView(ChartCanvas *cc, const LLBBox &bbox);
+  void CenterView(ChartCanvas *cc, const LLBBox &bbox, int nWidth, int nHeight);
 
   void JumpToPosition(ChartCanvas *cc, double lat, double lon, double scale);
 
@@ -299,6 +299,7 @@ public:
   void LoadHarmonics();
   void ReloadAllVP();
   void SetCanvasSizes(wxSize frameSize);
+  void ResizeManually(int nWidth, int nHeight);
 
   void RequestNewMasterToolbar(bool bforcenew = true);  
   bool AddDefaultPositionPlugInTools();

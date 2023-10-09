@@ -68,6 +68,7 @@
 #include "color_handler.h"
 #include "cutil.h"
 #include "dychart.h"
+#include "FontMgr.h"
 #include "georef.h"
 #include "glChartCanvas.h"
 #include "gui_lib.h"
@@ -1568,6 +1569,100 @@ void MyFrame::ODoSetSize(void) {
   if (g_pauimgr) g_pauimgr->Update();
 }
 
+void MyFrame::ResizeManually(int nWidth, int nHeight) {	
+	//      Resize the children
+	if (m_pStatusBar != NULL) {
+		m_StatusBarFieldCount = g_Platform->GetStatusBarFieldCount();
+		int currentCount = m_pStatusBar->GetFieldsCount();
+		if (currentCount != m_StatusBarFieldCount) {
+			if ((currentCount > 0) && (currentCount < 7)) {
+				// reset the widths very small to avoid auto-resizing of the frame
+				// The sizes will be reset later in this method
+				int widths[] = { 2, 2, 2, 2, 2, 2 };
+				m_pStatusBar->SetStatusWidths(currentCount, widths);
+			}
+
+			m_pStatusBar->SetFieldsCount(m_StatusBarFieldCount);
+		}
+
+		if (m_StatusBarFieldCount) {
+			//  If the status bar layout is "complex", meaning more than two columns,
+			//  then use custom crafted relative widths for the fields.
+			//  Otherwise, just split the frame client width into equal spaces
+
+			if (m_StatusBarFieldCount > 2) {
+				int widths[] = { -6, -5, -5, -6, -4 };
+				m_pStatusBar->SetStatusWidths(m_StatusBarFieldCount, widths);
+			}
+			else if (m_StatusBarFieldCount == 2) {
+				int cwidth = nWidth * 90 / 100;
+				int widths[] = { 100, 100 };
+				widths[0] = cwidth * 6.4 / 10.0;
+				widths[1] = cwidth * 3.6 / 10.0;
+				m_pStatusBar->SetStatusWidths(m_StatusBarFieldCount, widths);
+			}
+			else {
+				int widths[] = { 100, 100 };
+				widths[0] = nWidth * 90 / 100;
+				m_pStatusBar->SetStatusWidths(m_StatusBarFieldCount, widths);
+			}
+
+			int styles[] = { wxSB_FLAT, wxSB_FLAT, wxSB_FLAT,
+							wxSB_FLAT, wxSB_FLAT, wxSB_FLAT };
+			m_pStatusBar->SetStatusStyles(m_StatusBarFieldCount, styles);
+
+			wxString sogcog(_T("SOG --- ") + getUsrSpeedUnit() + +_T("     ") +
+				_T(" COG ---\u00B0"));
+			m_pStatusBar->SetStatusText(sogcog, STAT_FIELD_SOGCOG);
+		}
+	}
+
+	if (m_pStatusBar) {
+		//  Maybe resize the font so the text fits in the boxes
+
+		wxRect stat_box;
+		m_pStatusBar->GetFieldRect(0, stat_box);
+		// maximum size is 1/28 of the box width, or the box height - whicever is
+		// less
+		int max_font_size = wxMin((stat_box.width / 28), (stat_box.height));
+
+		wxFont sys_font = *wxNORMAL_FONT;
+		int try_font_size = sys_font.GetPointSize();
+
+#ifdef __WXOSX__
+		int min_font_size = 10;  // much less than 10pt is unreadably small on OS X
+		try_font_size += 1;      // default to 1pt larger than system UI font
+#else
+		int min_font_size =
+			7;               // on Win/Linux the text does not shrink quite so fast
+		try_font_size += 2;  // default to 2pt larger than system UI font
+#endif
+	}
+
+	wxSize xSize(nWidth, nHeight);
+	SetCanvasSizes(xSize);
+
+	// .. for each canvas...
+	for (unsigned int i = 0; i < g_canvasArray.GetCount(); i++) {
+		ChartCanvas* cc = g_canvasArray.Item(i);
+		if (cc) cc->FormatPianoKeys();
+	}
+
+	//  If global toolbar is shown, reposition it...
+	//  Update the stored window size
+	g_nframewin_x = nWidth;
+	g_nframewin_y = nHeight;
+
+	// FIXME (dave)  Thumbwins are gone...
+	// if (pthumbwin) pthumbwin->SetMaxSize(GetClientSize());
+
+	//  Reset the options dialog size logic
+	options_lastWindowSize = wxSize(0, 0);
+	options_lastWindowPos = wxPoint(0, 0);
+
+	if (g_pauimgr) g_pauimgr->Update();
+}
+
 void MyFrame::PositionConsole(void) {
   if (NULL == GetPrimaryCanvas()) return;
   //    Reposition console based on its size and chartcanvas size
@@ -2354,7 +2449,7 @@ void MyFrame::UpdateCanvasConfigDescriptors() {
   }
 }
 
-void MyFrame::CenterView(ChartCanvas *cc, const LLBBox &RBBox) {
+void MyFrame::CenterView(ChartCanvas *cc, const LLBBox &RBBox, int nWidth, int nHeight) {
   if (!RBBox.GetValid()) return;
   // Calculate bbox center
   double clat = (RBBox.GetMinLat() + RBBox.GetMaxLat()) / 2;
@@ -2377,6 +2472,8 @@ void MyFrame::CenterView(ChartCanvas *cc, const LLBBox &RBBox) {
                             RBBox.GetMaxLat(), RBBox.GetMinLon(), NULL, &rh);
 
     cc->GetSize(&ww, &wh);
+	/*ww = nWidth;
+	wh = nHeight;*/
 
     ppm = wxMin(ww / (rw * 1852), wh / (rh * 1852)) * (100 - fabs(clat)) / 90;
 
@@ -4926,7 +5023,8 @@ bool ReloadLocale() {
 }
 
 void ApplyLocale() {
-
+	FontMgr::Get().SetLocale(g_locale);
+	FontMgr::Get().ScrubList();
   //  Close and re-init various objects to allow new locale to show.
   delete g_options;
   g_options = NULL;

@@ -11,11 +11,14 @@ Implementation of a Web Map Server v1.3.0
 - User could get s57 ENC and s63 Map Images.
 - Parameters are as follows.
   LAYERS : TEXT, DEPTHS, BLLABELS, LIGHTS, LDESCR, AINFO, SLVIS, GRID.
-  FORMAT : PNG or JPG
-  CRS : WGS84 - 4326
-  BBOX : The region configured by min and max value of latitude and longitude
+  FORMAT : image/png or image/jpg
+  CRS : 4326
+  BBOX : The region configured by min and max value of latitude and longitude(ex : min latitude, min longitude, max latitude, max longitude)
   WIDTH : Image width
   HEIGHT : Image height
+  REQUEST : GetMap
+  VERSION : 1.3.0
+  SERVICE : WMS
 
 ## Requirements
 

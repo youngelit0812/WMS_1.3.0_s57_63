@@ -133,6 +133,7 @@ public:
   bool IsPrimaryCanvas() { return (m_canvasIndex == 0); }
   double GetCanvasRangeMeters();
   void SetCanvasRangeMeters(double range);
+  void DrawGridInDC(wxMemoryDC *mscratch_dc, int, int, int, int, LLBBox&);
 
   void EnablePaint(bool b_enable);
   virtual bool SetCursor(const wxCursor &c);
@@ -161,6 +162,7 @@ public:
   bool CheckGroup(int igroup);
   void canvasRefreshGroupIndex(void);
   void canvasChartsRefresh(int dbi_hint);
+  void GenerateImageFile(wxMemoryDC*, int, int, std::string&, bool);
   void GenerateImageFile(wxMemoryDC*, int, int, int, int, int, int, std::string&, bool);
   void GenerateImageFile(wxImage&, std::string&, bool);
   void GenerateImageFile(wxBitmap&, int, int, std::string&, bool);

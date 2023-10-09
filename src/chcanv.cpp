@@ -4838,6 +4838,17 @@ int s_in_update;
 void ChartCanvas::DrawCanvasData(LLBBox &llbBox, int nWidth, int nHeight, std::vector<int>& vnLayers, std::string& sIMGFilePath, bool bPNGFlag) {
 	SetViewPointByCorners(llbBox.GetMinLat(), llbBox.GetMinLon(), llbBox.GetMaxLat(), llbBox.GetMaxLon());	
 
+	SetShowENCText(HasLayer(vnLayers, LAYER_TEXT));
+	SetShowENCLightDesc(HasLayer(vnLayers, LAYER_LDESCR));
+	SetShowENCAnchor(HasLayer(vnLayers, LAYER_AINFO));
+	SetShowENCDepth(HasLayer(vnLayers, LAYER_DEPTHS));
+	SetShowENCBuoyLabels(HasLayer(vnLayers, LAYER_BLLABELS));
+	SetShowENCLights(HasLayer(vnLayers, LAYER_LIGHTS));
+	SetShowVisibleSectors(HasLayer(vnLayers, LAYER_SLVIS));
+	SetShowGrid(false);
+
+	UpdateCanvasS52PLIBConfig();
+
 	pscratch_bm->Create(VPoint.pix_width, VPoint.pix_height, -1);
 	m_working_bm.Create(VPoint.pix_width, VPoint.pix_height, -1);
 
@@ -5120,6 +5131,9 @@ void ChartCanvas::DrawCanvasData(LLBBox &llbBox, int nWidth, int nHeight, std::v
 
 	//    Set up a scratch DC for overlay objects
 	wxMemoryDC mscratch_dc;
+	mscratch_dc.SetBackground(*wxWHITE_BRUSH);
+	mscratch_dc.SetTextForeground(*wxBLACK);
+
 	mscratch_dc.SelectObject(*pscratch_bm);
 
 	mscratch_dc.ResetBoundingBox();
@@ -5246,8 +5260,7 @@ void ChartCanvas::DrawCanvasData(LLBBox &llbBox, int nWidth, int nHeight, std::v
 		}
 	}
 #endif
-	// Direct rendering model...
-	if (VPoint.b_quilt && HasLayer(vnLayers, LAYER_TEXT)) {
+	if (VPoint.b_quilt) {
 		if (m_pQuilt->IsQuiltVector() && ps52plib && ps52plib->GetShowS57Text()) {
 			ChartBase* chart = m_pQuilt->GetRefChart();
 			if (chart && chart->GetChartType() != CHART_TYPE_CM93COMP) {
@@ -5265,13 +5278,6 @@ void ChartCanvas::DrawCanvasData(LLBBox &llbBox, int nWidth, int nHeight, std::v
 		}
 	}
 	
-	if (HasLayer(vnLayers, LAYER_GRID)) {
-		m_bDisplayGrid = true;
-		ocpnDC gridDC(mscratch_dc);
-		GridDraw(gridDC);
-		m_bDisplayGrid = false;
-	}
-
 	LLBBox llbViewPortBox = VPoint.GetBBox();
 	double dVPMinLat = llbViewPortBox.GetMinLat();
 	double dVPMaxLat = llbViewPortBox.GetMaxLat();
@@ -5288,33 +5294,108 @@ void ChartCanvas::DrawCanvasData(LLBBox &llbBox, int nWidth, int nHeight, std::v
 	double dPixelPerDegreeForLat = (nBottom - nTop) / abs(dVPMaxLat - dVPMinLat);
 	double dPixelPerDegreeForLon = (nRight - nLeft) / abs(dVPMaxLon - dVPMinLon);
 	
+	wxPoint xPoint;
+
+	int x1, y1, x2, y2;
 	if (dMinLat > dVPMinLat) {
-		nTop = abs(dMinLat - dVPMinLat) * dPixelPerDegreeForLat;
-	}
+		GetCanvasPointPix(dMinLat, dVPMinLon, &xPoint);
+	} else GetCanvasPointPix(dVPMinLat, dVPMinLon, &xPoint);
+
+	y1 = xPoint.y;
 
 	if (dMinLon > dVPMinLon) {
-		nLeft = abs(dMinLon - dVPMinLon) * dPixelPerDegreeForLon;
+		GetCanvasPointPix(dVPMinLat, dMinLon, &xPoint);
 	}
+	else GetCanvasPointPix(dVPMinLat, dVPMinLon, &xPoint);
+	
+	x1 = xPoint.x;
 
 	if (dMaxLat < dVPMaxLat) {
-		nBottom = nBottom - (abs(dVPMaxLat - dMaxLat) * dPixelPerDegreeForLat);
+		GetCanvasPointPix(dMaxLat, dVPMaxLon, &xPoint);			
 	}
+	else GetCanvasPointPix(dVPMaxLat, dVPMaxLon, &xPoint);
+
+	y2 = xPoint.y;
 
 	if (dMaxLon < dVPMaxLon) {
-		nRight = nRight - (abs(dVPMaxLon - dMaxLon) * dPixelPerDegreeForLon);		
+		GetCanvasPointPix(dVPMaxLat, dMaxLon, &xPoint);
+	}else GetCanvasPointPix(dVPMaxLat, dVPMaxLon, &xPoint);
+
+	x2 = xPoint.x;
+
+	if (x1 < x2) {
+		nLeft = x1;
+		nRight = x2;
+	}
+	else {
+		nLeft = x2;
+		nRight = x1;
+	}
+
+	if (y1 < y2) {
+		nTop = y1;
+		nBottom = y2;
+	}
+	else {
+		nTop = y2;
+		nBottom = y1;
+	}
+
+	if (HasLayer(vnLayers, LAYER_GRID)) {
+		DrawGridInDC(&mscratch_dc, nLeft, nTop, nRight, nBottom, llbBox);
 	}
 
 	GenerateImageFile(&mscratch_dc, nLeft, nTop, nRight, nBottom, nWidth, nHeight, sIMGFilePath, bPNGFlag);
-
+	
 	temp_dc.SelectObject(wxNullBitmap);
 	mscratch_dc.SelectObject(wxNullBitmap);
-
-	//GenerateImageFile(m_working_bm, nWidth, nHeight, sIMGFilePath, bPNGFlag);
-	//GenerateImageFile(*pscratch_bm, nWidth, nHeight, sIMGFilePath, bPNGFlag);
-	
 	m_b_paint_enable = true;
 
 	printf("cc : Draw Canvas manually 3\n");
+}
+
+void ChartCanvas::DrawGridInDC(wxMemoryDC *mscratch_dc, int nLeft, int nTop, int nRight, int nBottom, LLBBox& llbBox) {
+	double dMinLat = llbBox.GetMinLat();
+	double dMaxLat = llbBox.GetMaxLat();
+	double dMinLon = llbBox.GetMinLon();
+	double dMaxLon = llbBox.GetMaxLon();
+
+	wxPoint xPointBegin, xPointEnd, xDegreeShowPos;
+	double dLat = dMinLat;
+	while (dLat < dMaxLat) {
+		GetCanvasPointPix(dLat, dMinLon, &xPointBegin);
+		GetCanvasPointPix(dLat, dMaxLon, &xPointEnd);
+
+		wxColour colour = GetGlobalColor(_T("BLACK"));
+		mscratch_dc->SetPen(wxPen(colour, 2));
+		mscratch_dc->SetBrush(wxBrush(colour));
+		mscratch_dc->DrawLine(xPointBegin, xPointEnd);
+
+		xDegreeShowPos = xPointBegin;
+		if (xPointBegin.x > xPointEnd.x) xDegreeShowPos = xPointEnd;
+		wxString sDegree = wxString::Format(wxT("%.2f"), dLat);
+		mscratch_dc->DrawText(sDegree, xDegreeShowPos);
+
+		dLat += 0.5;
+	}
+
+	double dLon = dMinLon;
+	while (dLon < dMaxLon) {
+		GetCanvasPointPix(dMinLat, dLon, &xPointBegin);
+		GetCanvasPointPix(dMaxLat, dLon, &xPointEnd);
+
+		wxColour colour = GetGlobalColor(_T("BLACK"));
+		mscratch_dc->SetPen(wxPen(colour, 2));
+		mscratch_dc->SetBrush(wxBrush(colour));
+		mscratch_dc->DrawLine(xPointBegin, xPointEnd);
+
+		xDegreeShowPos = xPointBegin;
+		if (xPointBegin.y > xPointEnd.y) xDegreeShowPos = xPointEnd;
+		wxString sDegree = wxString::Format(wxT("%.2f"), dLon);
+		mscratch_dc->DrawText(sDegree, xDegreeShowPos);
+
+		dLon += 0.5;
+	}
 }
 
 void ChartCanvas::GenerateImageFile(wxImage &xImage, std::string& sIMGFilePath, bool bPNGFlag) {
@@ -5350,6 +5431,28 @@ void ChartCanvas::GenerateImageFile(wxMemoryDC *pMemDC, int nLeft, int nTop, int
 	
 	if (nTargetHeight > 1) {
 		xMemDC.StretchBlit(0, 0, nTargetWidth, nTargetHeight, pMemDC, nLeft, nTop, nRight - nLeft, nBottom - nTop);	
+	}
+	xMemDC.SelectObject(wxNullBitmap);
+
+	wxImage xImage;
+	if (xbTargetBitmap.IsOk()) {
+		xImage = xbTargetBitmap.ConvertToImage();
+
+		wxFileOutputStream xFileOutput(sIMGFilePath);
+		if (xFileOutput.IsOk()) {
+			if (bPNGFlag) xImage.SaveFile(xFileOutput, wxBITMAP_TYPE_PNG);
+			else xImage.SaveFile(xFileOutput, wxBITMAP_TYPE_JPEG);
+		}
+	}
+}
+
+void ChartCanvas::GenerateImageFile(wxMemoryDC* pMemDC, int nTargetWidth, int nTargetHeight, std::string& sIMGFilePath, bool bPNGFlag) {
+	wxBitmap xbTargetBitmap(nTargetWidth, nTargetHeight, -1);
+	wxMemoryDC xMemDC;
+	xMemDC.SelectObject(xbTargetBitmap);
+
+	if (nTargetHeight > 1) {
+		xMemDC.StretchBlit(0, 0, nTargetWidth, nTargetHeight, pMemDC, 0, 0, pMemDC->GetSize().GetWidth(), pMemDC->GetSize().GetHeight());
 	}
 	xMemDC.SelectObject(wxNullBitmap);
 
