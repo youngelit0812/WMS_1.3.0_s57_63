@@ -254,7 +254,7 @@ option(OCPN_PEDANTIC "Enable more compiler warnings" OFF)
 
 set(OCPN_PACKAGE_RELEASE "1" CACHE STRING "Package release number")
 
-option(OCPN_USE_GL "Enable OpenGL support" ON)
+option(OCPN_USE_GL "Enable OpenGL support" OFF)
 option(OCPN_USE_GLES_SHIM "Enable GLESv1 Shim library" OFF)
 option(OCPN_USE_UDEV_PORTS "Use udev to enumerate serial ports" ON)
 option(OCPN_USE_SYSFS_PORTS "Use sysfs to enumerate serial ports" OFF)

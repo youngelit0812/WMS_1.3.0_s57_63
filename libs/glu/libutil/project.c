@@ -232,9 +232,9 @@ static void __gluMultMatricesd(const GLdouble a[16], const GLdouble b[16],
 
 GLint /*GLAPIENTRY*/
 gluProject(GLdouble objx, GLdouble objy, GLdouble objz,
-	      const GLdouble modelMatrix[16],
-	      const GLdouble projMatrix[16],
-              const GLint viewport[4],
+	      const GLdouble *modelMatrix,
+	      const GLdouble *projMatrix,
+              const GLint *viewport,
 	      GLdouble *winx, GLdouble *winy, GLdouble *winz)
 {
     double in[4];
@@ -267,9 +267,8 @@ gluProject(GLdouble objx, GLdouble objy, GLdouble objz,
 
 GLint /*GLAPIENTRY*/
 gluUnProject(GLdouble winx, GLdouble winy, GLdouble winz,
-		const GLdouble modelMatrix[16],
-		const GLdouble projMatrix[16],
-                const GLint viewport[4],
+		const GLdouble *modelMatrix,
+		const GLdouble *projMatrix, const GLint *viewport,
 	        GLdouble *objx, GLdouble *objy, GLdouble *objz)
 {
     double finalMatrix[16];
@@ -306,9 +305,9 @@ gluUnProject(GLdouble winx, GLdouble winy, GLdouble winz,
 
 GLint /*GLAPIENTRY*/
 gluUnProject4(GLdouble winx, GLdouble winy, GLdouble winz, GLdouble clipw,
-	      const GLdouble modelMatrix[16],
-	      const GLdouble projMatrix[16],
-	      const GLint viewport[4],
+	      const GLdouble *modelMatrix,
+	      const GLdouble *projMatrix,
+	      const GLint *viewport,
 	      GLclampd nearVal, GLclampd farVal,
 	      GLdouble *objx, GLdouble *objy, GLdouble *objz,
 	      GLdouble *objw)
@@ -346,7 +345,7 @@ gluUnProject4(GLdouble winx, GLdouble winy, GLdouble winz, GLdouble clipw,
 
 void /*GLAPIENTRY*/
 gluPickMatrix(GLdouble x, GLdouble y, GLdouble deltax, GLdouble deltay,
-		  GLint viewport[4])
+		  GLint *viewport)
 {
     if (deltax <= 0 || deltay <= 0) {
 	return;

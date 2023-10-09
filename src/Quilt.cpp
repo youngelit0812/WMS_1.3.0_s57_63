@@ -2471,6 +2471,7 @@ bool Quilt::DoRenderQuiltRegionViewOnDC(wxMemoryDC &dc, ViewPort &vp, OCPNRegion
   OCPNRegion rendered_region;
 
   int nRenderableChartCnt = GetnCharts();
+  printf("Quilt: render chart cnt:%d", nRenderableChartCnt);
   if (nRenderableChartCnt && !m_bbusy) {
     OCPNRegion screen_region = chart_region;
 

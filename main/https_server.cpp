@@ -296,7 +296,7 @@ int main(int argc, char** argv)
 	// Create a new HTTP server
 	auto serverHTTP = std::make_shared<HTTPCacheServer>(service, nPortForHTTP);
 	serverHTTP->SetDBFlag((void*)app, (void*)&envConfig);
-	serverHTTP->AddStaticContent(www, "/api");
+	serverHTTP->AddStaticContent(www, &envConfig, "/api");
 
 	// Start the server
 	std::cout << "Server starting...";

@@ -342,7 +342,7 @@ gluTessCallback( GLUtesselator *tess, GLenum which, _GLUfuncptr fn)
   }
 }
 
-static int AddVertex( GLUtesselator *tess, GLdouble coords[3], void *data )
+static int AddVertex( GLUtesselator *tess, GLdouble *coords, void *data )
 {
   GLUhalfEdge *e;
 
@@ -412,7 +412,7 @@ static int EmptyCache( GLUtesselator *tess )
 
 
 void /*GLAPIENTRY*/
-gluTessVertex( GLUtesselator *tess, GLdouble coords[3], void *data )
+gluTessVertex( GLUtesselator *tess, GLdouble coords*, void *data )
 {
   int i, tooLarge = FALSE;
   GLdouble x, clamped[3];

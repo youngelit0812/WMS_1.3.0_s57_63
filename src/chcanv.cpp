@@ -4904,22 +4904,24 @@ void ChartCanvas::DrawCanvasData(LLBBox &llbBox, int nWidth, int nHeight, std::v
 	svp.pix_width = svp.rv_rect.width;
 	svp.pix_height = svp.rv_rect.height;
 
-	printf("Onpaint pix %d %d\n", VPoint.pix_width, VPoint.pix_height);
-	printf("OnPaint rv_rect %d %d\n", VPoint.rv_rect.width, VPoint.rv_rect.height);
+	printf("DrawCanvasData pix %d %d\n", VPoint.pix_width, VPoint.pix_height);
+	printf("DrawCanvasData rv_rect %d %d\n", VPoint.rv_rect.width, VPoint.rv_rect.height);
 
 	OCPNRegion chart_get_region(wxRect(0, 0, svp.pix_width, svp.pix_height));
 	
 	//  Blit pan acceleration
 	if (VPoint.b_quilt)  // quilted
 	{
+		printf("DrawCanvasData quilt \n");
 		if (!m_pQuilt || !m_pQuilt->IsComposed()) return;  // not ready
 
 		bool bvectorQuilt = m_pQuilt->IsQuiltVector();
-
+		printf("DrawCanvasData quilt 0\n");
 		if ((m_working_bm.GetWidth() != svp.pix_width) || (m_working_bm.GetHeight() != svp.pix_height)) {
 			m_working_bm.Create(svp.pix_width, svp.pix_height, -1);  // make sure the target is big enoug
 		}
 
+		printf("DrawCanvasData quilt 1\n");
 		if (fabs(VPoint.rotation) < 0.01) {
 			bool b_save = true;
 
@@ -4983,6 +4985,7 @@ void ChartCanvas::DrawCanvasData(LLBBox &llbBox, int nWidth, int nHeight, std::v
 							update_region.Union(wxRect(0, 0, -dx, VPoint.pix_height));
 					}
 
+					printf("DrawCanvasData quilt 2\n");
 					//  Render the new region
 					m_pQuilt->RenderQuiltRegionViewOnDCNoText(temp_dc, svp, update_region, HasLayer(vnLayers, LAYER_DEPTHS), HasLayer(vnLayers, LAYER_LIGHTS), HasLayer(vnLayers, LAYER_BLLABELS), HasLayer(vnLayers, LAYER_LDESCR), HasLayer(vnLayers, LAYER_AINFO), HasLayer(vnLayers, LAYER_SLVIS));
 					cache_dc.SelectObject(wxNullBitmap);
@@ -4990,30 +4993,38 @@ void ChartCanvas::DrawCanvasData(LLBBox &llbBox, int nWidth, int nHeight, std::v
 				else {
 					//    No sensible (dx, dy) change in the view, so use the cached
 					//    member bitmap
+					printf("DrawCanvasData quilt 3\n");
 					temp_dc.SelectObject(m_cached_chart_bm);
 					b_save = false;
 				}
-				m_pQuilt->ComputeRenderRegion(svp, chart_get_region);
 
-			} else {  // not blitable
+				printf("DrawCanvasData quilt 4\n");
+				m_pQuilt->ComputeRenderRegion(svp, chart_get_region);
+			} else {  // not blitable				
 				temp_dc.SelectObject(m_working_bm);
+
+				printf("DrawCanvasData quilt 5\n");
 				m_pQuilt->RenderQuiltRegionViewOnDCNoText(temp_dc, svp, chart_get_region, HasLayer(vnLayers, LAYER_DEPTHS), HasLayer(vnLayers, LAYER_LIGHTS), HasLayer(vnLayers, LAYER_BLLABELS), HasLayer(vnLayers, LAYER_LDESCR), HasLayer(vnLayers, LAYER_AINFO), HasLayer(vnLayers, LAYER_SLVIS));
 			}	
 		} else  // quilted, rotated
 		{
 			temp_dc.SelectObject(m_working_bm);
 			OCPNRegion chart_get_all_region(wxRect(0, 0, svp.pix_width, svp.pix_height));
+
+			printf("DrawCanvasData quilt 6\n");
 			m_pQuilt->RenderQuiltRegionViewOnDCNoText(temp_dc, svp, chart_get_all_region, HasLayer(vnLayers, LAYER_DEPTHS), HasLayer(vnLayers, LAYER_LIGHTS), HasLayer(vnLayers, LAYER_BLLABELS), HasLayer(vnLayers, LAYER_LDESCR), HasLayer(vnLayers, LAYER_AINFO), HasLayer(vnLayers, LAYER_SLVIS));
 		}
 	} else {
 		if (!m_singleChart) {
 			return;
 		}
-
+		printf("DrawCanvasData 1-1.\n");
 		if (!chart_get_region.IsEmpty()) {
 			m_singleChart->RenderRegionViewOnDC(temp_dc, svp, chart_get_region);
 		}
 	}
+
+	printf("DrawCanvasData 2.\n");
 
 	if (temp_dc.IsOk()) {  //process background except the ENC data's region (draw water and rotate)
 		OCPNRegion chartValidRegion;
@@ -5061,6 +5072,7 @@ void ChartCanvas::DrawCanvasData(LLBBox &llbBox, int nWidth, int nHeight, std::v
 		}
 	}
 
+	printf("DrawCanvasData 3.\n");
 	wxMemoryDC* pChartDC = &temp_dc;
 	wxMemoryDC rotd_dc;
 
@@ -5125,7 +5137,7 @@ void ChartCanvas::DrawCanvasData(LLBBox &llbBox, int nWidth, int nHeight, std::v
 	}
 
 	wxPoint offset = m_roffset;
-
+	printf("DrawCanvasData 4.\n");
 	//        Save the PixelCache viewpoint for next time
 	m_cache_vp = VPoint;
 
@@ -5148,7 +5160,7 @@ void ChartCanvas::DrawCanvasData(LLBBox &llbBox, int nWidth, int nHeight, std::v
 			rect.x - offset.x, rect.y - offset.y);
 		upd++;
 	}
-  
+	printf("DrawCanvasData 5.\n");
 	// If multi-canvas, indicate which canvas has keyboard focus
 	// by drawing a simple blue bar at the top.
 	if (g_canvasConfig != 0) {  // multi-canvas?
@@ -5163,7 +5175,7 @@ void ChartCanvas::DrawCanvasData(LLBBox &llbBox, int nWidth, int nHeight, std::v
 			mscratch_dc.DrawRectangle(activeRect);
 		}
 	}
-
+	printf("DrawCanvasData 6.\n");
 	// Any MBtiles?
 	std::vector<int> stackIndexArray = m_pQuilt->GetExtendedStackIndexArray();
 	unsigned int im = stackIndexArray.size();
@@ -5194,7 +5206,7 @@ void ChartCanvas::DrawCanvasData(LLBBox &llbBox, int nWidth, int nHeight, std::v
 	}
 	
 	RenderAlertMessage(mscratch_dc, GetVP());
-
+	printf("DrawCanvasData 7.\n");
 	// quiting?
 	if (g_bquiting) {
 #ifdef ocpnUSE_DIBSECTION
@@ -5277,7 +5289,7 @@ void ChartCanvas::DrawCanvasData(LLBBox &llbBox, int nWidth, int nHeight, std::v
 			}
 		}
 	}
-	
+	printf("DrawCanvasData 8.\n");
 	LLBBox llbViewPortBox = VPoint.GetBBox();
 	double dVPMinLat = llbViewPortBox.GetMinLat();
 	double dVPMaxLat = llbViewPortBox.GetMaxLat();

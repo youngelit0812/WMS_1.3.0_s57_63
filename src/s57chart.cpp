@@ -1993,6 +1993,7 @@ bool s57chart::DoRenderViewOnDC(wxMemoryDC &dc, const ViewPort &VPoint, RenderTy
   double easting_lr, northing_lr;
   double prev_easting_ul = 0., prev_northing_ul = 0.;
 
+  printf("s57chart: DoRenderViewOnDC\n");
   if (ps52plib->GetPLIBColorScheme() != m_lastColorScheme) bReallyNew = true;
   m_lastColorScheme = ps52plib->GetPLIBColorScheme();
 
@@ -2331,35 +2332,40 @@ bool s57chart::DCRenderLPB(wxMemoryDC &dcinput, const ViewPort &vp, wxRect *rect
       top = razRules[i][4];  // Area Symbolized Boundaries
     else
       top = razRules[i][3];  // Area Plain Boundaries
-    while (top != NULL) {
-      crnt = top;
-      top = top->next;  // next object
-      crnt->sm_transform_parms = &vp_transform;
-      ps52plib->RenderObjectToDC(&dcinput, crnt, bCSShowFlag, bLHShowFlag, bBUOYShowFlag, bLDESCRShowFlag, bAIShowFlag, bSlvisShowFlag);
-    }
 
-    top = razRules[i][2];  // LINES
-    while (top != NULL) {
-      crnt = top;
-      top = top->next;
-      crnt->sm_transform_parms = &vp_transform;
-      ps52plib->RenderObjectToDC(&dcinput, crnt, bCSShowFlag, bLHShowFlag, bBUOYShowFlag, bLDESCRShowFlag, bAIShowFlag, bSlvisShowFlag);
-    }
+	try {
+		while (top != NULL) {
+			crnt = top;
+			top = top->next;  // next object
+			crnt->sm_transform_parms = &vp_transform;
+			ps52plib->RenderObjectToDC(&dcinput, crnt, bCSShowFlag, bLHShowFlag, bBUOYShowFlag, bLDESCRShowFlag, bAIShowFlag, bSlvisShowFlag);
+		}
 
-    if (ps52plib->m_nSymbolStyle == SIMPLIFIED)
-      top = razRules[i][0];  // SIMPLIFIED Points
-    else
-      top = razRules[i][1];  // Paper Chart Points Points
+		top = razRules[i][2];  // LINES
+		while (top != NULL) {
+			crnt = top;
+			top = top->next;
+			crnt->sm_transform_parms = &vp_transform;
+			ps52plib->RenderObjectToDC(&dcinput, crnt, bCSShowFlag, bLHShowFlag, bBUOYShowFlag, bLDESCRShowFlag, bAIShowFlag, bSlvisShowFlag);
+		}
 
-    while (top != NULL) {
-      crnt = top;
-      top = top->next;
-      crnt->sm_transform_parms = &vp_transform;
-      ps52plib->RenderObjectToDC(&dcinput, crnt, bCSShowFlag, bLHShowFlag, bBUOYShowFlag, bLDESCRShowFlag, bAIShowFlag, bSlvisShowFlag);
-    }
+		if (ps52plib->m_nSymbolStyle == SIMPLIFIED)
+			top = razRules[i][0];  // SIMPLIFIED Points
+		else
+			top = razRules[i][1];  // Paper Chart Points Points
 
-    //      Destroy Clipper
-    if (pdcc) delete pdcc;
+		while (top != NULL) {
+			crnt = top;
+			top = top->next;
+			crnt->sm_transform_parms = &vp_transform;
+			ps52plib->RenderObjectToDC(&dcinput, crnt, bCSShowFlag, bLHShowFlag, bBUOYShowFlag, bLDESCRShowFlag, bAIShowFlag, bSlvisShowFlag);
+		}
+
+		//      Destroy Clipper
+		if (pdcc) delete pdcc;
+	}catch (std::exception& ex) {		
+		continue;
+	}
   }
 
   /*

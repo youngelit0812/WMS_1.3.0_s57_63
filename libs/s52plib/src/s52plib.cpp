@@ -2355,6 +2355,7 @@ bool s52plib::TextRenderCheck(ObjRazRules *rzRules) {
 
 int s52plib::RenderT_All(ObjRazRules *rzRules, Rules *rules,
                          bool bTX) {
+  // printf("s52plib : RnederT_All 1\n");
   if (!TextRenderCheck(rzRules)) return 0;
 
   S52_TextC *text = NULL;
@@ -2548,6 +2549,7 @@ bool s52plib::RenderHPGL(ObjRazRules *rzRules, Rule *prule, wxPoint &r, float ro
 
   float xscale = 1.0;
 
+  // printf("s52plib: RenderHPGL 1\n");
   if ((!strncmp(rzRules->obj->FeatureName, "TSSLPT", 6)) ||
       (!strncmp(rzRules->obj->FeatureName, "DWRTPT", 6)) ||
       (!strncmp(rzRules->obj->FeatureName, "TWRTPT", 6)) ||
@@ -2567,7 +2569,7 @@ bool s52plib::RenderHPGL(ObjRazRules *rzRules, Rule *prule, wxPoint &r, float ro
   }
 
   xscale *= uScale;
-
+  //printf("s52plib: RenderHPGL 2\n");
   //  Special case for GEO_AREA objects with centred symbols
   if (rzRules->obj->Primitive_type == GEO_AREA) {
     wxPoint r;
@@ -2588,6 +2590,7 @@ bool s52plib::RenderHPGL(ObjRazRules *rzRules, Rule *prule, wxPoint &r, float ro
   }
 
   double render_angle = rot_angle;
+  // printf("s52plib: RenderHPGL 3\n");
 
   //  Very special case for ATON flare lights at 135 degrees, the standard
   //  render angle. We don't want them to rotate with the viewport.
@@ -2619,8 +2622,9 @@ bool s52plib::RenderHPGL(ObjRazRules *rzRules, Rule *prule, wxPoint &r, float ro
   wxPoint r0((int)(pivot_x / fsf), (int)(pivot_y / fsf));
 
   HPGL->SetVP(&vp_plib);
-
+  // printf("s52plib: HPGL 1\n");
   if (!m_pdc) {  // OpenGL Mode, do a direct render
+    // printf("s52plib: HPGL 2\n");
     HPGL->SetTargetOpenGl();
     HPGL->Render(str, col, r, pivot, origin, xscale, render_angle, true);
 
@@ -2650,23 +2654,24 @@ bool s52plib::RenderHPGL(ObjRazRules *rzRules, Rule *prule, wxPoint &r, float ro
     pbm->UseAlpha();
 #endif
 #endif
+    // printf("s52plib: HPGL 3\n");
     wxMemoryDC mdc(*pbm);
     if (!mdc.IsOk()) {
-      wxString msg;
-      msg.Printf(_T("RenderHPGL: width %d  height %d"), width, height);
-      wxLogMessage(msg);
+      printf("s52plib : RenderHPGL: width:%d, height:%d\n", width, height);
       return false;
     }
 
 #if wxUSE_GRAPHICS_CONTEXT
     wxGCDC gdc(mdc);
-    HPGL->SetTargetGCDC(&gdc);
+     printf("s52plib: HPGL 3-0-1\n"); 
+   HPGL->SetTargetGCDC(&gdc);
 #else
     wxMemoryDC &gdc(mdc);
+  //  printf("s52plib: HPGL 3-0-2\n");
     HPGL->SetTargetDC(&gdc);
 #endif
     HPGL->Render(str, col, r0, pivot, origin, xscale, (double)rot_angle, true);
-
+    // printf("s52plib:HPGL3-1\n");
     int bm_width = (gdc.MaxX() - gdc.MinX()) + 4;
     int bm_height = (gdc.MaxY() - gdc.MinY()) + 4;
     int bm_orgx = wxMax(0, gdc.MinX() - 2);
@@ -2698,6 +2703,7 @@ bool s52plib::RenderHPGL(ObjRazRules *rzRules, Rule *prule, wxPoint &r, float ro
 #else
     //  We can use the bitmap already rendered
     //  Get smallest containing bitmap
+    // printf("s52plib:HPGL3-2\n");
     wxBitmap *sbm = new wxBitmap(
         pbm->GetSubBitmap(wxRect(bm_orgx, bm_orgy, bm_width, bm_height)));
 
@@ -2725,7 +2731,7 @@ bool s52plib::RenderHPGL(ObjRazRules *rzRules, Rule *prule, wxPoint &r, float ro
                               &latmax, &lonmax);
     LLBBox symbox;
     symbox.Set(latmin, lonmin, latmax, lonmax);
-
+    // printf("s52plib: HPGL 3-3\n");
     rzRules->obj->BBObj.Expand(symbox);
   }
 
@@ -2799,6 +2805,7 @@ bool s52plib::RenderRasterSymbol(ObjRazRules *rzRules, Rule *prule, wxPoint &r,
 
   scale_factor *= m_ChartScaleFactorExp;
 
+  // printf("s52plib: RenderRasterSymbol 1\n");
     // Correct scale factor for symbolized soundings,
     //  as sometimes found in objects OBSTRN, WRECKS, UWTROC
   if (!strncmp(prule->name.SYNM, "SOUND", 5)) {
@@ -3247,6 +3254,7 @@ int s52plib::RenderSY(ObjRazRules *rzRules, Rules *rules, bool bCSFlag, bool bLH
     }
   }*/
 
+  // printf("s52plib: RenderSY 1\n");
   if (rules->razRule != NULL) {
     if (rules->INSTstr[8] == ',')  // supplementary parameter assumed to be angle, seen in LIGHTSXX
     {
@@ -3813,6 +3821,7 @@ int s52plib::RenderGLLS(ObjRazRules *rzRules, Rules *rules) {
 // Line Simple Style
 int s52plib::RenderLS(ObjRazRules *rzRules, Rules *rules) {
   // catch legacy PlugIns (e.g.s63_pi)
+  // printf("s52plib : RnederLS 1\n");
   if (rzRules->obj->m_n_lsindex && !rzRules->obj->m_ls_list)
     return RenderLSLegacy(rzRules, rules);
 
@@ -4603,6 +4612,7 @@ int s52plib::RenderLC(ObjRazRules *rzRules, Rules *rules) {
     //return 0;
 
   // catch cm93 and legacy PlugIns (e.g.s63_pi)
+  // printf("s52plib : RenderLC 1\n");
   if (rzRules->obj->m_n_lsindex && !rzRules->obj->m_ls_list)
     return RenderLCLegacy(rzRules, rules);
 
@@ -5255,8 +5265,10 @@ void s52plib::draw_lc_poly(wxDC *pdc, wxColor &color, int width, wxPoint *ptp,
   int x0, y0, x1, y1;
 
   if (pdc) {
-    wxPen *pthispen =
-        wxThePenList->FindOrCreatePen(color, width, wxPENSTYLE_SOLID);
+    wxPen *pthispen = 0;
+    if (!wxThePenList) pthispen = new wxPen(color, width, wxPENSTYLE_SOLID);
+    else pthispen = wxThePenList->FindOrCreatePen(color, width, wxPENSTYLE_SOLID);
+
     m_pdc->SetPen(*pthispen);
 
     int start_seg = 0;
@@ -5522,6 +5534,7 @@ void s52plib::draw_lc_poly(wxDC *pdc, wxColor &color, int width, wxPoint *ptp,
 int s52plib::RenderMPS(ObjRazRules *rzRules, Rules *rules) {
   if (!m_bShowSoundg) return 0;
 
+  // printf("s52plib : RnederMPS 1\n");
   if (m_bUseSCAMIN) {
     if (vp_plib.chart_scale > rzRules->obj->Scamin) return 0;
   }
@@ -5956,6 +5969,7 @@ int s52plib::RenderCARC_GLSL(ObjRazRules *rzRules, Rules *rules) {
 
 int s52plib::RenderCARC_VBO(ObjRazRules *rzRules, Rules *rules) {
 
+  // printf("s52plib : RnederCARC_VBO 1\n");
   char *str = (char *)rules->INSTstr;
   //    extract the parameters from the string
   //    And creating a unique string hash as we go
@@ -6132,8 +6146,9 @@ int s52plib::RenderCARC_VBO(ObjRazRules *rzRules, Rules *rules) {
       {
         mdc.ResetBoundingBox();
 
-        wxPen *pblockpen =
-            wxThePenList->FindOrCreatePen(*wxBLACK, 10, wxPENSTYLE_SOLID);
+        wxPen *pblockpen = 0;
+        if (wxThePenList) pblockpen = wxThePenList->FindOrCreatePen(*wxBLACK, 10, wxPENSTYLE_SOLID);
+        else pblockpen = new wxPen(*wxBLACK, 10, wxPENSTYLE_SOLID);
         mdc.SetPen(*pblockpen);
 
         float start_angle, end_angle;
@@ -6184,11 +6199,16 @@ int s52plib::RenderCARC_VBO(ObjRazRules *rzRules, Rules *rules) {
       //    Draw the outer border
       wxColour color = getwxColour(outline_color);
 
-      wxPen *pthispen = wxThePenList->FindOrCreatePen(
-          color, outline_width * scale_factor, wxPENSTYLE_SOLID);
+      wxPen *pthispen = 0;
+      if (wxThePenList) pthispen = wxThePenList->FindOrCreatePen(color, outline_width * scale_factor, wxPENSTYLE_SOLID);
+      else pthispen = new wxPen(color, outline_width * scale_factor, wxPENSTYLE_SOLID);
+
       mdc.SetPen(*pthispen);
-      wxBrush *pthisbrush =
-          wxTheBrushList->FindOrCreateBrush(color, wxBRUSHSTYLE_TRANSPARENT);
+
+      wxBrush *pthisbrush = 0;
+      if (wxTheBrushList) pthisbrush = wxTheBrushList->FindOrCreateBrush(color, wxBRUSHSTYLE_TRANSPARENT);
+      else pthisbrush = new wxBrush(color, wxBRUSHSTYLE_TRANSPARENT);
+
       mdc.SetBrush(*pthisbrush);
 
       mdc.DrawEllipticArc(width / 2 - rad, height / 2 - rad, rad * 2, rad * 2,
@@ -6199,8 +6219,8 @@ int s52plib::RenderCARC_VBO(ObjRazRules *rzRules, Rules *rules) {
 
         if (!colorb.IsOk()) colorb = getwxColour(_T("CHMGD"));
 
-        pthispen = wxThePenList->FindOrCreatePen(
-            colorb, arc_width * scale_factor, wxPENSTYLE_SOLID);
+        if (wxThePenList) pthispen = wxThePenList->FindOrCreatePen(colorb, arc_width * scale_factor, wxPENSTYLE_SOLID);
+        else pthispen = new wxPen(colorb, arc_width * scale_factor, wxPENSTYLE_SOLID);
         mdc.SetPen(*pthispen);
 
         mdc.DrawEllipticArc(width / 2 - rad, height / 2 - rad, rad * 2, rad * 2,
@@ -6405,13 +6425,14 @@ int s52plib::DoRenderObject(wxDC *pdcin, ObjRazRules *rzRules, bool bCSShowFlag,
         break;  // Circular Arc, 2 colors
 
       case RUL_CND_SY: {
+        // printf("s52plib : Render try to RUL_CND_SY 1\n");
         if (!rzRules->obj->bCS_Added) {
           rzRules->obj->CSrules = NULL;
           GetAndAddCSRules(rzRules, rules);
           if (strncmp(rzRules->obj->FeatureName, "SOUNDG", 6))
             rzRules->obj->bCS_Added = 1;  // mark the object
         }
-
+        // printf("s52plib : Render try to RUL_CND_SY 2\n");
         Rules *rules_last = rules;
         rules = rzRules->obj->CSrules;
 
@@ -10405,15 +10426,24 @@ void RenderFromHPGL::SetPen() {
       wxMax(1.0, floor(plib->GetPPMM() /
                        5.0));  // 0.2 mm nominal, but not less than 1 pixel
   int pen_width_mod = floor(penWidth * nominal_line_width_pix);
+	printf("SetPen 1\n");
+  if (!wxThePenList) {
+    pen = new wxPen(penColor, pen_width_mod, wxPENSTYLE_SOLID);
+   } else {
+    pen = wxThePenList->FindOrCreatePen(penColor, pen_width_mod, wxPENSTYLE_SOLID);
+  }
 
-  pen =
-      wxThePenList->FindOrCreatePen(penColor, pen_width_mod, wxPENSTYLE_SOLID);
-  brush = wxTheBrushList->FindOrCreateBrush(penColor, wxBRUSHSTYLE_SOLID);
+  if (!wxTheBrushList) {
+     brush=new wxBrush(penColor, wxBRUSHSTYLE_SOLID);   
+   }else{
+     brush = wxTheBrushList->FindOrCreateBrush(penColor, wxBRUSHSTYLE_SOLID);
+   }
 
   if (renderToDC) {
     targetDC->SetPen(*pen);
     targetDC->SetBrush(*brush);
   }
+	printf("SetPen 4\n");
 #ifdef ocpnUSE_GL
   if (renderToOpenGl) {
     if (plib->GetGLPolygonSmoothing()) glEnable(GL_POLYGON_SMOOTH);
@@ -10441,10 +10471,16 @@ void RenderFromHPGL::SetPen() {
 #endif
 #if wxUSE_GRAPHICS_CONTEXT
   if (renderToGCDC) {
-    pen = wxThePenList->FindOrCreatePen(penColor, penWidth, wxPENSTYLE_SOLID);
-    brush = wxTheBrushList->FindOrCreateBrush(penColor, wxBRUSHSTYLE_SOLID);
+	printf("Set Pen 6\n");
+    if (wxThePenList) pen = wxThePenList->FindOrCreatePen(penColor, penWidth, wxPENSTYLE_SOLID);
+    else pen = new wxPen(penColor, penWidth, wxPENSTYLE_SOLID);
+
+    if (wxTheBrushList) brush = wxTheBrushList->FindOrCreateBrush(penColor, wxBRUSHSTYLE_SOLID);
+    else brush = new wxBrush(penColor, wxBRUSHSTYLE_SOLID);
+
     targetGCDC->SetPen(*pen);
     targetGCDC->SetBrush(*brush);
+	printf("SetPen 7\n");
   }
 #endif
 }
@@ -10616,10 +10652,12 @@ void RenderFromHPGL::Polygon() {
   if (renderToOpenGl) {
     penColor.Set(penColor.Red(), penColor.Green(), penColor.Blue(),
                  transparency);
-    pen = wxThePenList->FindOrCreatePen(penColor, penWidth, wxPENSTYLE_SOLID);
-    brush = wxTheBrushList->FindOrCreateBrush(penColor, wxBRUSHSTYLE_SOLID);
-    DrawPolygon(noPoints, polygon, 0, 0, 1.0, 0);
+    if (wxThePenList) pen = wxThePenList->FindOrCreatePen(penColor, penWidth, wxPENSTYLE_SOLID);
+    else  pen = new wxPen(penColor, penWidth, wxPENSTYLE_SOLID);
 
+    if (wxTheBrushList) brush = wxTheBrushList->FindOrCreateBrush(penColor, wxBRUSHSTYLE_SOLID);
+    else brush = new wxBrush(penColor, wxBRUSHSTYLE_SOLID);
+    DrawPolygon(noPoints, polygon, 0, 0, 1.0, 0);
   }
 #endif  // OpenGL
 
@@ -10668,6 +10706,7 @@ bool RenderFromHPGL::Render(char *str, char *col, wxPoint &r, wxPoint &pivot,
     command = command.Left(2);
 
     if (command == _T("SP")) {
+      printf("Render :SP\n");
       S52color *color =
           plib->getColor(findColorNameInRef(arguments.GetChar(0), col));
       penColor = wxColor(color->R, color->G, color->B);
@@ -10675,10 +10714,12 @@ bool RenderFromHPGL::Render(char *str, char *col, wxPoint &r, wxPoint &pivot,
       continue;
     }
     if (command == _T("SW")) {
+   	printf("Render :SW\n");
       arguments.ToLong(&penWidth);
       continue;
     }
     if (command == _T("ST")) {
+	printf("Render:ST\n");
       long transIndex;
       arguments.ToLong(&transIndex);
       transparency = (4 - transIndex) * 64;
@@ -10687,9 +10728,13 @@ bool RenderFromHPGL::Render(char *str, char *col, wxPoint &r, wxPoint &pivot,
       continue;
     }
     if (command == _T("PU")) {
+	printf("Render:PU\n");
       SetPen();
+	printf("Render:PU 1\n");
       lineStart = ParsePoint(arguments);
+	printf("Render:PU 2\n");
       RotatePoint(lineStart, origin, rot_angle);
+	printf("Render:PU 3\n");
       lineStart -= pivot;
       lineStart.x /= scaleFactor;
       lineStart.y /= scaleFactor;
@@ -10697,6 +10742,7 @@ bool RenderFromHPGL::Render(char *str, char *col, wxPoint &r, wxPoint &pivot,
       continue;
     }
     if (command == _T("PD")) {
+	printf("Render:PD\n");
       if (arguments.Length() == 0) {
         lineEnd = lineStart;
         lineEnd.x++;
@@ -10714,12 +10760,14 @@ bool RenderFromHPGL::Render(char *str, char *col, wxPoint &r, wxPoint &pivot,
     }
     if (command == _T("CI")) {
       long radius;
+	printf("Render:CI\n");
       arguments.ToLong(&radius);
       radius = (int)radius / scaleFactor;
       Circle(lineStart, radius);
       continue;
     }
     if (command == _T("PM")) {
+	printf("Render PM\n");
       noPoints = 1;
       polygon[0] = lineStart;
 
@@ -10730,15 +10778,17 @@ bool RenderFromHPGL::Render(char *str, char *col, wxPoint &r, wxPoint &pivot,
           command = command.Left(2);
 
           if (command == _T("AA")) {
-            wxLogWarning(_T("RenderHPGL: AA instruction not implemented."));
+            printf("RenderHPGL: PM-AA instruction not implemented.\n");
           }
           if (command == _T("CI")) {
             long radius;
+		printf("Render:HP-CI\n");
             arguments.ToLong(&radius);
             radius = (int)radius / scaleFactor;
             Circle(lineStart, radius, HPGL_FILLED);
           }
           if (command == _T("PD")) {
+		printf("Render:HP-PD\n");
             wxStringTokenizer points(arguments, _T(","));
             while (points.HasMoreTokens()) {
               long x, y;
@@ -10758,6 +10808,7 @@ bool RenderFromHPGL::Render(char *str, char *col, wxPoint &r, wxPoint &pivot,
       continue;
     }
     if (command == _T("FP")) {
+	printf("Render:FP\n");
       SetPen();
       Polygon();
       continue;
