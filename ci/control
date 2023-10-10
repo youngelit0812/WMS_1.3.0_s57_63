@@ -1,4 +1,4 @@
-Source: opencpn
+Source: wmsserver
 Build-Depends: debhelper (>= 9),
  cmake3 | cmake (>> 3.5.0),
  libarchive-dev,

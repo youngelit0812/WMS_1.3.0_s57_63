@@ -2355,7 +2355,7 @@ bool s52plib::TextRenderCheck(ObjRazRules *rzRules) {
 
 int s52plib::RenderT_All(ObjRazRules *rzRules, Rules *rules,
                          bool bTX) {
-  // printf("s52plib : RnederT_All 1\n");
+  printf("s52plib : RnederT_All 1\n");
   if (!TextRenderCheck(rzRules)) return 0;
 
   S52_TextC *text = NULL;
@@ -2549,7 +2549,7 @@ bool s52plib::RenderHPGL(ObjRazRules *rzRules, Rule *prule, wxPoint &r, float ro
 
   float xscale = 1.0;
 
-  // printf("s52plib: RenderHPGL 1\n");
+  printf("s52plib: RenderHPGL 1\n");
   if ((!strncmp(rzRules->obj->FeatureName, "TSSLPT", 6)) ||
       (!strncmp(rzRules->obj->FeatureName, "DWRTPT", 6)) ||
       (!strncmp(rzRules->obj->FeatureName, "TWRTPT", 6)) ||
@@ -2563,13 +2563,13 @@ bool s52plib::RenderHPGL(ObjRazRules *rzRules, Rule *prule, wxPoint &r, float ro
     xscale = wxMin(xscale, 1.0);
     xscale = wxMax(.4, xscale);
 
-    // printf("scaled length: %g   xscale: %g\n", scaled_length, xscale);
+    printf("scaled length: %g   xscale: %g\n", scaled_length, xscale);
 
     fsf *= xscale;
   }
 
   xscale *= uScale;
-  //printf("s52plib: RenderHPGL 2\n");
+  printf("s52plib: RenderHPGL 2\n");
   //  Special case for GEO_AREA objects with centred symbols
   if (rzRules->obj->Primitive_type == GEO_AREA) {
     wxPoint r;
@@ -2590,7 +2590,7 @@ bool s52plib::RenderHPGL(ObjRazRules *rzRules, Rule *prule, wxPoint &r, float ro
   }
 
   double render_angle = rot_angle;
-  // printf("s52plib: RenderHPGL 3\n");
+  printf("s52plib: RenderHPGL 3\n");
 
   //  Very special case for ATON flare lights at 135 degrees, the standard
   //  render angle. We don't want them to rotate with the viewport.
@@ -2622,9 +2622,9 @@ bool s52plib::RenderHPGL(ObjRazRules *rzRules, Rule *prule, wxPoint &r, float ro
   wxPoint r0((int)(pivot_x / fsf), (int)(pivot_y / fsf));
 
   HPGL->SetVP(&vp_plib);
-  // printf("s52plib: HPGL 1\n");
+  printf("s52plib: HPGL 1\n");
   if (!m_pdc) {  // OpenGL Mode, do a direct render
-    // printf("s52plib: HPGL 2\n");
+    printf("s52plib: HPGL 2\n");
     HPGL->SetTargetOpenGl();
     HPGL->Render(str, col, r, pivot, origin, xscale, render_angle, true);
 
@@ -2654,7 +2654,7 @@ bool s52plib::RenderHPGL(ObjRazRules *rzRules, Rule *prule, wxPoint &r, float ro
     pbm->UseAlpha();
 #endif
 #endif
-    // printf("s52plib: HPGL 3\n");
+    printf("s52plib: HPGL 3\n");
     wxMemoryDC mdc(*pbm);
     if (!mdc.IsOk()) {
       printf("s52plib : RenderHPGL: width:%d, height:%d\n", width, height);
@@ -2667,11 +2667,11 @@ bool s52plib::RenderHPGL(ObjRazRules *rzRules, Rule *prule, wxPoint &r, float ro
    HPGL->SetTargetGCDC(&gdc);
 #else
     wxMemoryDC &gdc(mdc);
-  //  printf("s52plib: HPGL 3-0-2\n");
+    printf("s52plib: HPGL 3-0-2\n");
     HPGL->SetTargetDC(&gdc);
 #endif
     HPGL->Render(str, col, r0, pivot, origin, xscale, (double)rot_angle, true);
-    // printf("s52plib:HPGL3-1\n");
+    printf("s52plib:HPGL3-1\n");
     int bm_width = (gdc.MaxX() - gdc.MinX()) + 4;
     int bm_height = (gdc.MaxY() - gdc.MinY()) + 4;
     int bm_orgx = wxMax(0, gdc.MinX() - 2);
@@ -2703,7 +2703,7 @@ bool s52plib::RenderHPGL(ObjRazRules *rzRules, Rule *prule, wxPoint &r, float ro
 #else
     //  We can use the bitmap already rendered
     //  Get smallest containing bitmap
-    // printf("s52plib:HPGL3-2\n");
+    printf("s52plib:HPGL3-2\n");
     wxBitmap *sbm = new wxBitmap(
         pbm->GetSubBitmap(wxRect(bm_orgx, bm_orgy, bm_width, bm_height)));
 
@@ -2731,7 +2731,7 @@ bool s52plib::RenderHPGL(ObjRazRules *rzRules, Rule *prule, wxPoint &r, float ro
                               &latmax, &lonmax);
     LLBBox symbox;
     symbox.Set(latmin, lonmin, latmax, lonmax);
-    // printf("s52plib: HPGL 3-3\n");
+    printf("s52plib: HPGL 3-3\n");
     rzRules->obj->BBObj.Expand(symbox);
   }
 
@@ -2805,7 +2805,7 @@ bool s52plib::RenderRasterSymbol(ObjRazRules *rzRules, Rule *prule, wxPoint &r,
 
   scale_factor *= m_ChartScaleFactorExp;
 
-  // printf("s52plib: RenderRasterSymbol 1\n");
+    printf("s52plib: RenderRasterSymbol 1\n");
     // Correct scale factor for symbolized soundings,
     //  as sometimes found in objects OBSTRN, WRECKS, UWTROC
   if (!strncmp(prule->name.SYNM, "SOUND", 5)) {
@@ -3254,7 +3254,7 @@ int s52plib::RenderSY(ObjRazRules *rzRules, Rules *rules, bool bCSFlag, bool bLH
     }
   }*/
 
-  // printf("s52plib: RenderSY 1\n");
+  printf("s52plib: RenderSY 1\n");
   if (rules->razRule != NULL) {
     if (rules->INSTstr[8] == ',')  // supplementary parameter assumed to be angle, seen in LIGHTSXX
     {
@@ -3821,7 +3821,7 @@ int s52plib::RenderGLLS(ObjRazRules *rzRules, Rules *rules) {
 // Line Simple Style
 int s52plib::RenderLS(ObjRazRules *rzRules, Rules *rules) {
   // catch legacy PlugIns (e.g.s63_pi)
-  // printf("s52plib : RnederLS 1\n");
+  printf("s52plib : RnederLS 1\n");
   if (rzRules->obj->m_n_lsindex && !rzRules->obj->m_ls_list)
     return RenderLSLegacy(rzRules, rules);
 
@@ -4612,7 +4612,7 @@ int s52plib::RenderLC(ObjRazRules *rzRules, Rules *rules) {
     //return 0;
 
   // catch cm93 and legacy PlugIns (e.g.s63_pi)
-  // printf("s52plib : RenderLC 1\n");
+  printf("s52plib : RenderLC 1\n");
   if (rzRules->obj->m_n_lsindex && !rzRules->obj->m_ls_list)
     return RenderLCLegacy(rzRules, rules);
 
@@ -4848,7 +4848,7 @@ int s52plib::reduceLOD(double LOD_meters, int nPoints, double *source,
     double y = *ppr++;
     int maskval = 1;
     if (maskIn) maskval = maskIn[ip];
-    // printf("LOD:  %10g  %10g\n", x, y);
+    printf("LOD:  %10g  %10g\n", x, y);
 
     for (unsigned int j = 0; j < index_keep.size(); j++) {
       if (index_keep[j] == ip) {
@@ -5534,7 +5534,7 @@ void s52plib::draw_lc_poly(wxDC *pdc, wxColor &color, int width, wxPoint *ptp,
 int s52plib::RenderMPS(ObjRazRules *rzRules, Rules *rules) {
   if (!m_bShowSoundg) return 0;
 
-  // printf("s52plib : RnederMPS 1\n");
+  printf("s52plib : RnederMPS 1\n");
   if (m_bUseSCAMIN) {
     if (vp_plib.chart_scale > rzRules->obj->Scamin) return 0;
   }
@@ -5968,8 +5968,7 @@ int s52plib::RenderCARC_GLSL(ObjRazRules *rzRules, Rules *rules) {
 }
 
 int s52plib::RenderCARC_VBO(ObjRazRules *rzRules, Rules *rules) {
-
-  // printf("s52plib : RnederCARC_VBO 1\n");
+  printf("s52plib : RnederCARC_VBO 1\n");
   char *str = (char *)rules->INSTstr;
   //    extract the parameters from the string
   //    And creating a unique string hash as we go
@@ -6425,14 +6424,14 @@ int s52plib::DoRenderObject(wxDC *pdcin, ObjRazRules *rzRules, bool bCSShowFlag,
         break;  // Circular Arc, 2 colors
 
       case RUL_CND_SY: {
-        // printf("s52plib : Render try to RUL_CND_SY 1\n");
+        printf("s52plib : Render try to RUL_CND_SY 1\n");
         if (!rzRules->obj->bCS_Added) {
           rzRules->obj->CSrules = NULL;
           GetAndAddCSRules(rzRules, rules);
           if (strncmp(rzRules->obj->FeatureName, "SOUNDG", 6))
             rzRules->obj->bCS_Added = 1;  // mark the object
         }
-        // printf("s52plib : Render try to RUL_CND_SY 2\n");
+        printf("s52plib : Render try to RUL_CND_SY 2\n");
         Rules *rules_last = rules;
         rules = rzRules->obj->CSrules;
 
@@ -7620,12 +7619,6 @@ inline int s52plib::dda_trap(wxPoint *segs, int lseg, int rseg, int ytop,
         int ix, ixm;
         ix = ledge[iyp];
         ixm = redge[iyp];
-
-        //                        if(debug) printf("iyp %d, ix %d, ixm %d\n",
-        //                        iyp, ix, ixm);
-        //                           int ix = ledge[iyp];
-        //                            if(ix != -1)                    // special
-        //                            clip case
         if (ledge[iyp] != -1) {
           int xoff = (ix - pb_spec->x) * 3;
 

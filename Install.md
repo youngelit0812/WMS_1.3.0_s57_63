@@ -39,7 +39,7 @@
   - cd build
   - cmake ..
   - make -j4
-* Execute the "build/WMSServer.exe".
+* Execute the "build/WMSServer".
   Wait until the message "Press Enter to stop the server or '!' to restart the server..." is displayed.
 
 ## Pre-Build Steps
