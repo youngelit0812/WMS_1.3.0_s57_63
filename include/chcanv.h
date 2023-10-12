@@ -133,24 +133,19 @@ public:
   bool IsPrimaryCanvas() { return (m_canvasIndex == 0); }
   double GetCanvasRangeMeters();
   void SetCanvasRangeMeters(double range);
-  void DrawGridInDC(wxMemoryDC *mscratch_dc, int, int, int, int, LLBBox&);
-
   void EnablePaint(bool b_enable);
   virtual bool SetCursor(const wxCursor &c);
-  virtual void Refresh(bool eraseBackground = true,
-                       const wxRect *rect = (const wxRect *)NULL);
+  virtual void Refresh(bool eraseBackground = true, const wxRect *rect = (const wxRect *)NULL);
   virtual void Update();
 
   void LostMouseCapture(wxMouseCaptureLostEvent &event);
-
   void SetDisplaySizeMM(double size);
   double GetDisplaySizeMM() { return m_display_size_mm; }
 
   bool SetVPScale(double sc, bool b_refresh = true);
   bool SetVPProjection(int projection);
   bool SetViewPoint(double lat, double lon);
-  bool SetViewPointByCorners(double latSW, double lonSW, double latNE,
-                             double lonNE);
+  bool SetViewPointByCorners(double latSW, double lonSW, double latNE, double lonNE);
   bool SetViewPoint(double lat, double lon, double scale_ppm, double skew,
                     double rotation, int projection = 0, bool b_adjust = true,
                     bool b_refresh = true);
@@ -162,10 +157,7 @@ public:
   bool CheckGroup(int igroup);
   void canvasRefreshGroupIndex(void);
   void canvasChartsRefresh(int dbi_hint);
-  void GenerateImageFile(wxMemoryDC*, int, int, std::string&, bool);
-  void GenerateImageFile(wxMemoryDC*, int, int, int, int, int, int, std::string&, bool);
-  void GenerateImageFile(wxImage&, std::string&, bool);
-  void GenerateImageFile(wxBitmap&, int, int, std::string&, bool);
+  void GenerateImageFile(wxMemoryDC*, std::string&, bool);
 
   void CheckGroupValid(bool showMessage = true, bool switchGroup0 = true);
 
@@ -462,6 +454,7 @@ public:
   }
   double GetDisplayScale(){ return m_displayScale; }
   void DrawCanvasData(LLBBox &llbBox, int, int, std::vector<int>&, std::string&, bool);
+  void ResizeChCanvasWH(int, int);
 
 private:
   int AdjustQuiltRefChart();
@@ -574,7 +567,7 @@ private:
   emboss_data *EmbossOverzoomIndicator(ocpnDC &dc);
   void SetOverzoomFont();
 
-  void DrawEmboss(ocpnDC &dc, emboss_data *pemboss);  
+  void DrawEmboss(ocpnDC &dc, emboss_data *pemboss);    
   //    Data
   int m_canvas_width, m_canvas_height;
 

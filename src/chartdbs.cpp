@@ -1750,13 +1750,7 @@ bool ChartDatabase::Check_CM93_Structure(wxString dir_name) {
   wxDir dirt(dir_name);
   wxString candidate;
 
-  if (dirt.IsOpened())
-	  wprintf(_T("Check_CM93_Structure: check_cm93 opened dir OK:  %s\n"), dir_name.wc_str());    
-  else {
-	  wprintf(_T("Check_CM93_Structure: check_cm93 NOT OPENED OK:  %s\n"), dir_name.wc_str());
-	  //wprintf(_T("Check_CM93_Structure: check_cm93 returns false. %s\n"), dir_name.wc_str());
-    return false;
-  }
+  if (!dirt.IsOpened())	return false;  
 
   bool b_maybe_found_cm93 = false;
   bool b_cont = dirt.GetFirst(&candidate);
@@ -2429,8 +2423,8 @@ ChartBase *ChartDatabase::GetChart(const wxChar *theFilePath,
 
 ChartTableEntry *ChartDatabase::CreateChartTableEntry(const wxString &filePath, wxString &utf8Path, ChartClassDescriptor &chart_desc) {
   wxString msg_fn(filePath);
-  msg_fn.Replace(_T("%"), _T("%%"));
-  wprintf(_T("CreateChartTableEntry :\n Loading chart data for%s\n"), msg_fn.wc_str());
+  /*msg_fn.Replace(_T("%"), _T("%%"));
+  wprintf(_T("CreateChartTableEntry :\n Loading chart data for%s\n"), msg_fn.wc_str());*/
 
   ChartBase *pch = GetChart(filePath, chart_desc);
   if (pch == NULL) {

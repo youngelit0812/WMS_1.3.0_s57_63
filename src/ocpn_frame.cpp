@@ -625,7 +625,6 @@ EVT_MENU(wxID_EXIT, MyFrame::OnExit)
 EVT_SIZE(MyFrame::OnSize)
 EVT_MAXIMIZE(MyFrame::OnMaximize)
 EVT_ERASE_BACKGROUND(MyFrame::OnEraseBackground)
-EVT_TIMER(RECAPTURE_TIMER, MyFrame::OnRecaptureTimer)
 EVT_COMMAND(wxID_ANY, BELLS_PLAYED_EVTYPE, MyFrame::OnBellsFinished)
 
 #ifdef wxHAS_POWER_EVENTS
@@ -720,11 +719,8 @@ MyFrame::MyFrame(wxFrame *frame, const wxString &title, const wxPoint &pos, cons
   g_sticky_projection = -1;
   m_BellsToPlay = 0;
 
-  m_resizeTimer.SetOwner(this, RESIZE_TIMER);
-  m_recaptureTimer.SetOwner(this, RECAPTURE_TIMER);
+  m_resizeTimer.SetOwner(this, RESIZE_TIMER);  
   m_tick_idx = 0;
-
-
 #ifdef __WXOSX__
   // Enable native fullscreen on macOS
   EnableFullScreenView();
@@ -1399,17 +1395,6 @@ void MyFrame::OnMove(wxMoveEvent &event) {
   g_nframewin_posy = GetPosition().y;
 }
 
-void MyFrame::ProcessCanvasResize(void) {
-  TriggerRecaptureTimer();
-}
-
-void MyFrame::TriggerRecaptureTimer() {
-  m_recaptureTimer.Start(
-      1000, wxTIMER_ONE_SHOT);  // One second seems enough, on average
-}
-
-void MyFrame::OnRecaptureTimer(wxTimerEvent &event) { Raise(); }
-
 void MyFrame::SetCanvasSizes(wxSize frameSize) {
   if (!g_canvasArray.GetCount()) return;  
 
@@ -1567,6 +1552,31 @@ void MyFrame::ODoSetSize(void) {
   options_lastWindowPos = wxPoint(0, 0);
 
   if (g_pauimgr) g_pauimgr->Update();
+}
+
+void MyFrame::ResizeFrameWH(int nWidth, int nHeight) {	
+	wxSize xSize(nWidth, nHeight);
+	SetCanvasSizes(xSize);
+
+	// .. for each canvas...
+	for (unsigned int i = 0; i < g_canvasArray.GetCount(); i++) {
+		ChartCanvas* cc = g_canvasArray.Item(i);
+		if (cc) cc->FormatPianoKeys();
+	}
+
+	//  If global toolbar is shown, reposition it...
+	//  Update the stored window size	
+	g_nframewin_x = nWidth;
+	g_nframewin_y = nHeight;
+
+	//  Reset the options dialog size logic
+	options_lastWindowSize = wxSize(0, 0);
+	options_lastWindowPos = wxPoint(0, 0);
+
+	for (unsigned int i = 0; i < g_canvasArray.GetCount(); i++) {
+		ChartCanvas* cc = g_canvasArray.Item(i);
+		if (cc) cc->ResizeChCanvasWH(nWidth, nHeight);
+	}
 }
 
 void MyFrame::ResizeManually(int nWidth, int nHeight) {	
@@ -1842,8 +1852,7 @@ void MyFrame::ToggleFullScreen() {
 
   UpdateAllToolbars(global_color_scheme);
   UpdateControlBar(GetPrimaryCanvas());
-  Layout();
-  TriggerRecaptureTimer();
+  Layout();  
 }
 
 void MyFrame::TrackOn(void) {

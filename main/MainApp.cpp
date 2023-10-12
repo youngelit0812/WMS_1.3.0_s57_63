@@ -923,17 +923,11 @@ MainApp::MainApp()
 	m_bDBCreateResult = false;
 #ifdef __linux__
 	// Handle e. g., wayland default display -- see #1166.
-
-	if (wxGetEnv("WAYLAND_DISPLAY", NULL))
-		setenv("GDK_BACKEND", "x11", 1);
-
+	if (wxGetEnv("WAYLAND_DISPLAY", NULL)) setenv("GDK_BACKEND", "x11", 1);
 #endif   // __linux__
 }
 
 bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart) {
-//#ifdef __linux__
-//	gtk_init();
-//#endif
 	if (!wxApp::OnInit()) return false;
 		g_unit_test_2 = 0;
 		g_bportable = true;
@@ -942,10 +936,6 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart) {
 		g_rebuild_gl_cache = false;
 		g_parse_all_enc = false;
 		g_unit_test_1 = 0;
-
-// #ifndef WIN32
-// 	g_bportable = true;
-// #endif
 
 	GpxDocument::SeedRandom();
 	last_own_ship_sog_cog_calc_ts = wxInvalidDateTime;
@@ -1018,7 +1008,6 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart) {
 		printf("Creating new Config_File: %s\n", (const char*)(g_Platform->GetConfigFileName().mb_str(wxConvUTF8)));
 
 		b_initial_load = true;
-
 		if (true != config_test_file_name.DirExists(config_test_file_name.GetPath())) {
 			if (!config_test_file_name.Mkdir(config_test_file_name.GetPath())) {
 				printf("Cannot create config file directory for %s\n", (const char *)(g_Platform->GetConfigFileName().mb_str(wxConvUTF8)));
@@ -1116,7 +1105,6 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart) {
 #endif
 
 	ChartListFileName = newPrivateFileName(g_Platform->GetPrivateDataDir(), "chartlist.dat", "CHRTLIST.DAT");
-
 	//      Establish location and name of AIS MMSI -> Target Name mapping
 	AISTargetNameFileName = newPrivateFileName(g_Platform->GetPrivateDataDir(), "mmsitoname.csv", "MMSINAME.CSV");
 
@@ -1137,12 +1125,8 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart) {
 
 	//  Check the global Tide/Current data source array
 	//  If empty, preset default (US + ROW) data sources
-	wxString default_tcdata0 =
-		(g_Platform->GetSharedDataDir() + _T("tcdata") +
-			wxFileName::GetPathSeparator() + _T("harmonics-dwf-20210110-free.tcd"));
-	wxString default_tcdata1 =
-		(g_Platform->GetSharedDataDir() + _T("tcdata") +
-			wxFileName::GetPathSeparator() + _T("HARMONICS_NO_US.IDX"));
+	wxString default_tcdata0 = (g_Platform->GetSharedDataDir() + _T("tcdata") + wxFileName::GetPathSeparator() + _T("harmonics-dwf-20210110-free.tcd"));
+	wxString default_tcdata1 = (g_Platform->GetSharedDataDir() + _T("tcdata") + wxFileName::GetPathSeparator() + _T("HARMONICS_NO_US.IDX"));
 
 	if (TideCurrentDataSet.empty()) {
 		TideCurrentDataSet.push_back(g_Platform->NormalizePath(default_tcdata0).ToStdString());
@@ -1201,8 +1185,7 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart) {
 
 	//  If the requested frame window does not intersect any installed monitor,
 	//  then default to simple primary monitor positioning.
-	if (NULL == MonitorFromRect(&frame_rect, MONITOR_DEFAULTTONULL))
-		position = wxPoint(10, 10);
+	if (NULL == MonitorFromRect(&frame_rect, MONITOR_DEFAULTTONULL)) position = wxPoint(10, 10);
 #endif
 
 #ifdef __WXOSX__
@@ -1237,16 +1220,12 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart) {
 	g_pauimgr->SetDockSizeConstraint(.9, .9);
 
 	g_grad_default = g_pauidockart->GetMetric(wxAUI_DOCKART_GRADIENT_TYPE);
-	g_border_color_default =
-		g_pauidockart->GetColour(wxAUI_DOCKART_BORDER_COLOUR);
-	g_border_size_default =
-		g_pauidockart->GetMetric(wxAUI_DOCKART_PANE_BORDER_SIZE);
+	g_border_color_default = g_pauidockart->GetColour(wxAUI_DOCKART_BORDER_COLOUR);
+	g_border_size_default = g_pauidockart->GetMetric(wxAUI_DOCKART_PANE_BORDER_SIZE);
 	g_sash_size_default = g_pauidockart->GetMetric(wxAUI_DOCKART_SASH_SIZE);
-	g_caption_color_default =
-		g_pauidockart->GetColour(wxAUI_DOCKART_INACTIVE_CAPTION_COLOUR);
+	g_caption_color_default = g_pauidockart->GetColour(wxAUI_DOCKART_INACTIVE_CAPTION_COLOUR);
 	g_sash_color_default = g_pauidockart->GetColour(wxAUI_DOCKART_SASH_COLOUR);
-	g_background_color_default =
-		g_pauidockart->GetColour(wxAUI_DOCKART_BACKGROUND_COLOUR);
+	g_background_color_default = g_pauidockart->GetColour(wxAUI_DOCKART_BACKGROUND_COLOUR);
 
 	g_pauimgr->SetManagedWindow(gFrame);
 	gFrame->CreateCanvasLayout();
@@ -1258,9 +1237,7 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart) {
 	pthumbwin = new ThumbWin(gFrame->GetPrimaryCanvas());
 
 	gFrame->ApplyGlobalSettings(false);  // done once on init with resize
-
 	gFrame->SetAndApplyColorScheme(global_color_scheme);
-
 	if (g_bframemax) gFrame->Maximize(true);
 
 	Yield();
@@ -1306,13 +1283,6 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart) {
 		g_GLOptions.m_bTextureCompressionCaching) {
 		gFrame->ReloadAllVP();  //  Get a nice chart background loaded
 
-		//      Turn off the toolbar as a clear signal that the system is busy right
-		//      now.
-		// Note: I commented this out because the toolbar never comes back for me
-		// and is unusable until I restart opencpn without generating the cache
-		//        if( g_MainToolbar )
-		//            g_MainToolbar->Hide();
-
 		if (g_glTextureManager) g_glTextureManager->BuildCompressedCache();
 	}
 #endif
@@ -1321,9 +1291,7 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart) {
 		gps_watchdog_timeout_ticks = (GPS_TIMEOUT_SECONDS * 1000) / TIMER_GFRAME_1;
 
 	sat_watchdog_timeout_ticks = gps_watchdog_timeout_ticks;
-
 	g_priSats = 99;
-
 	////  Most likely installations have no ownship heading information
 	g_bVAR_Rx = false;
 
@@ -1363,7 +1331,7 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart) {
 	gFrame->GetPrimaryCanvas()->Enable();
 	gFrame->GetPrimaryCanvas()->SetFocus();
 
-	printf("Initialize 4 \n");
+	//printf("Initialize 4 \n");
 	OCPNPlatform::Initialize_4();
 
 	wxMilliSleep(500);
@@ -1378,8 +1346,6 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart) {
 	g_config_version_string = vs;
 
 	pConfig->UpdateSettings();
-
-	printf("MainApp : pauiMGR update\n");
 	g_pauimgr->Update();	
 
 	printf("Wait for minutes to prepare... \n");
@@ -1415,7 +1381,7 @@ int MainApp::GetLayerIndex(std::string& sLayerCaption) {
 
 bool MainApp::UpdateFrameCanvas(std::string& sBBox, int nWidth, int nHeight, std::string& sLayers, std::string& sIMGFilePath, bool bPNGFlag)
 {
-	if (!gFrame || sBBox.empty() || sLayers.empty() || nWidth < 1 || nHeight < 1) return false;
+	if (!gFrame || sBBox.empty() || sLayers.empty() || nWidth < 1 || nWidth > 1800 || nHeight < 1 || nHeight > 900) return false;
 
 	std::vector<std::string> bbox_parts;
 	std::string delimiter = ",";
@@ -1454,22 +1420,11 @@ bool MainApp::UpdateFrameCanvas(std::string& sBBox, int nWidth, int nHeight, std
 	nLayerIndex = GetLayerIndex(sLayers);
 	if (nLayerIndex >= 0) vnLayers.push_back(nLayerIndex);
 
-	ChartCanvas* pCC = gFrame->GetPrimaryCanvas();
-	//pCC->SetSize(nWidth, nHeight);
+	gFrame->ResizeFrameWH(nWidth, nHeight);
+	ChartCanvas* pCC = gFrame->GetPrimaryCanvas();	
 	gFrame->CenterView(pCC, llbBox, nWidth, nHeight);
 	gFrame->DoChartUpdate();
 	gFrame->ChartsRefresh();
-
-	//gFrame->ResizeManually(nWidth, nHeight);
-	//adjust bbox with viewport's size
-	/*wxPoint xMin, xMax, xCenter;
-	pCC->GetCanvasPointPix(dMinLat, dMinLon, &xMin);
-	pCC->GetCanvasPointPix(dMaxLat, dMaxLon, &xMax);
-	pCC->GetCanvasPointPix((dMaxLat + dMinLat) / 2, (dMaxLon + dMinLon) / 2, &xCenter);
-
-	int nVWidth, nVHeight;
-	nVWidth = pCC->GetVP().pix_width;
-	nVHeight = pCC->GetVP().pix_height;*/
 
 	pCC->m_b_paint_enable = true;
 	pCC->DrawCanvasData(llbBox, nWidth, nHeight, vnLayers, sIMGFilePath, bPNGFlag);

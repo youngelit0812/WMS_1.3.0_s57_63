@@ -148,8 +148,7 @@ public:
   void OnMove(wxMoveEvent &event);
   void OnFrameTimer1(wxTimerEvent &event);
   bool DoChartUpdate(void);
-  void OnMemFootTimer(wxTimerEvent &event);
-  void OnRecaptureTimer(wxTimerEvent &event);
+  void OnMemFootTimer(wxTimerEvent &event);  
   void OnSENCEvtThread(OCPN_BUILDSENC_ThreadEvent &event);
   void OnBellsFinished(wxCommandEvent &event);
 
@@ -188,7 +187,6 @@ public:
 
   bool DropMarker(bool atOwnShip = true);
   
-  void TriggerRecaptureTimer();
   bool SetGlobalToolbarViz(bool viz);
 
   void MouseEvent(wxMouseEvent &event);
@@ -196,7 +194,7 @@ public:
 
   void JumpToPosition(ChartCanvas *cc, double lat, double lon, double scale);
 
-  void ProcessCanvasResize(void);
+  void ResizeFrameWH(int nWidth, int nHeight);
   void ApplyGlobalSettings(bool bnewtoolbar);
   void BuildMenuBar(void);  
   void RegisterGlobalMenuItems();
@@ -363,8 +361,7 @@ public:
   time_t m_last_track_rotation_ts;
   wxRect m_mainlast_tb_rect;
   wxTimer ToolbarAnimateTimer;
-  int m_nMasterToolCountShown;
-  wxTimer m_recaptureTimer;
+  int m_nMasterToolCountShown;  
   bool m_b_new_data;
 
   DECLARE_EVENT_TABLE()
