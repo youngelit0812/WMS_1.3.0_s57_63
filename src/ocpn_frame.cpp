@@ -5223,7 +5223,14 @@ void LoadS57() {
       ps52plib->SetPPMM(g_BasePlatform->GetDisplayDPmm());
       double dip_factor = g_BasePlatform->GetDisplayDIPMult(gFrame);
       ps52plib->SetDIPFactor(dip_factor);
-      ps52plib->SetContentScaleFactor(OCPN_GetDisplayContentScaleFactor());
+
+	  double dRv = 1.0;
+#if defined(__WXOSX__) || defined(__WXGTK3__)
+	  // Support scaled HDPI displays.
+	  if (gFrame) dRv = gFrame->GetContentScaleFactor();
+#endif
+
+      ps52plib->SetContentScaleFactor(dRv);
     }
 
     // preset S52 PLIB scale factors

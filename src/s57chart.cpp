@@ -1993,7 +1993,7 @@ bool s57chart::DoRenderViewOnDC(wxMemoryDC &dc, const ViewPort &VPoint, RenderTy
   double easting_lr, northing_lr;
   double prev_easting_ul = 0., prev_northing_ul = 0.;
 
-  printf("s57chart: DoRenderViewOnDC\n");
+  //printf("s57chart: DoRenderViewOnDC\n");
   if (ps52plib->GetPLIBColorScheme() != m_lastColorScheme) bReallyNew = true;
   m_lastColorScheme = ps52plib->GetPLIBColorScheme();
 
@@ -2320,13 +2320,10 @@ bool s57chart::DCRenderLPB(wxMemoryDC &dcinput, const ViewPort &vp, wxRect *rect
   ObjRazRules *crnt;
   ViewPort tvp = vp;  // undo const  TODO fix this in PLIB
 
+  //printf("s57chart: PRIO_NUM:%d\n", PRIO_NUM);
   for (i = 0; i < PRIO_NUM; ++i) {
     //      Set up a Clipper for Lines
-    wxDCClipper *pdcc = NULL;
-    //      if( rect ) {
-    //         wxRect nr = *rect;
-    //         pdcc = new wxDCClipper(dcinput, nr);
-    //      }
+    wxDCClipper *pdcc = NULL;    
 
     if (ps52plib->m_nBoundaryStyle == SYMBOLIZED_BOUNDARIES)
       top = razRules[i][4];  // Area Symbolized Boundaries
@@ -3068,7 +3065,7 @@ WX_DEFINE_ARRAY_PTR(float *, MyFloatPtrArray);
 
 //    Read the .000 ENC file and create required Chartbase data structures
 bool s57chart::CreateHeaderDataFromENC(void) {
-	printf("s57chart:CreateHeaderDataFromENC 1\n");
+	//printf("s57chart:CreateHeaderDataFromENC 1\n");
   if (!InitENCMinimal(m_TempFilePath)) {
     wxString msg(_T("   Cannot initialize ENC file "));
     msg.Append(m_TempFilePath);
@@ -3093,7 +3090,7 @@ bool s57chart::CreateHeaderDataFromENC(void) {
   std::vector<int> auxCntArray, noCovrCntArray;
 
   MyFloatPtrArray *pNoCovrPtrArray = new MyFloatPtrArray;
-  printf("s57chart:CreateHeaderDataFromENC 2\n");
+  //printf("s57chart:CreateHeaderDataFromENC 2\n");
   // Get the first M_COVR object
   pFeat = GetChartFirstM_COVR(catcov);
 
@@ -3999,6 +3996,7 @@ int s57chart::BuildSENCFile(const wxString &FullPath000,
 }
 
 int s57chart::BuildRAZFromSENCFile(const wxString &FullPath) {
+	//printf("s57chart: BuildRAZFSF obj Path:%s\n", (const char*)FullPath.mb_str(wxConvUTF8));
   int ret_val = 0;  // default is OK
 
   Osenc sencfile;
@@ -4080,7 +4078,7 @@ int s57chart::BuildRAZFromSENCFile(const wxString &FullPath) {
   VCs.clear();
 
   // Walk the vector of S57Objs, associating LUPS, instructions, etc...
-
+  //printf("s57chart: BuildRAZFSF obj size:%d\n", (int)Objects.size());
   for (unsigned int i = 0; i < Objects.size(); i++) {
     S57Obj *obj = Objects[i];
 

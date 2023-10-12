@@ -391,9 +391,9 @@ ChartBase *ChartDB::GetChart(const wxChar *theFilePath,
   }
 
   if (chartExt == wxT("000") || chartExt == wxT("S57")) {
-    printf("GetChart: LoadS57\n");
+    //printf("GetChart: LoadS57\n");
     LoadS57();
-    printf("GetChart: create new s57chart\n");
+    //printf("GetChart: create new s57chart\n");
     pch = new s57chart;
   } else {
 	  printf("GetChart: No ENC Format\n");    
@@ -965,20 +965,14 @@ CacheEntry *ChartDB::FindOldestDeleteCandidate(bool blog) {
   return pret;
 }
 
-ChartBase *ChartDB::OpenChartUsingCache(int dbindex, ChartInitFlag init_flag) {
-  if ((dbindex < 0) || (dbindex > GetChartTableEntries() - 1)) return NULL;
-
-  //      printf("Opening chart %d   lock: %d\n", dbindex, m_b_locked);
-
+ChartBase *ChartDB::OpenChartUsingCache(int dbindex, ChartInitFlag init_flag) {	
+  if ((dbindex < 0) || (dbindex > GetChartTableEntries() - 1)) return NULL;  
+  
   const ChartTableEntry &cte = GetChartTableEntry(dbindex);
   wxString ChartFullPath = cte.GetFullSystemPath();
   ChartTypeEnum chart_type = (ChartTypeEnum)cte.GetChartType();
   ChartFamilyEnum chart_family = (ChartFamilyEnum)cte.GetChartFamily();
-
-  wxString msg1;
-  msg1.Printf(_T("OpenChartUsingCache:  type %d  "), chart_type);
-  //      wxLogMessage(msg1 + ChartFullPath);
-
+  
   if (cte.GetLatMax() > 90.0)  // Chart has been disabled...
     return NULL;
 

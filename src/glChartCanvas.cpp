@@ -31,7 +31,7 @@
 #include <wx/utils.h>
 #include <wx/window.h>
 
-
+#include "ocpn_frame.h"
 #include "ais.h"
 #include "chartbase.h"
 #include "chartdb.h"
@@ -1390,7 +1390,13 @@ void glChartCanvas::GridDraw() {
     font.SetPointSize(font_size * m_displayScale);
     font.SetWeight(wxFONTWEIGHT_NORMAL);
 
-    m_gridfont.SetContentScaleFactor(OCPN_GetDisplayContentScaleFactor());
+	double dRv = 1.0;
+#if defined(__WXOSX__) || defined(__WXGTK3__)
+	// Support scaled HDPI displays.
+	if (gFrame) dRv = gFrame->GetContentScaleFactor();
+#endif
+
+    m_gridfont.SetContentScaleFactor(dRv);
     m_gridfont.Build(font, 1, dpi_factor);
   }
   m_gridfont.SetColor(GridColor);

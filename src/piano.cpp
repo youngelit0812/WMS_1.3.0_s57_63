@@ -254,9 +254,14 @@ void Piano::BuildGLTexture() {
   dc.SetBrush(tbackBrush);
   dc.DrawRectangle(0, 0, m_texw, m_texh);
 
+  double dScaler = 1.0;
+#ifdef __WXMSW__
+  if (gFrame) dScaler = (double)(gFrame->ToDIP(100)) / 100.;
+#endif
+
   // 0.5 mm nominal, but not less than 1 pixel
   double nominal_line_width_pix = floor(g_Platform->GetDisplayDPmm() / 2.0);
-  nominal_line_width_pix *= OCPN_GetWinDIPScaleFactor();
+  nominal_line_width_pix *= dScaler;
   nominal_line_width_pix = wxMax(1.0, nominal_line_width_pix);
 
   // draw the needed rectangles
@@ -683,8 +688,13 @@ bool Piano::MouseEvent(wxMouseEvent &event) {
   event.GetPosition(&x, &y);
 #ifdef __WXOSX__
   if (g_bopengl){
-    x *= OCPN_GetDisplayContentScaleFactor();
-    y *= OCPN_GetDisplayContentScaleFactor();
+	  double dRv = 1.0;
+#if defined(__WXOSX__) || defined(__WXGTK3__)
+	  // Support scaled HDPI displays.
+	  if (gFrame) dRv = gFrame->GetContentScaleFactor();
+#endif
+	  x *= dRv;
+	  y *= dRv;
   }
 #endif
 

@@ -707,7 +707,7 @@ void AddChartCacheFromDB(ChartDB* pChartDB) {
 				int mem_used;
 				GetMemoryStatus(0, &mem_used);
 
-				printf("AddChartCacheFromDB : cache size: %d, chart type: %d\n", (int)pChartCacheFromDB->GetCount(), chart_type);
+				//printf("AddChartCacheFromDB : cache size: %d, chart type: %d\n", (int)pChartCacheFromDB->GetCount(), chart_type);
 				if ((mem_used > g_memCacheLimit * 8 / 10) && (pChartCacheFromDB->GetCount() > 2)) {
 					wxString msg(_T("Removing oldest chart from cache: "));
 					while (1) {
@@ -943,9 +943,9 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart) {
 		g_parse_all_enc = false;
 		g_unit_test_1 = 0;
 
-#ifndef WIN32
-	g_bportable = true;
-#endif
+// #ifndef WIN32
+// 	g_bportable = true;
+// #endif
 
 	GpxDocument::SeedRandom();
 	last_own_ship_sog_cog_calc_ts = wxInvalidDateTime;
@@ -1379,6 +1379,7 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart) {
 
 	pConfig->UpdateSettings();
 
+	printf("MainApp : pauiMGR update\n");
 	g_pauimgr->Update();	
 
 	printf("Wait for minutes to prepare... \n");

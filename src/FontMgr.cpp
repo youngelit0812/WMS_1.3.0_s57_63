@@ -4,6 +4,7 @@
 #include <wx/tokenzr.h>
 
 #include "FontMgr.h"
+#include "ocpn_frame.h"
 #include "OCPNPlatform.h"
 #include "ocpn_plugin.h"
 
@@ -34,6 +35,7 @@ private:
   std::vector<font_cache_record> m_fontVector;
 };
 
+extern MyFrame *gFrame;
 extern wxString g_locale;
 
 wxString s_locale;
@@ -415,9 +417,14 @@ wxFont *OCPNwxFontList::FindOrCreateFont(int pointSize, wxFontFamily family,
   // font not found, create the new one
   // Support scaled HDPI displays automatically
 
+  double dRv = 1.0;
+#if defined(__WXOSX__) || defined(__WXGTK3__)
+  // Support scaled HDPI displays.
+  if (gFrame) dRv = gFrame->GetContentScaleFactor();
+#endif
+
   font = NULL;
-  wxFont fontTmp(OCPN_GetDisplayContentScaleFactor() * pointSize,
-                 family, style, weight, underline, facename, encoding);
+  wxFont fontTmp(dRv * pointSize, family, style, weight, underline, facename, encoding);
   if (fontTmp.IsOk()) {
     font = new wxFont(fontTmp);
     font_cache_record record;

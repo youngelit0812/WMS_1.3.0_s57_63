@@ -1593,6 +1593,7 @@ void Quilt::UnlockQuilt() {
 }
 
 bool Quilt::Compose(const ViewPort &vp_in) {
+	//printf("Quilt:Compose:viewport:lan:%.2f,lon:%.2f", vp_in.clat, vp_in.clon);
   if (!ChartData) return false;
 
   if (ChartData->IsBusy()) { // This prevent recursion on chart loads that Yeild()
@@ -2471,7 +2472,7 @@ bool Quilt::DoRenderQuiltRegionViewOnDC(wxMemoryDC &dc, ViewPort &vp, OCPNRegion
   OCPNRegion rendered_region;
 
   int nRenderableChartCnt = GetnCharts();
-  printf("Quilt: render chart cnt:%d", nRenderableChartCnt);
+  //printf("Quilt: render chart cnt:%d", nRenderableChartCnt);
   if (nRenderableChartCnt && !m_bbusy) {
     OCPNRegion screen_region = chart_region;
 
@@ -2522,7 +2523,7 @@ bool Quilt::DoRenderQuiltRegionViewOnDC(wxMemoryDC &dc, ViewPort &vp, OCPNRegion
           OCPNRegionIterator upd(get_screen_region);
           while (upd.HaveRects()) {
             wxRect rect = upd.GetRect();
-            dc.Blit(rect.x, rect.y, rect.width, rect.height, &tmp_dc, rect.x, rect.y, wxCOPY, true);
+			if (tmp_dc.IsOk()) dc.Blit(rect.x, rect.y, rect.width, rect.height, &tmp_dc, rect.x, rect.y, wxCOPY, true);
             upd.NextRect();
           }
 
@@ -2558,8 +2559,7 @@ bool Quilt::DoRenderQuiltRegionViewOnDC(wxMemoryDC &dc, ViewPort &vp, OCPNRegion
               OCPNRegionIterator upd(get_screen_region);
               while (upd.HaveRects()) {
                 wxRect rect = upd.GetRect();
-                dc.Blit(rect.x, rect.y, rect.width, rect.height, &tmp_dc,
-                        rect.x, rect.y, wxCOPY, true);
+                if (tmp_dc.IsOk()) dc.Blit(rect.x, rect.y, rect.width, rect.height, &tmp_dc, rect.x, rect.y, wxCOPY, true);
                 upd.NextRect();
               }
               tmp_dc.SelectObject(wxNullBitmap);
@@ -2820,9 +2820,9 @@ bool Quilt::DoRenderQuiltRegionViewOnDCTextOnly(wxMemoryDC &dc, ViewPort &vp,
       QuiltPatch *pqp = GetCurrentPatch();
       if (pqp->b_Valid) {
         s57chart *Chs57 = dynamic_cast<s57chart *>(chart);
-        if (Chs57) {
-          Chs57->RenderRegionViewOnDCTextOnly(dc, vp, chart_region);
-        }
+		if (Chs57) {
+			Chs57->RenderRegionViewOnDCTextOnly(dc, vp, chart_region);
+		}        
       }
 
       chart = GetNextSmallerScaleChart();

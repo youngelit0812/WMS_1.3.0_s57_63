@@ -1633,7 +1633,7 @@ int ChartDatabase::TraverseDirAndAddCharts(ChartDirInfo &dir_info, wxString &dir
     wxFileName fn_dir(dir_path, _T("stuff"));
     unsigned int dir_path_count = fn_dir.GetDirCount();
 
-    printf("TraverseDirAndAddCharts: Chart Scan....\n");
+    //printf("TraverseDirAndAddCharts: Chart Scan....\n");
 
     int nEntries = active_chartTable.GetCount();
 
@@ -1754,7 +1754,7 @@ bool ChartDatabase::Check_CM93_Structure(wxString dir_name) {
 	  wprintf(_T("Check_CM93_Structure: check_cm93 opened dir OK:  %s\n"), dir_name.wc_str());    
   else {
 	  wprintf(_T("Check_CM93_Structure: check_cm93 NOT OPENED OK:  %s\n"), dir_name.wc_str());
-	  wprintf(_T("Check_CM93_Structure: check_cm93 returns false. %s\n"), dir_name.wc_str());
+	  //wprintf(_T("Check_CM93_Structure: check_cm93 returns false. %s\n"), dir_name.wc_str());
     return false;
   }
 
@@ -1920,7 +1920,7 @@ one_file) find_unique = false;
 WX_DECLARE_STRING_HASH_MAP(int, ChartCollisionsHashMap);
 
 int ChartDatabase::SearchDirAndAddCharts(wxString &dir_name_base, ChartClassDescriptor &chart_desc) {
-	wprintf(_T("SearchDirAndAddCharts 1:\n Searching directory: %s for %s.\n"), dir_name_base.wc_str(), chart_desc.m_search_mask.wc_str());  
+	//wprintf(_T("SearchDirAndAddCharts 1:\n Searching directory: %s for %s.\n"), dir_name_base.wc_str(), chart_desc.m_search_mask.wc_str());  
 
   wxString dir_name = dir_name_base;
   
@@ -1985,7 +1985,7 @@ int ChartDatabase::SearchDirAndAddCharts(wxString &dir_name_base, ChartClassDesc
   }
 
   int nFile = FileList.GetCount();
-  printf("SearchDirAndAddCharts: chart file count :%d\n", nFile);
+  //printf("SearchDirAndAddCharts: chart file count :%d\n", nFile);
 
   if (!nFile) return false;
 
@@ -1996,7 +1996,7 @@ int ChartDatabase::SearchDirAndAddCharts(wxString &dir_name_base, ChartClassDesc
   //    match of each potential addition and bthis_dir_in_dB is false.
   bool bthis_dir_in_dB = IsChartDirUsed(dir_name);
 
-  printf("SearchDirAndAddCharts: WMS 1.3.0 Chart Add....\n");
+  //printf("SearchDirAndAddCharts: WMS 1.3.0 Chart Add....\n");
 
   // build a hash table based on filename (without directory prefix) of
   // the chart to fast to detect identical charts
@@ -2079,7 +2079,7 @@ int ChartDatabase::SearchDirAndAddCharts(wxString &dir_name_base, ChartClassDesc
       wxLogMessage(
           wxString::Format(_T("Loading chart data for %s"), msg_fn.c_str()));
     } else {
-		printf("SearchDirAndAddCharts 2: CreateChartTableEntry\n");
+		//printf("SearchDirAndAddCharts 2: CreateChartTableEntry\n");
       pnewChart = CreateChartTableEntry(full_name, utf8_path, chart_desc);
       if (!pnewChart) {
         bAddFinal = false;		    
@@ -2437,7 +2437,7 @@ ChartTableEntry *ChartDatabase::CreateChartTableEntry(const wxString &filePath, 
 	  wprintf(_T("CreateChartTableEntry :\n   ...creation failed for %s.\n"), msg_fn.wc_str());	  
     return NULL;
   }
-  printf("CreateChartTableEntry: Try to init chart.\n");
+  //printf("CreateChartTableEntry: Try to init chart.\n");
   InitReturn rc = pch->Init(filePath, HEADER_ONLY);  
   if (rc != INIT_OK) {
     delete pch;	  

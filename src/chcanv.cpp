@@ -3256,7 +3256,7 @@ bool ChartCanvas::SetViewPoint(double lat, double lon, double scale_ppm,
 
   bool bwasValid = VPoint.IsValid();
   VPoint.Validate();  // Mark this ViewPoint as OK
-
+  //printf("chcanv: SetViewPoint : screen width:%d, height:%d\n", VPoint.pix_width, VPoint.pix_height);
   //  Has the Viewport scale changed?  If so, invalidate the vp
   if (last_vp.view_scale_ppm != scale_ppm) {
     m_cache_vp.Invalidate();
@@ -3417,6 +3417,7 @@ bool ChartCanvas::SetViewPoint(double lat, double lon, double scale_ppm,
       }
 
       if (!g_bopengl) {
+		  //printf("chcanv : SetViewPoint : g_bOpenGL false\n");
         // Preset the VPoint projection type to match what the quilt projection
         // type will be
         int ref_db_index = m_pQuilt->GetRefChartdbIndex(), proj;
@@ -3424,7 +3425,7 @@ bool ChartCanvas::SetViewPoint(double lat, double lon, double scale_ppm,
         // Always keep the default Mercator projection if the reference chart is
         // not in the PatchList or the scale is too small for it to render.
 
-        bool renderable = true;
+        bool renderable = true; 
         ChartBase *referenceChart =
             ChartData->OpenChartFromDB(ref_db_index, FULL_INIT);
         if (referenceChart) {
@@ -4409,7 +4410,7 @@ void ChartCanvas::OnSize(wxSizeEvent &event) {
     m_glcc->OnSize(event);
   }
 #endif
-
+  //printf("s57chart : onSize : ReloadVP\n");
   FormatPianoKeys();
   //  Invalidate the whole window
   ReloadVP();
@@ -4852,11 +4853,11 @@ void ChartCanvas::DrawCanvasData(LLBBox &llbBox, int nWidth, int nHeight, std::v
 	pscratch_bm->Create(VPoint.pix_width, VPoint.pix_height, -1);
 	m_working_bm.Create(VPoint.pix_width, VPoint.pix_height, -1);
 
-	printf("cc : Draw Canvas manually 1\n");
+	//printf("cc : Draw Canvas manually 1\n");
 	if (!m_b_paint_enable) {
 		return;
 	}
-	printf("cc : Draw Canvas manually 2\n");
+	//printf("cc : Draw Canvas manually 2\n");
 	m_b_paint_enable = false;
 	//  If necessary, reconfigure the S52 PLIB
 	UpdateCanvasS52PLIBConfig();
@@ -4904,24 +4905,24 @@ void ChartCanvas::DrawCanvasData(LLBBox &llbBox, int nWidth, int nHeight, std::v
 	svp.pix_width = svp.rv_rect.width;
 	svp.pix_height = svp.rv_rect.height;
 
-	printf("DrawCanvasData pix %d %d\n", VPoint.pix_width, VPoint.pix_height);
-	printf("DrawCanvasData rv_rect %d %d\n", VPoint.rv_rect.width, VPoint.rv_rect.height);
+	//printf("DrawCanvasData pix %d %d\n", VPoint.pix_width, VPoint.pix_height);
+	//printf("DrawCanvasData rv_rect %d %d\n", VPoint.rv_rect.width, VPoint.rv_rect.height);
 
 	OCPNRegion chart_get_region(wxRect(0, 0, svp.pix_width, svp.pix_height));
 	
 	//  Blit pan acceleration
 	if (VPoint.b_quilt)  // quilted
 	{
-		printf("DrawCanvasData quilt \n");
+		//printf("DrawCanvasData quilt \n");
 		if (!m_pQuilt || !m_pQuilt->IsComposed()) return;  // not ready
 
 		bool bvectorQuilt = m_pQuilt->IsQuiltVector();
-		printf("DrawCanvasData quilt 0\n");
+		//printf("DrawCanvasData quilt 0\n");
 		if ((m_working_bm.GetWidth() != svp.pix_width) || (m_working_bm.GetHeight() != svp.pix_height)) {
 			m_working_bm.Create(svp.pix_width, svp.pix_height, -1);  // make sure the target is big enoug
 		}
 
-		printf("DrawCanvasData quilt 1\n");
+		//printf("DrawCanvasData quilt 1\n");
 		if (fabs(VPoint.rotation) < 0.01) {
 			bool b_save = true;
 
@@ -4985,7 +4986,7 @@ void ChartCanvas::DrawCanvasData(LLBBox &llbBox, int nWidth, int nHeight, std::v
 							update_region.Union(wxRect(0, 0, -dx, VPoint.pix_height));
 					}
 
-					printf("DrawCanvasData quilt 2\n");
+					//printf("DrawCanvasData quilt 2\n");
 					//  Render the new region
 					m_pQuilt->RenderQuiltRegionViewOnDCNoText(temp_dc, svp, update_region, HasLayer(vnLayers, LAYER_DEPTHS), HasLayer(vnLayers, LAYER_LIGHTS), HasLayer(vnLayers, LAYER_BLLABELS), HasLayer(vnLayers, LAYER_LDESCR), HasLayer(vnLayers, LAYER_AINFO), HasLayer(vnLayers, LAYER_SLVIS));
 					cache_dc.SelectObject(wxNullBitmap);
@@ -4993,17 +4994,17 @@ void ChartCanvas::DrawCanvasData(LLBBox &llbBox, int nWidth, int nHeight, std::v
 				else {
 					//    No sensible (dx, dy) change in the view, so use the cached
 					//    member bitmap
-					printf("DrawCanvasData quilt 3\n");
+					//printf("DrawCanvasData quilt 3\n");
 					temp_dc.SelectObject(m_cached_chart_bm);
 					b_save = false;
 				}
 
-				printf("DrawCanvasData quilt 4\n");
+				//printf("DrawCanvasData quilt 4\n");
 				m_pQuilt->ComputeRenderRegion(svp, chart_get_region);
 			} else {  // not blitable				
 				temp_dc.SelectObject(m_working_bm);
 
-				printf("DrawCanvasData quilt 5\n");
+				//printf("DrawCanvasData quilt 5\n");
 				m_pQuilt->RenderQuiltRegionViewOnDCNoText(temp_dc, svp, chart_get_region, HasLayer(vnLayers, LAYER_DEPTHS), HasLayer(vnLayers, LAYER_LIGHTS), HasLayer(vnLayers, LAYER_BLLABELS), HasLayer(vnLayers, LAYER_LDESCR), HasLayer(vnLayers, LAYER_AINFO), HasLayer(vnLayers, LAYER_SLVIS));
 			}	
 		} else  // quilted, rotated
@@ -5011,20 +5012,20 @@ void ChartCanvas::DrawCanvasData(LLBBox &llbBox, int nWidth, int nHeight, std::v
 			temp_dc.SelectObject(m_working_bm);
 			OCPNRegion chart_get_all_region(wxRect(0, 0, svp.pix_width, svp.pix_height));
 
-			printf("DrawCanvasData quilt 6\n");
+			//printf("DrawCanvasData quilt 6\n");
 			m_pQuilt->RenderQuiltRegionViewOnDCNoText(temp_dc, svp, chart_get_all_region, HasLayer(vnLayers, LAYER_DEPTHS), HasLayer(vnLayers, LAYER_LIGHTS), HasLayer(vnLayers, LAYER_BLLABELS), HasLayer(vnLayers, LAYER_LDESCR), HasLayer(vnLayers, LAYER_AINFO), HasLayer(vnLayers, LAYER_SLVIS));
 		}
 	} else {
 		if (!m_singleChart) {
 			return;
 		}
-		printf("DrawCanvasData 1-1.\n");
+		//printf("DrawCanvasData 1-1.\n");
 		if (!chart_get_region.IsEmpty()) {
 			m_singleChart->RenderRegionViewOnDC(temp_dc, svp, chart_get_region);
 		}
 	}
 
-	printf("DrawCanvasData 2.\n");
+	//printf("DrawCanvasData 2.\n");
 
 	if (temp_dc.IsOk()) {  //process background except the ENC data's region (draw water and rotate)
 		OCPNRegion chartValidRegion;
@@ -5072,7 +5073,7 @@ void ChartCanvas::DrawCanvasData(LLBBox &llbBox, int nWidth, int nHeight, std::v
 		}
 	}
 
-	printf("DrawCanvasData 3.\n");
+	//printf("DrawCanvasData 3.\n");
 	wxMemoryDC* pChartDC = &temp_dc;
 	wxMemoryDC rotd_dc;
 
@@ -5137,15 +5138,12 @@ void ChartCanvas::DrawCanvasData(LLBBox &llbBox, int nWidth, int nHeight, std::v
 	}
 
 	wxPoint offset = m_roffset;
-	printf("DrawCanvasData 4.\n");
+	//printf("DrawCanvasData 4.\n");
 	//        Save the PixelCache viewpoint for next time
 	m_cache_vp = VPoint;
 
 	//    Set up a scratch DC for overlay objects
 	wxMemoryDC mscratch_dc;
-	mscratch_dc.SetBackground(*wxWHITE_BRUSH);
-	mscratch_dc.SetTextForeground(*wxBLACK);
-
 	mscratch_dc.SelectObject(*pscratch_bm);
 
 	mscratch_dc.ResetBoundingBox();
@@ -5160,7 +5158,14 @@ void ChartCanvas::DrawCanvasData(LLBBox &llbBox, int nWidth, int nHeight, std::v
 			rect.x - offset.x, rect.y - offset.y);
 		upd++;
 	}
-	printf("DrawCanvasData 5.\n");
+
+	if (mscratch_dc.IsOk()) {
+		mscratch_dc.SetBackground(*wxBLACK_BRUSH);
+		mscratch_dc.SetTextForeground(*wxBLACK);
+		//printf("DrawCanvasData : Set Background and Text Foreground is OK.\n");
+	}
+
+	//printf("DrawCanvasData 5.\n");
 	// If multi-canvas, indicate which canvas has keyboard focus
 	// by drawing a simple blue bar at the top.
 	if (g_canvasConfig != 0) {  // multi-canvas?
@@ -5175,7 +5180,7 @@ void ChartCanvas::DrawCanvasData(LLBBox &llbBox, int nWidth, int nHeight, std::v
 			mscratch_dc.DrawRectangle(activeRect);
 		}
 	}
-	printf("DrawCanvasData 6.\n");
+	//printf("DrawCanvasData 6.\n");
 	// Any MBtiles?
 	std::vector<int> stackIndexArray = m_pQuilt->GetExtendedStackIndexArray();
 	unsigned int im = stackIndexArray.size();
@@ -5206,7 +5211,7 @@ void ChartCanvas::DrawCanvasData(LLBBox &llbBox, int nWidth, int nHeight, std::v
 	}
 	
 	RenderAlertMessage(mscratch_dc, GetVP());
-	printf("DrawCanvasData 7.\n");
+	//printf("DrawCanvasData 7.\n");
 	// quiting?
 	if (g_bquiting) {
 #ifdef ocpnUSE_DIBSECTION
@@ -5289,7 +5294,7 @@ void ChartCanvas::DrawCanvasData(LLBBox &llbBox, int nWidth, int nHeight, std::v
 			}
 		}
 	}
-	printf("DrawCanvasData 8.\n");
+	//printf("DrawCanvasData 8.\n");
 	LLBBox llbViewPortBox = VPoint.GetBBox();
 	double dVPMinLat = llbViewPortBox.GetMinLat();
 	double dVPMaxLat = llbViewPortBox.GetMaxLat();
@@ -5362,8 +5367,7 @@ void ChartCanvas::DrawCanvasData(LLBBox &llbBox, int nWidth, int nHeight, std::v
 	temp_dc.SelectObject(wxNullBitmap);
 	mscratch_dc.SelectObject(wxNullBitmap);
 	m_b_paint_enable = true;
-
-	printf("cc : Draw Canvas manually 3\n");
+	//printf("cc : Draw Canvas manually 3\n");
 }
 
 void ChartCanvas::DrawGridInDC(wxMemoryDC *mscratch_dc, int nLeft, int nTop, int nRight, int nBottom, LLBBox& llbBox) {
