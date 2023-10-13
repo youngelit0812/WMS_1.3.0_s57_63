@@ -509,8 +509,7 @@ public:
   wxCheckBox *m_pCheck_use_Wpl, *m_pCheck_ShowAllCPA;
   wxTextCtrl *m_pText_CPA_Max, *m_pText_CPA_Warn, *m_pText_CPA_WarnT;
   wxTextCtrl *m_pText_Mark_Lost, *m_pText_Remove_Lost, *m_pText_COG_Predictor;
-  wxTextCtrl *m_pText_Track_Length, *m_pText_Moored_Speed,
-      *m_pText_Scale_Priority;
+  wxTextCtrl *m_pText_Moored_Speed, *m_pText_Scale_Priority;
   wxTextCtrl *m_pText_ACK_Timeout, *m_pText_Show_Target_Name_Scale;
   wxTextCtrl *m_pText_RealtPred_Speed;
 
@@ -565,8 +564,7 @@ public:
   wxCheckBox *pWayPointPreventDragging, *pConfirmObjectDeletion;
   wxCheckBox *pEnableZoomToCursor, *pPreserveScale, *pPlayShipsBells;
   wxCheckBox *pTransparentToolbar;
-  wxCheckBox *pAdvanceRouteWaypointOnArrivalOnly, *pTrackShowIcon;
-  wxCheckBox *pTrackDaily, *pTrackHighlite;
+  wxCheckBox *pAdvanceRouteWaypointOnArrivalOnly, *pTrackShowIcon;  
   wxStaticText *pStatic_CallSign;
 
 #if wxCHECK_VERSION(2, 9, 0)

@@ -179,8 +179,6 @@ extern double g_RemoveLost_Mins;
 extern bool g_bShowCOG;
 extern double g_ShowCOG_Mins;
 extern bool g_bSyncCogPredictors;
-extern bool g_bAISShowTracks;
-extern double g_AISShowTracks_Mins;
 extern double g_ShowMoored_Kts;
 extern bool g_bHideMoored;
 extern bool g_bAllowShowScaled;
@@ -232,15 +230,6 @@ extern int g_n_ownship_min_mm;
 extern double g_n_arrival_circle_radius;
 
 extern bool g_bEnableZoomToCursor;
-extern bool g_bTrackDaily;
-extern int g_track_rotate_time;
-extern int g_track_rotate_time_type;
-extern bool g_bHighliteTracks;
-extern double g_TrackDeltaDistance;
-extern double g_TrackDeltaDistance;
-extern int g_nTrackPrecision;
-extern wxColour g_colourTrackLineColour;
-
 extern int g_iSDMMFormat;
 extern int g_iDistanceFormat;
 extern int g_iSpeedFormat;
@@ -534,14 +523,7 @@ wxFont GetOCPNGUIScaledFont(wxString item) {
 		double points_per_mm = g_Platform->GetDisplayDPmm();
 		double min_scaled_font_size =
 			3 * points_per_mm;  // smaller than 3 mm is unreadable
-		int nscaled_font_size =
-			wxMax(wxRound(scaled_font_size), min_scaled_font_size);
-
-		//        wxFont *qFont = wxTheFontList->FindOrCreateFont(
-		//        nscaled_font_size,
-		//                                                                  dFont->GetFamily(),
-		//                                                                  dFont->GetStyle(),
-		//                                                                  dFont->GetWeight());
+		int nscaled_font_size = wxMax(wxRound(scaled_font_size), min_scaled_font_size);
 		qFont.SetPointSize(nscaled_font_size);
 	}
 
@@ -549,7 +531,6 @@ wxFont GetOCPNGUIScaledFont(wxString item) {
 }
 
 //////////////////////////////////////////////////////////////////////////////////////
-
 class ChartDirPanelHardBreakWrapper : public wxTextWrapper {
 public:
   ChartDirPanelHardBreakWrapper(wxWindow* win, const wxString& text,
@@ -1551,94 +1532,6 @@ void options::CreatePanel_Ownship(size_t parent, int border_size,
                    LineColorNChoices, m_LineColorChoices, 0);
   m_shipToActiveColor->SetSelection(0);
   shipToActiveGrid->Add(m_shipToActiveColor, 0, wxALL, 5);
-
-  //  Tracks
-  wxStaticBox* trackText =
-      new wxStaticBox(itemPanelShip, wxID_ANY, _("Tracks"));
-  wxStaticBoxSizer* trackSizer = new wxStaticBoxSizer(trackText, wxVERTICAL);
-  wxBoxSizer* trackSizer1 = new wxBoxSizer(wxHORIZONTAL);
-  ownShip->Add(trackSizer, 0, wxGROW | wxALL, border_size);
-
-  pTrackDaily = new wxCheckBox(itemPanelShip, ID_DAILYCHECKBOX,
-                               _("Automatic Daily Tracks at midnight"));
-
-  trackSizer1->Add(pTrackDaily, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT,
-                   border_size);
-
-  trackSizer1->Add(0, 0, 1, wxEXPAND, 0);
-
-#if wxCHECK_VERSION(2, 9, 0)
-#if wxUSE_TIMEPICKCTRL
-  pTrackDaily->SetLabel(_("Automatic Daily Tracks at"));
-#ifdef __WXGTK__
-  pTrackRotateTime =
-      new TimeCtrl(itemPanelShip, ID_TRACKROTATETIME,
-                   wxDateTime((time_t)g_track_rotate_time).ToUTC(),
-                   wxDefaultPosition, wxDefaultSize, 0);
-#else
-  pTrackRotateTime =
-      new wxTimePickerCtrl(itemPanelShip, ID_TRACKROTATETIME,
-                           wxDateTime((time_t)g_track_rotate_time).ToUTC(),
-                           wxDefaultPosition, wxDefaultSize, 0);
-#endif
-  trackSizer1->Add(pTrackRotateTime, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT,
-                   border_size);
-#endif
-#endif
-
-  pTrackRotateComputerTime =
-      new wxRadioButton(itemPanelShip, ID_TRACKROTATECOMPUTER, _("Computer"),
-                        wxDefaultPosition, wxDefaultSize, 0);
-  trackSizer1->Add(pTrackRotateComputerTime, 0,
-                   wxALIGN_CENTER_VERTICAL | wxRIGHT, border_size);
-
-  pTrackRotateUTC =
-      new wxRadioButton(itemPanelShip, ID_TRACKROTATEUTC, _("UTC"),
-                        wxDefaultPosition, wxDefaultSize, 0);
-  trackSizer1->Add(pTrackRotateUTC, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT,
-                   border_size);
-
-  pTrackRotateLMT =
-      new wxRadioButton(itemPanelShip, ID_TRACKROTATELMT, _("LMT"),
-                        wxDefaultPosition, wxDefaultSize, 0);
-  trackSizer1->Add(pTrackRotateLMT, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT,
-                   border_size);
-
-  trackSizer->Add(trackSizer1, 1, wxEXPAND | wxALL, border_size);
-
-  wxFlexGridSizer* hTrackGrid =
-      new wxFlexGridSizer(1, 3, group_item_spacing, group_item_spacing);
-  hTrackGrid->AddGrowableCol(1);
-  trackSizer->Add(hTrackGrid, 0, wxALL | wxEXPAND, border_size);
-
-  pTrackHighlite =
-      new wxCheckBox(itemPanelShip, ID_TRACKHILITE, _("Highlight Tracks"));
-  hTrackGrid->Add(pTrackHighlite, 1, wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL,
-                  border_size);
-  wxStaticText* trackColourText =
-      new wxStaticText(itemPanelShip, wxID_STATIC, _("Highlight Colour"));
-  hTrackGrid->Add(trackColourText, 1, wxALIGN_RIGHT | wxALIGN_CENTER_VERTICAL,
-                  border_size);
-  m_colourTrackLineColour = new OCPNColourPickerCtrl(
-      itemPanelShip, wxID_STATIC, *wxRED, wxDefaultPosition,
-      m_colourPickerDefaultSize, 0, wxDefaultValidator,
-      _T( "ID_COLOURTRACKCOLOUR" ));
-  hTrackGrid->Add(m_colourTrackLineColour, 1, wxALIGN_RIGHT, border_size);
-
-  wxFlexGridSizer* pTrackGrid =
-      new wxFlexGridSizer(1, 2, group_item_spacing, group_item_spacing);
-  pTrackGrid->AddGrowableCol(1);
-  trackSizer->Add(pTrackGrid, 0, wxALL | wxEXPAND, border_size);
-
-  wxStaticText* tpText =
-      new wxStaticText(itemPanelShip, wxID_STATIC, _("Tracking Precision"));
-  pTrackGrid->Add(tpText, 1, wxEXPAND | wxALL, group_item_spacing);
-
-  wxString trackAlt[] = {_("Low"), _("Medium"), _("High")};
-  pTrackPrecision = new wxChoice(itemPanelShip, wxID_ANY, wxDefaultPosition,
-                                 m_pShipIconType->GetSize(), 3, trackAlt);
-  pTrackGrid->Add(pTrackPrecision, 0, wxALIGN_RIGHT | wxALL,
-                  group_item_spacing);
 
   //  Calculate values
   wxStaticBox* ownshipcalcText =
@@ -4059,8 +3952,6 @@ void OCPNSoundPanel::SetSoundFileLabel(wxString file)
   Layout();
 }
 
-
-
 wxString OCPNSoundPanel::SelectSoundFile() {
   wxString sound_dir = g_Platform->GetSharedDataDir();
   sound_dir.Append(_T("sounds"));
@@ -4272,10 +4163,6 @@ void options::CreatePanel_AIS(size_t parent, int border_size,
   m_pCheck_Show_Tracks =
       new wxCheckBox(panelAIS, -1, _("Show target tracks, length (min)"));
   pDisplayGrid->Add(m_pCheck_Show_Tracks, 1, wxALL, group_item_spacing);
-
-  m_pText_Track_Length = new wxTextCtrl(panelAIS, -1, "TEXT  ");
-  pDisplayGrid->Add(m_pText_Track_Length, 1, wxALL | wxALIGN_RIGHT,
-                    group_item_spacing);
 
   m_pCheck_Hide_Moored = new wxCheckBox(
       panelAIS, -1, _("Suppress anchored/moored targets, speed max (kn)"));
@@ -5371,15 +5258,6 @@ void options::SetInitialSettings(void) {
   pAdvanceRouteWaypointOnArrivalOnly->SetValue(
       g_bAdvanceRouteWaypointOnArrivalOnly);
 
-  pTrackDaily->SetValue(g_bTrackDaily);
-  pTrackRotateLMT->SetValue(g_track_rotate_time_type == TIME_TYPE_LMT);
-  pTrackRotateUTC->SetValue(g_track_rotate_time_type == TIME_TYPE_UTC);
-  pTrackRotateComputerTime->SetValue(g_track_rotate_time_type ==
-                                     TIME_TYPE_COMPUTER);
-  pTrackHighlite->SetValue(g_bHighliteTracks);
-  m_colourTrackLineColour->SetColour(g_colourTrackLineColour);
-  pTrackPrecision->SetSelection(g_nTrackPrecision);
-
   m_soundPanelAnchor->GetCheckBox()->SetValue(g_bAnchor_Alert_Audio);
 
   //    AIS Parameters
@@ -5423,12 +5301,7 @@ void options::SetInitialSettings(void) {
   m_pCheck_Sync_OCOG_ACOG->SetValue(g_bSyncCogPredictors);
   if(g_bSyncCogPredictors) m_pText_COG_Predictor->Disable();
 
-  m_pCheck_Show_Tracks->SetValue(g_bAISShowTracks);
-
-  s.Printf(_T("%4.0f"), g_AISShowTracks_Mins);
-  m_pText_Track_Length->SetValue(s);
-
-  m_pCheck_Hide_Moored->SetValue(g_bHideMoored);
+	m_pCheck_Hide_Moored->SetValue(g_bHideMoored);
 
   s.Printf(_T("%4.1f"), g_ShowMoored_Kts);
   m_pText_Moored_Speed->SetValue(s);
@@ -6208,38 +6081,6 @@ void options::OnApplyClick(wxCommandEvent& event) {
   g_bAdvanceRouteWaypointOnArrivalOnly =
       pAdvanceRouteWaypointOnArrivalOnly->GetValue();
 
-  g_colourTrackLineColour = m_colourTrackLineColour->GetColour();
-  g_colourTrackLineColour =
-      wxColour(g_colourTrackLineColour.Red(), g_colourTrackLineColour.Green(),
-               g_colourTrackLineColour.Blue());
-  g_nTrackPrecision = pTrackPrecision->GetSelection();
-
-  g_bTrackDaily = pTrackDaily->GetValue();
-
-  g_track_rotate_time = 0;
-#if wxCHECK_VERSION(2, 9, 0)
-#if wxUSE_TIMEPICKCTRL
-  int h, m, s;
-  if (pTrackRotateTime->GetTime(&h, &m, &s))
-    g_track_rotate_time = h * 3600 + m * 60 + s;
-#endif
-#endif
-
-  if (pTrackRotateUTC->GetValue())
-    g_track_rotate_time_type = TIME_TYPE_UTC;
-  else if (pTrackRotateLMT->GetValue())
-    g_track_rotate_time_type = TIME_TYPE_LMT;
-  else
-    g_track_rotate_time_type = TIME_TYPE_COMPUTER;
-
-  g_bHighliteTracks = pTrackHighlite->GetValue();
-
-  if (pEnableZoomToCursor)
-    g_bEnableZoomToCursor = pEnableZoomToCursor->GetValue();
-#ifdef __OCPN__ANDROID__
-  g_bEnableZoomToCursor = false;
-#endif
-
   g_colourOwnshipRangeRingsColour = m_colourOwnshipRangeRingColour->GetColour();
   g_colourOwnshipRangeRingsColour =
       wxColour(g_colourOwnshipRangeRingsColour.Red(),
@@ -6275,19 +6116,6 @@ void options::OnApplyClick(wxCommandEvent& event) {
     m_pText_COG_Predictor->SetValue(m_pText_OSCOG_Predictor->GetValue());
   }
   m_pText_COG_Predictor->GetValue().ToDouble(&g_ShowCOG_Mins);
-
-  g_bAISShowTracks = m_pCheck_Show_Tracks->GetValue();
-  m_pText_Track_Length->GetValue().ToDouble(&g_AISShowTracks_Mins);
-
-  //   Update all the current targets
-  if (g_pAIS) {
-    for (const auto& it : g_pAIS->GetTargetList()) {
-      auto pAISTarget = it.second;
-      if (NULL != pAISTarget) {
-        pAISTarget->b_show_track = g_bAISShowTracks;        
-      }
-    }
-  }
 
   g_bHideMoored = m_pCheck_Hide_Moored->GetValue();
   m_pText_Moored_Speed->GetValue().ToDouble(&g_ShowMoored_Kts);

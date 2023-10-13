@@ -160,8 +160,7 @@ public:
   wxString GetFullName(void);
   wxString GetCountryCode(bool b_CntryLongStr);
   wxString GetNatureofDistress(int dscnature);
-  void Toggle_AIS_CPA(void);
-  void ToggleShowTrack(void);
+  void Toggle_AIS_CPA(void);  
   void CloneFrom(AisTargetData* q);
 
   int MID;
@@ -249,9 +248,7 @@ public:
   double CPA;   // Nautical Miles
 
   bool b_show_AIS_CPA;  // TR 2012.06.28: Show AIS-CPA
-
-  bool b_show_track;
-
+  
   std::vector<AISTargetTrackPoint> m_ptrack;
 
   std::unordered_map<int, Ais8_001_22> area_notices;

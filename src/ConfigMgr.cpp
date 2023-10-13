@@ -127,7 +127,6 @@ extern bool g_bShowActiveRouteHighway;
 extern bool g_bShowRouteTotal;
 extern int g_nAWDefault;
 extern int g_nAWMax;
-extern int g_nTrackPrecision;
 
 extern int g_iSDMMFormat;
 extern int g_iDistanceFormat;
@@ -163,13 +162,6 @@ extern double g_RemoveLost_Mins;
 extern bool g_bShowCOG;
 extern bool g_bSyncCogPredictors;
 extern double g_ShowCOG_Mins;
-extern bool g_bAISShowTracks;
-extern bool g_bTrackCarryOver;
-extern bool g_bTrackDaily;
-extern int g_track_rotate_time;
-extern int g_track_rotate_time_type;
-extern double g_AISShowTracks_Mins;
-extern double g_AISShowTracks_Limit;
 extern bool g_bHideMoored;
 extern double g_ShowMoored_Kts;
 extern bool g_bAllowShowScaled;
@@ -220,8 +212,6 @@ extern wxColour g_colourOwnshipRangeRingsColour;
 
 extern bool g_bEnableZoomToCursor;
 extern wxString g_toolbarConfig;
-extern double g_TrackIntervalSeconds;
-extern double g_TrackDeltaDistance;
 
 extern bool g_bGDAL_Debug;
 extern bool g_bDebugCM93;
@@ -299,15 +289,10 @@ extern int g_lastClientRecty;
 extern int g_lastClientRectw;
 extern int g_lastClientRecth;
 
-extern bool g_bHighliteTracks;
 extern int g_cog_predictor_width;
 extern int g_ais_cog_predictor_width;
 
-extern int g_route_line_width;
-extern int g_track_line_width;
-extern wxColour g_colourTrackLineColour;
 extern wxString g_default_wp_icon;
-
 extern ChartGroupArray *g_pGroupArray;
 
 extern bool g_bDebugOGL;
@@ -939,18 +924,11 @@ bool ConfigMgr::SaveTemplate(wxString fileName) {
   conf->Write(_T ( "OwnShipGPSOffsetY" ), g_n_gps_antenna_offset_y);
   conf->Write(_T ( "OwnShipMinSize" ), g_n_ownship_min_mm);
   conf->Write(_T ( "OwnShipSogCogCalc" ), g_own_ship_sog_cog_calc);
-  conf->Write(_T ( "OwnShipSogCogCalcDampSec"),
-              g_own_ship_sog_cog_calc_damp_sec);
+  conf->Write(_T ( "OwnShipSogCogCalcDampSec"), g_own_ship_sog_cog_calc_damp_sec);
 
   conf->Write(_T ( "RouteArrivalCircleRadius" ),
               wxString::Format(_T("%.3f"), g_n_arrival_circle_radius));
   conf->Write(_T ( "ChartQuilting" ), g_bQuiltEnable);
-
-  conf->Write(_T ( "StartWithTrackActive" ), g_bTrackCarryOver);
-  conf->Write(_T ( "AutomaticDailyTracks" ), g_bTrackDaily);
-  conf->Write(_T ( "TrackRotateAt" ), g_track_rotate_time);
-  conf->Write(_T ( "TrackRotateTimeType" ), g_track_rotate_time_type);
-  conf->Write(_T ( "HighlightTracks" ), g_bHighliteTracks);
 
   conf->Write(_T ( "InitialStackIndex" ), g_restore_stackindex);
   conf->Write(_T ( "InitialdBIndex" ), g_restore_dbindex);
@@ -1039,9 +1017,7 @@ bool ConfigMgr::SaveTemplate(wxString fileName) {
   conf->Write(_T ( "bRemoveLostTargets" ), g_bRemoveLost);
   conf->Write(_T ( "RemoveLost_Minutes" ), g_RemoveLost_Mins);
   conf->Write(_T ( "bShowCOGArrows" ), g_bShowCOG);
-  conf->Write(_T ( "CogArrowMinutes" ), g_ShowCOG_Mins);
-  conf->Write(_T ( "bShowTargetTracks" ), g_bAISShowTracks);
-  conf->Write(_T ( "TargetTracksMinutes" ), g_AISShowTracks_Mins);
+  conf->Write(_T ( "CogArrowMinutes" ), g_ShowCOG_Mins);    
 
   conf->Write(_T ( "bHideMooredTargets" ), g_bHideMoored);
   conf->Write(_T ( "MooredTargetMaxSpeedKnots" ), g_ShowMoored_Kts);
@@ -1149,15 +1125,6 @@ bool ConfigMgr::SaveTemplate(wxString fileName) {
   conf->Write(_T ( "WaypointPreventDragging" ), g_bWayPointPreventDragging);
 
   conf->Write(_T ( "EnableZoomToCursor" ), g_bEnableZoomToCursor);
-
-  conf->Write(_T ( "TrackIntervalSeconds" ), g_TrackIntervalSeconds);
-  conf->Write(_T ( "TrackDeltaDistance" ), g_TrackDeltaDistance);
-  conf->Write(_T ( "TrackPrecision" ), g_nTrackPrecision);
-
-  conf->Write(_T ( "RouteLineWidth" ), g_route_line_width);
-  conf->Write(_T ( "TrackLineWidth" ), g_track_line_width);
-  conf->Write(_T ( "TrackLineColour" ),
-              g_colourTrackLineColour.GetAsString(wxC2S_HTML_SYNTAX));
   conf->Write(_T ( "DefaultWPIcon" ), g_default_wp_icon);
 
   //    Fonts
@@ -1420,19 +1387,9 @@ bool ConfigMgr::CheckTemplate(wxString fileName) {
 
   CHECK_FLT(_T ( "RouteArrivalCircleRadius" ), &g_n_arrival_circle_radius, .01);
 
-  CHECK_INT(_T ( "FullScreenQuilt" ), &g_bFullScreenQuilt);
-
-  CHECK_INT(_T ( "StartWithTrackActive" ), &g_bTrackCarryOver);
-  CHECK_INT(_T ( "AutomaticDailyTracks" ), &g_bTrackDaily);
-  CHECK_INT(_T ( "TrackRotateAt" ), &g_track_rotate_time);
-  CHECK_INT(_T ( "TrackRotateTimeType" ), &g_track_rotate_time_type);
-  CHECK_INT(_T ( "HighlightTracks" ), &g_bHighliteTracks);
-
+  CHECK_INT(_T ( "FullScreenQuilt" ), &g_bFullScreenQuilt);  
   CHECK_FLT(_T ( "PlanSpeed" ), &g_PlanSpeed, 0.1)
-
-  /// CHECK_STR( _T ( "VisibleLayers" ), g_VisibleLayers );
-  /// CHECK_STR( _T ( "InvisibleLayers" ), g_InvisibleLayers );
-
+	  
   CHECK_INT(_T ( "PreserveScaleOnX" ), &g_bPreserveScaleOnX);
 
   CHECK_STR(_T ( "Locale" ), g_locale);
@@ -1440,12 +1397,6 @@ bool ConfigMgr::CheckTemplate(wxString fileName) {
 
   // We allow 0-99 backups ov navobj.xml
   CHECK_INT(_T ( "KeepNavobjBackups" ), &g_navobjbackups);
-
-  //     NMEALogWindow::Get().SetSize(Read(_T("NMEALogWindowSizeX"), 600L),
-  //     Read(_T("NMEALogWindowSizeY"), 400L));
-  //     NMEALogWindow::Get().SetPos(Read(_T("NMEALogWindowPosX"), 10L),
-  //     Read(_T("NMEALogWindowPosY"), 10L));
-  //     NMEALogWindow::Get().CheckPos(display_width, display_height);
 
   // Boolean to cater for legacy Input COM Port filer behaviour, i.e. show msg
   // filtered but put msg on bus.
@@ -1497,10 +1448,7 @@ bool ConfigMgr::CheckTemplate(wxString fileName) {
   CHECK_FLT(_T ( "RemoveLost_Minutes" ), &g_RemoveLost_Mins, 1)
   CHECK_INT(_T ( "bShowCOGArrows" ), &g_bShowCOG);
   CHECK_INT(_T ( "bSyncCogPredictors" ), &g_bSyncCogPredictors);
-  CHECK_FLT(_T ( "CogArrowMinutes" ), &g_ShowCOG_Mins, 1);
-  CHECK_INT(_T ( "bShowTargetTracks" ), &g_bAISShowTracks);
-  CHECK_FLT(_T ( "TargetTracksMinutes" ), &g_AISShowTracks_Mins, 1)
-  CHECK_FLT(_T ( "TargetTracksLimit" ), &g_AISShowTracks_Limit, 300)
+  CHECK_FLT(_T ( "CogArrowMinutes" ), &g_ShowCOG_Mins, 1);      
   CHECK_INT(_T ( "bHideMooredTargets" ), &g_bHideMoored)
   CHECK_FLT(_T ( "MooredTargetMaxSpeedKnots" ), &g_ShowMoored_Kts, .1)
   CHECK_INT(_T ( "bShowScaledTargets"), &g_bAllowShowScaled);
@@ -1618,36 +1566,13 @@ bool ConfigMgr::CheckTemplate(wxString fileName) {
 
   CHECK_FLT(_T ( "WaypointRangeRingsStep" ), &g_fWaypointRangeRingsStep, .1)
 
-  CHECK_INT(_T ( "WaypointRangeRingsStepUnits" ),
-            &g_iWaypointRangeRingsStepUnits);
-
-  //    wxString l_wxsWaypointRangeRingsColour;
-  //    CHECK_STR( _T( "WaypointRangeRingsColour" ),
-  //    &l_wxsWaypointRangeRingsColour ); g_colourWaypointRangeRingsColour.Set(
-  //    l_wxsWaypointRangeRingsColour );
+  CHECK_INT(_T ( "WaypointRangeRingsStepUnits" ), &g_iWaypointRangeRingsStepUnits);
 
   CHECK_INT(_T ( "ConfirmObjectDeletion" ), &g_bConfirmObjectDelete);
 
   // Waypoint dragging with mouse
   CHECK_INT(_T ( "WaypointPreventDragging" ), &g_bWayPointPreventDragging);
-
   CHECK_INT(_T ( "EnableZoomToCursor" ), &g_bEnableZoomToCursor);
-
-  CHECK_FLT(_T ( "TrackIntervalSeconds" ), &g_TrackIntervalSeconds, 1)
-
-  CHECK_FLT(_T ( "TrackDeltaDistance" ), &g_TrackDeltaDistance, .1)
-
-  CHECK_INT(_T ( "TrackPrecision" ), &g_nTrackPrecision);
-
-  // CHECK_STR( _T ( "NavObjectFileName" ), m_sNavObjSetFile );
-
-  CHECK_INT(_T ( "RouteLineWidth" ), &g_route_line_width);
-  CHECK_INT(_T ( "TrackLineWidth" ), &g_track_line_width);
-
-  //     wxString l_wxsTrackLineColour;
-  //     CHECK_STR( _T( "TrackLineColour" ), l_wxsTrackLineColour )
-  //         g_colourTrackLineColour.Set( l_wxsTrackLineColour );
-
   CHECK_STR(_T ( "DefaultWPIcon" ), g_default_wp_icon)
 
   // S57 template items

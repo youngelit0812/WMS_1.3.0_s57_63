@@ -141,32 +141,6 @@ public:
   PI_line_segment_element *next;
 };
 
-void GenerateImage(wxDC *pDC, const char *pPrefix) {
-  /*std::string sPrefix(pPrefix);
-  std::string sFilePath = "./capture_images/" + sPrefix + std::to_string(GetTickCount()) + ".jpg";
-
-  int nDCWidth = pDC->GetSize().x;
-	int nDCHeight = pDC->GetSize().y;
-
-	wxBitmap xbTargetBitmap(nDCWidth, nDCHeight, -1);
-	wxMemoryDC xMemDC;
-	xMemDC.SelectObject(xbTargetBitmap);
-
-  xMemDC.Blit(0, 0, nDCWidth, nDCHeight, pDC, 0, 0);
-  xMemDC.SelectObject(wxNullBitmap);
-
-	wxImage xImage;
-	if (xbTargetBitmap.IsOk()) {
-		xImage = xbTargetBitmap.ConvertToImage();		
-		
-		wxFileOutputStream xFileOutput(sFilePath);
-		if (xFileOutput.IsOk()) {			
-			xImage.SaveFile(xFileOutput, wxBITMAP_TYPE_JPEG);
-		}
-	}*/
-}
-
-
 //-----------------------------------------------------------------------------
 //      Comparison Function for LUPArray sorting
 //      Note Global Scope
@@ -269,8 +243,9 @@ LUPHashIndex *LUPArrayContainer::GetArrayIndexHelper(const char *objectName) {
 //-----------------------------------------------------------------------------
 //      s52plib implementation
 //-----------------------------------------------------------------------------
-s52plib::s52plib(const wxString &PLib, OCPNPlatform *pPlatform, bool b_forceLegacy) {
+s52plib::s52plib(const wxString &PLib, OCPNPlatform *pPlatform, bool bResponsive, bool b_forceLegacy) {
   m_pPlatform = pPlatform;
+  m_bResponsive = bResponsive;
 
   m_plib_file = PLib;
 
@@ -421,6 +396,30 @@ void s52plib::InitializeNatsurHash() {
                                                   {56, "Bo"},
                                                   {51, "Wd"}  });
   m_natsur_hash = surmap;
+}
+
+wxFont* s52plib::GetS52PLIBOCPNScaledFont(wxString item, int default_size) {
+  wxFont* dFont = FontMgr::Get().GetFont(item, default_size);
+  int req_size = dFont->GetPointSize();
+
+  if (m_bResponsive) {
+    //      Adjust font size to be no smaller than xx mm actual size
+    double scaled_font_size = dFont->GetPointSize();
+
+    double points_per_mm = m_pPlatform->getFontPointsperPixel() * m_pPlatform->GetDisplayDPmm();
+    double min_scaled_font_size = 3 * points_per_mm;  // smaller than 3 mm is unreadable
+    int nscaled_font_size = wxMax(wxRound(scaled_font_size), min_scaled_font_size);
+
+    if (req_size >= nscaled_font_size) return dFont;
+    else {
+      wxFont* qFont = FontMgr::Get().FindOrCreateFont(
+          nscaled_font_size, dFont->GetFamily(), dFont->GetStyle(),
+          dFont->GetWeight());
+      return qFont;
+    }    
+  }
+
+  return dFont;
 }
 
 void s52plib::SetVPointCompat(int pix_width,int pix_height,
@@ -2277,10 +2276,9 @@ bool s52plib::RenderText(wxDC *pdc, S52_TextC *ptext, int x, int y,
 
       // If the user has not changed the color from BLACK, then use the color
       // specified in the S52 LUP
-      if (wcolor == *wxBLACK)
-        wcolor = wxColour(ptext->pcol->R, ptext->pcol->G, ptext->pcol->B);
-      pdc->SetTextForeground(wcolor);
+      if (wcolor == *wxBLACK) wcolor = wxColour(ptext->pcol->R, ptext->pcol->G, ptext->pcol->B);
 
+      pdc->SetTextForeground(wcolor);
       pdc->DrawText(ptext->frmtd, xp, yp);
     }
 
@@ -2354,9 +2352,7 @@ bool s52plib::TextRenderCheck(ObjRazRules *rzRules) {
   return true;
 }
 
-int s52plib::RenderT_All(ObjRazRules *rzRules, Rules *rules,
-                         bool bTX) {
-  // printf("s52plib : RnederT_All 1\n");
+int s52plib::RenderT_All(ObjRazRules *rzRules, Rules *rules, bool bTX) {
   if (!TextRenderCheck(rzRules)) return 0;
 
   S52_TextC *text = NULL;
@@ -2441,7 +2437,7 @@ int s52plib::RenderT_All(ObjRazRules *rzRules, Rules *rules,
       default_size += 2;  // default to 2pt larger than system UI font
 #endif
 
-      wxFont *templateFont = GetOCPNScaledFont(_("ChartTexts"), default_size);
+      wxFont *templateFont = GetS52PLIBOCPNScaledFont(_("ChartTexts"), default_size);
 
         // NOAA ENC fles requests font size up to 20 points, which looks very
         // disproportioned. Let's scale those sizes down to more reasonable
@@ -2468,8 +2464,7 @@ int s52plib::RenderT_All(ObjRazRules *rzRules, Rules *rules,
     GetPointPixSingle(rzRules, rzRules->obj->y, rzRules->obj->x, &r);
 
     wxRect rect;
-    bool bwas_drawn = RenderText(m_pdc, text, r.x, r.y, &rect, rzRules->obj,
-                                 m_bDeClutterText);
+    bool bwas_drawn = RenderText(m_pdc, text, r.x, r.y, &rect, rzRules->obj, m_bDeClutterText);
 
     //  If this is an un-cached text render, it probably means that a single
     //  object has two or more text renders in its rule set.  RDOCAL is one
@@ -6386,8 +6381,7 @@ int s52plib::DoRenderObject(wxDC *pdcin, ObjRazRules *rzRules, bool bCSShowFlag,
         RenderTE(rzRules, rules);
         break;  // TE
       case RUL_SYM_PT:
-        RenderSY(rzRules, rules, false, bSY_LHShowFlag, bBUOYShowFlag);
-        //GenerateImage(m_pdc, "SY");
+        RenderSY(rzRules, rules, false, bSY_LHShowFlag, bBUOYShowFlag);        
         break;  // SY
       case RUL_SIM_LN:
         if (m_pdc)
@@ -6399,7 +6393,6 @@ int s52plib::DoRenderObject(wxDC *pdcin, ObjRazRules *rzRules, bool bCSShowFlag,
         RenderLC(rzRules, rules);
         break;  // LC
       case RUL_MUL_SG:
-        // printf("s52plib: RenderMPS-P\n");
         RenderMPS(rzRules, rules);
         break;  // MultiPoint Sounding
       case RUL_ARC_2C:

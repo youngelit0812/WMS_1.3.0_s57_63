@@ -37,8 +37,6 @@ extern bool g_bAISRolloverShowCOG;
 extern bool g_bAISRolloverShowCPA;
 extern bool g_bShowMag;
 extern bool g_bShowTrue;
-//extern MyFrame *gFrame;
-extern bool g_bAISShowTracks;
 extern double gVar;
 
 static std::unordered_map<int, wxString> s_ERI_hash;
@@ -201,8 +199,7 @@ AisTargetData::AisTargetData(AisTargetCallbacks cb ) : m_callbacks(cb)  {
   blue_paddle = 0;
   bCPA_Valid = false;
   b_isFollower = false;
-  ROTIND = 0;
-  b_show_track = g_bAISShowTracks;
+  ROTIND = 0;  
   b_SarAircraftPosnReport = false;
   altitude = 0;
   b_nameFromCache = false;
@@ -290,8 +287,7 @@ void AisTargetData::CloneFrom(AisTargetData *q) {
   b_active = q->b_active;
   blue_paddle = q->blue_paddle;
   bCPA_Valid = q->bCPA_Valid;
-  ROTIND = q->ROTIND;
-  b_show_track = q->b_show_track;
+  ROTIND = q->ROTIND;  
   b_SarAircraftPosnReport = q->b_SarAircraftPosnReport;
   altitude = q->altitude;
 }
@@ -999,15 +995,10 @@ void AisTargetData::Toggle_AIS_CPA(void) {
   b_show_AIS_CPA = !b_show_AIS_CPA ? true : false;
 }
 
-void AisTargetData::ToggleShowTrack(void) {
-  b_show_track = !b_show_track ? true : false;
-}
-
 // Get country name and code according to ITU 2019-02
 // (http://www.itu.int/en/ITU-R/terrestrial/fmd/Pages/mid.aspx)
-wxString AisTargetData::GetCountryCode(
-    bool
-        b_CntryLongStr)  // false = Short country code, true = Full country name
+// false = Short country code, true = Full country name
+wxString AisTargetData::GetCountryCode(bool b_CntryLongStr)
 {
   int nMID = MMSI / 1000000;
   // SAR Aircraft start with 111 and has a MID at pos 4,5,6

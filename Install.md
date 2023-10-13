@@ -52,6 +52,9 @@ The "project_path" is path in which the "CMakeLists.txt" file exists.
 * Copy all ENC files into the directory indicated in "config.json" file.
 * Should modify the port number for HTTP and HTTPS in "config.json" file
 
+## Close Step
+* To close the server, should press "Enter".
+
 ## Test
 * Open the Web Browser.
 * If you need to rebuild Chart DB, you should set the "rebuildCharts" to "1". Otherwise, you should set the "rebuildCharts" to "0".

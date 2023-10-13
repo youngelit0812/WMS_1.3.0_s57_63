@@ -17,6 +17,7 @@ public:
 	~MainApp() {};
 
 	bool OnInit(std::string&, bool);
+	int OnExit();
 	void OnInitCmdLine(wxCmdLineParser& parser);
 	bool OnCmdLineParsed(wxCmdLineParser& parser);
 	int GetLayerIndex(std::string&);
@@ -24,6 +25,7 @@ public:
 	bool UpdateFrameCanvas(std::string&, int, int, std::string&, std::string&, bool);	
 
 	bool GetDBCreateResult() { return m_bDBCreateResult; }
+	bool GetSENCFileCreateState();
 #ifdef LINUX_CRASHRPT
 	//! fatal exeption handling
 	void OnFatalException();

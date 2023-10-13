@@ -4061,28 +4061,14 @@ void ChartCanvas::GridDraw(ocpnDC &dc) {
 
 	// Draw Major latitude grid lines and text
 	while (lat < nlat) {
-		wxPoint r;
-		wxString st = CalcGridText(lat, gridlatMajor, true);  // get text for grid line
+		wxPoint r;		
 		GetCanvasPointPixVP(GetVP(), lat, (elon + wlon) / 2, &r);
-		dc.DrawLine(0, r.y, w, r.y, false);  // draw grid line
-		dc.DrawText(st, 0, r.y);             // draw text
+		dc.DrawLine(0, r.y, w, r.y, false);  // draw grid line		
 		lat = lat + gridlatMajor;
 
 		if (fabs(lat - wxRound(lat)) < 1e-5) lat = wxRound(lat);
 	}
-
-	// calculate position of first minor latitude grid line
-	lat = ceil(slat / gridlatMinor) * gridlatMinor;
-
-	// Draw minor latitude grid lines
-	while (lat < nlat) {
-		wxPoint r;
-		GetCanvasPointPixVP(GetVP(), lat, (elon + wlon) / 2, &r);
-		dc.DrawLine(0, r.y, 10, r.y, false);
-		dc.DrawLine(w - 10, r.y, w, r.y, false);
-		lat = lat + gridlatMinor;
-	}
-
+	
 	// calculate distance between grid lines
 	CalcGridSpacing(GetVP().view_scale_ppm, gridlonMajor, gridlonMinor);
 
@@ -4091,11 +4077,9 @@ void ChartCanvas::GridDraw(ocpnDC &dc) {
 
 	// draw major longitude grid lines
 	for (int i = 0, itermax = (int)(dlon / gridlonMajor); i <= itermax; i++) {
-		wxPoint r;
-		wxString st = CalcGridText(lon, gridlonMajor, false);
+		wxPoint r;		
 		GetCanvasPointPixVP(GetVP(), (nlat + slat) / 2, lon, &r);
-		dc.DrawLine(r.x, 0, r.x, h, false);
-		dc.DrawText(st, r.x, 0);
+		dc.DrawLine(r.x, 0, r.x, h, false);	
 		lon = lon + gridlonMajor;
 		if (lon > 180.0) {
 			lon = lon - 360.0;
@@ -4103,122 +4087,6 @@ void ChartCanvas::GridDraw(ocpnDC &dc) {
 
 		if (fabs(lon - wxRound(lon)) < 1e-5) lon = wxRound(lon);
 	}
-
-	// calculate position of first minor longitude grid line
-	lon = ceil(wlon / gridlonMinor) * gridlonMinor;
-	// draw minor longitude grid lines
-	for (int i = 0, itermax = (int)(dlon / gridlonMinor); i <= itermax; i++) {
-		wxPoint r;
-		GetCanvasPointPixVP(GetVP(), (nlat + slat) / 2, lon, &r);
-		dc.DrawLine(r.x, 0, r.x, 10, false);
-		dc.DrawLine(r.x, h - 10, r.x, h, false);
-		lon = lon + gridlonMinor;
-		if (lon > 180.0) {
-			lon = lon - 360.0;
-		}
-	}
-}
-
-void ChartCanvas::ScaleBarDraw(ocpnDC &dc) {
-  if (0 /*!g_bsimplifiedScalebar*/) {
-    double blat, blon, tlat, tlon;
-    wxPoint r;
-
-    int x_origin = m_bDisplayGrid ? 60 : 20;
-    int y_origin = m_canvas_height - 50;
-
-    float dist;
-    int count;
-    wxPen pen1, pen2;
-
-    if (GetVP().chart_scale > 80000)  // Draw 10 mile scale as SCALEB11
-    {
-      dist = 10.0;
-      count = 5;
-      pen1 = wxPen(GetGlobalColor(_T ( "SNDG2" )), 3, wxPENSTYLE_SOLID);
-      pen2 = wxPen(GetGlobalColor(_T ( "SNDG1" )), 3, wxPENSTYLE_SOLID);
-    } else  // Draw 1 mile scale as SCALEB10
-    {
-      dist = 1.0;
-      count = 10;
-      pen1 = wxPen(GetGlobalColor(_T ( "SCLBR" )), 3, wxPENSTYLE_SOLID);
-      pen2 = wxPen(GetGlobalColor(_T ( "CHGRD" )), 3, wxPENSTYLE_SOLID);
-    }
-
-    GetCanvasPixPoint(x_origin, y_origin, blat, blon);
-    double rotation = -VPoint.rotation;
-
-    ll_gc_ll(blat, blon, rotation * 180 / PI, dist, &tlat, &tlon);
-    GetCanvasPointPix(tlat, tlon, &r);
-    int l1 = (y_origin - r.y) / count;
-
-    for (int i = 0; i < count; i++) {
-      int y = l1 * i;
-      if (i & 1)
-        dc.SetPen(pen1);
-      else
-        dc.SetPen(pen2);
-
-      dc.DrawLine(x_origin, y_origin - y, x_origin, y_origin - (y + l1));
-    }
-  } else {
-    double blat, blon, tlat, tlon;
-
-    int x_origin = 5.0 * GetPixPerMM();
-
-    int y_origin = m_canvas_height/* - chartbar_height*/ - 5;
-#ifdef __WXOSX__
-    if (!g_bopengl)
-      y_origin = m_canvas_height/GetContentScaleFactor() - chartbar_height - 5;
-#endif
-
-    GetCanvasPixPoint(x_origin, y_origin, blat, blon);
-    GetCanvasPixPoint(x_origin + m_canvas_width, y_origin, tlat, tlon);
-
-    double d;
-    ll_gc_ll_reverse(blat, blon, tlat, tlon, 0, &d);
-    d /= 2;
-
-    int unit = g_iDistanceFormat;
-    if (d < .5 &&
-        (unit == DISTANCE_KM || unit == DISTANCE_MI || unit == DISTANCE_NMI))
-      unit = (unit == DISTANCE_MI) ? DISTANCE_FT : DISTANCE_M;
-
-    // nice number
-    float dist = toUsrDistance(d, unit), logdist = log(dist) / log(10.F);
-    float places = floor(logdist), rem = logdist - places;
-    dist = pow(10, places);
-
-    if (rem < .2)
-      dist /= 5;
-    else if (rem < .5)
-      dist /= 2;
-
-    wxString s = wxString::Format(_T("%g "), dist) + getUsrDistanceUnit(unit);
-    wxPen pen1 = wxPen(GetGlobalColor(_T ( "UBLCK" )), 3, wxPENSTYLE_SOLID);
-    double rotation = -VPoint.rotation;
-
-    ll_gc_ll(blat, blon, rotation * 180 / PI + 90, fromUsrDistance(dist, unit),
-             &tlat, &tlon);
-    wxPoint r;
-    GetCanvasPointPix(tlat, tlon, &r);
-    int l1 = r.x - x_origin;
-
-    m_scaleBarRect = wxRect(x_origin, y_origin - 12, l1,
-                            12);  // Store this for later reference
-
-    dc.SetPen(pen1);
-
-    dc.DrawLine(x_origin, y_origin, x_origin, y_origin - 12);
-    dc.DrawLine(x_origin, y_origin, x_origin + l1, y_origin);
-    dc.DrawLine(x_origin + l1, y_origin, x_origin + l1, y_origin - 12);
-
-    dc.SetFont(*m_pgridFont);
-    dc.SetTextForeground(GetGlobalColor(_T ( "UBLCK" )));
-    int w, h;
-    dc.GetTextExtent(s, &w, &h);
-    dc.DrawText(s, x_origin + l1 / 2 - w / 2, y_origin - h - 1);
-  }
 }
 
 void ChartCanvas::JaggyCircle(ocpnDC &dc, wxPen pen, int x, int y, int radius) {
@@ -4903,9 +4771,10 @@ void ChartCanvas::DrawCanvasData(LLBBox &llbBox, int nWidth, int nHeight, std::v
 	SetShowENCBuoyLabels(HasLayer(vnLayers, LAYER_BLLABELS));
 	SetShowENCLights(HasLayer(vnLayers, LAYER_LIGHTS));
 	SetShowVisibleSectors(HasLayer(vnLayers, LAYER_SLVIS));
-	SetShowGrid(HasLayer(vnLayers, LAYER_GRID));
+	SetShowGrid(HasLayer(vnLayers, LAYER_GRID));	
 
-	UpdateCanvasS52PLIBConfig();
+	ps52plib->m_bUseSCAMIN = false;
+	ps52plib->UpdateMarinerParams();
 
 	pscratch_bm->Create(VPoint.pix_width, VPoint.pix_height, -1);
 	m_working_bm.Create(VPoint.pix_width, VPoint.pix_height, -1);
@@ -4957,9 +4826,6 @@ void ChartCanvas::DrawCanvasData(LLBBox &llbBox, int nWidth, int nHeight, std::v
 
 	svp.pix_width = svp.rv_rect.width;
 	svp.pix_height = svp.rv_rect.height;
-
-	//printf("DrawCanvasData pix %d %d\n", VPoint.pix_width, VPoint.pix_height);
-	//printf("DrawCanvasData rv_rect %d %d\n", VPoint.rv_rect.width, VPoint.rv_rect.height);
 
 	OCPNRegion chart_get_region(wxRect(0, 0, svp.pix_width, svp.pix_height));
 	
@@ -5354,9 +5220,9 @@ void ChartCanvas::GenerateImageFile(wxMemoryDC* pMemDC, std::string& sIMGFilePat
 		xImage = xbTargetBitmap.ConvertToImage();
 
 		wxFileOutputStream xFileOutput(sIMGFilePath);
-		if (xFileOutput.IsOk()) {
-			if (bPNGFlag) xImage.SaveFile(xFileOutput, wxBITMAP_TYPE_PNG);
-			else xImage.SaveFile(xFileOutput, wxBITMAP_TYPE_JPEG);
+		if (xFileOutput.IsOk()) {			
+			xImage.SetOption(wxIMAGE_OPTION_QUALITY, 200);			
+			xImage.SaveFile(xFileOutput, wxBITMAP_TYPE_JPEG);			
 		}
 	}
 }
@@ -5657,7 +5523,6 @@ void ChartCanvas::DrawOverlayObjects(ocpnDC &dc, const wxRegion &ru) {
 
   RenderAllChartOutlines(dc, GetVP());
   
-  ScaleBarDraw(dc);
   s57_DrawExtendedLightSectors(dc, VPoint, extendedSectorLegs);
 
   DrawEmboss(dc, EmbossDepthScale());
@@ -7236,8 +7101,9 @@ void ChartCanvas::SetShowENCAnchor(bool show) {
 
 void ChartCanvas::RenderAlertMessage(wxDC &dc, const ViewPort &vp) {
   if (!GetAlertString().IsEmpty()) {
-    wxFont *pfont = wxTheFontList->FindOrCreateFont(
-        10, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL);
+	  wxFont* pfont = 0;
+	  if (wxTheFontList) pfont = wxTheFontList->FindOrCreateFont(10, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL);
+	  else pfont = new wxFont(10, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, false, wxEmptyString, wxFONTENCODING_DEFAULT);
 
     dc.SetFont(*pfont);
     dc.SetPen(*wxTRANSPARENT_PEN);

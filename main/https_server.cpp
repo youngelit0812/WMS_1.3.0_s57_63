@@ -289,6 +289,27 @@ int main(int argc, char** argv)
 	service->Start();
 	std::cout << "Done!" << std::endl;
 
+	// HTTPS server port
+	int nPortForHTTPS = envConfig.nPortForHTTPS;
+	// HTTPS server content path    
+	std::cout << "HTTPS server port: " << nPortForHTTPS << std::endl;
+
+	// Create and prepare a new SSL server context
+	auto context = std::make_shared<CppServer::Asio::SSLContext>(asio::ssl::context::tlsv13);
+	context->set_password_callback([](size_t max_length, asio::ssl::context::password_purpose purpose) -> std::string { return "qwerty"; });
+	context->use_certificate_chain_file("./tools/certificates/server.pem");
+	context->use_private_key_file("./tools/certificates/server.pem", asio::ssl::context::pem);
+	context->use_tmp_dh_file("./tools/certificates/dh4096.pem");
+
+	// Create a new HTTPS server
+	auto serverHTTPS = std::make_shared<HTTPSCacheServer>(service, context, nPortForHTTPS);
+	serverHTTPS->SetDBFlag((void*)app, (void*)& envConfig);
+	serverHTTPS->AddStaticContent(www, &envConfig, "/api");
+
+	// Start the server
+	std::cout << "Server starting..." << std::endl;
+	serverHTTPS->Start();
+
 	//HTTP server
 	int nPortForHTTP = envConfig.nPortForHTTP;
 	std::cout << "HTTP server port: " << nPortForHTTP << std::endl;
@@ -299,31 +320,8 @@ int main(int argc, char** argv)
 	serverHTTP->AddStaticContent(www, &envConfig, "/api");
 
 	// Start the server
-	std::cout << "Server starting...";
+	std::cout << "Server starting..." << std::endl;
 	serverHTTP->Start();
-	std::cout << "Done!" << std::endl;
-
-    // HTTPS server port
-    int nPortForHTTPS = envConfig.nPortForHTTPS;
-    // HTTPS server content path    
-    std::cout << "HTTPS server port: " << nPortForHTTPS << std::endl;
-
-    // Create and prepare a new SSL server context
-    auto context = std::make_shared<CppServer::Asio::SSLContext>(asio::ssl::context::tlsv13);
-    context->set_password_callback([](size_t max_length, asio::ssl::context::password_purpose purpose) -> std::string { return "qwerty"; });
-    context->use_certificate_chain_file("./tools/certificates/server.pem");
-    context->use_private_key_file("./tools/certificates/server.pem", asio::ssl::context::pem);
-    context->use_tmp_dh_file("./tools/certificates/dh4096.pem");
-
-    // Create a new HTTPS server
-    auto serverHTTPS = std::make_shared<HTTPSCacheServer>(service, context, nPortForHTTPS);
-	serverHTTPS->SetDBFlag((void *)app, (void *)&envConfig);
-	serverHTTPS->AddStaticContent(www, &envConfig, "/api");
-
-    // Start the server
-    std::cout << "Server starting...";
-	serverHTTPS->Start();
-    std::cout << "Done!" << std::endl;
 
     std::cout << "Press Enter to stop the server or '!' to restart the server..." << std::endl;
 
@@ -337,7 +335,7 @@ int main(int argc, char** argv)
         // Restart the server
         if (line == "!")
         {
-            std::cout << "Server restarting...";
+            std::cout << "Server restarting..." << std::endl;			
 			serverHTTP->Restart();
 			serverHTTPS->Restart();
             std::cout << "Done!" << std::endl;
@@ -346,14 +344,15 @@ int main(int argc, char** argv)
     }
 
     // Stop the server
-	std::cout << "Server stopping...";
-	serverHTTP->Stop();
+	std::cout << "Server stopping..." << std::endl;
+	if (app->OnExit()) delete app;
+
 	serverHTTPS->Stop();
+	serverHTTP->Stop();			
     std::cout << "Done!" << std::endl;
 
     // Stop the Asio service
-    std::cout << "Asio service stopping...";
-	delete app;
+    std::cout << "Asio service stopping..." << std::endl;
     service->Stop();
     std::cout << "Done!" << std::endl;
 

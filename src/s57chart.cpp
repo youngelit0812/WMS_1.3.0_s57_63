@@ -1663,6 +1663,8 @@ bool s57chart::DoRenderOnGL(const wxGLContext &glc, const ViewPort &VPoint) {
 #else
   //      Render the areas quickly
   for (i = 0; i < PRIO_NUM; ++i) {
+	  int nBoundaryStyleFromS52 = 0;
+	  if (ps52plib) nBoundaryStyleFromS52 = ps52plib->m_nBoundaryStyle;
     if (PI_GetPLIBBoundaryStyle() == SYMBOLIZED_BOUNDARIES)
       top = razRules[i][4];  // Area Symbolized Boundaries
     else

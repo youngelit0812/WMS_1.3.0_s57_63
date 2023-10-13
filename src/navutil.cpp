@@ -125,7 +125,6 @@ extern bool g_bShowActiveRouteHighway;
 bool g_bShowRouteTotal;
 extern int g_nAWDefault;
 extern int g_nAWMax;
-extern int g_nTrackPrecision;
 
 extern int g_iSDMMFormat;
 extern int g_iDistanceFormat;
@@ -165,13 +164,6 @@ extern double g_RemoveLost_Mins;
 extern bool g_bShowCOG;
 extern bool g_bSyncCogPredictors;
 extern double g_ShowCOG_Mins;
-extern bool g_bAISShowTracks;
-extern bool g_bTrackCarryOver;
-extern bool g_bTrackDaily;
-extern int g_track_rotate_time;
-extern int g_track_rotate_time_type;
-extern double g_AISShowTracks_Mins;
-extern double g_AISShowTracks_Limit;
 extern bool g_bHideMoored;
 extern double g_ShowMoored_Kts;
 extern bool g_bAllowShowScaled;
@@ -237,8 +229,6 @@ extern bool g_bShowWptName;
 
 extern bool g_bEnableZoomToCursor;
 extern wxString g_toolbarConfig;
-extern double g_TrackIntervalSeconds;
-extern double g_TrackDeltaDistance;
 
 extern int g_nCacheLimit;
 extern int g_memCacheLimit;
@@ -332,13 +322,9 @@ extern int g_lastClientRecty;
 extern int g_lastClientRectw;
 extern int g_lastClientRecth;
 
-extern bool g_bHighliteTracks;
 extern int g_cog_predictor_width;
 extern int g_ais_cog_predictor_width;
 
-extern int g_route_line_width;
-extern int g_track_line_width;
-extern wxColour g_colourTrackLineColour;
 extern wxString g_default_wp_icon;
 extern wxString g_default_routepoint_icon;
 
@@ -403,7 +389,6 @@ extern bool g_bShowCurrent;
 extern bool g_benableUDPNullHeader;
 
 extern wxString g_uiStyle;
-extern bool g_btrackContinuous;
 extern bool g_useMUI;
 
 int g_nCPUCount;
@@ -572,9 +557,7 @@ int MyConfig::LoadMyConfig(std::string& sENCDirPath) {
   g_ownship_HDTpredictor_miles = 1;
   g_n_ownship_min_mm = 2;
   g_own_ship_sog_cog_calc_damp_sec = 1;
-  g_bFullScreenQuilt = 1;
-  //g_track_rotate_time_type = TIME_TYPE_COMPUTER;
-  g_bHighliteTracks = 1;
+  g_bFullScreenQuilt = 1;  
   g_bPreserveScaleOnX = 1;
   g_navobjbackups = 5;
   g_benableAISNameCache = true;
@@ -582,8 +565,6 @@ int MyConfig::LoadMyConfig(std::string& sENCDirPath) {
   g_plus_minus_zoom_factor = 2.0;
   g_mouse_zoom_sensitivity = 1.5;
 
-  g_AISShowTracks_Mins = 20;
-  g_AISShowTracks_Limit = 300.0;
   g_ShowScaled_Num = 10;
   g_ScaledNumWeightSOG = 50;
   g_ScaledNumWeightCPA = 60;
@@ -626,12 +607,6 @@ int MyConfig::LoadMyConfig(std::string& sENCDirPath) {
   g_iWaypointRangeRingsStepUnits = 0;
   g_colourWaypointRangeRingsColour = wxColour(*wxRED);
   g_bConfirmObjectDelete = true;
-
-  g_TrackIntervalSeconds = 60.0;
-  g_TrackDeltaDistance = 0.10;
-  g_route_line_width = 2;
-  g_track_line_width = 2;
-  g_colourTrackLineColour = wxColour(243, 229, 47);  // Yellow
 
   g_tcwin_scale = 100;
   g_default_wp_icon = _T("triangle");
@@ -811,7 +786,6 @@ int MyConfig::LoadMyConfigRaw(bool bAsTemplate) {
     //Read(_T ( "UseGarminHostUpload" ), &g_bGarminHostUpload);
     Read(_T ( "UseNMEA_GLL" ), &g_bUseGLL);
     Read(_T ( "UseMagAPB" ), &g_bMagneticAPB);
-    Read(_T ( "TrackContinuous" ), &g_btrackContinuous, false);
     Read(_T ( "FilterTrackDropLargeJump" ), &g_trackFilterMax, 1000);
   }
 
@@ -954,13 +928,7 @@ int MyConfig::LoadMyConfigRaw(bool bAsTemplate) {
   Read(_T ( "RouteArrivalCircleRadius" ), &racr);
   if (racr.Len()) racr.ToDouble(&g_n_arrival_circle_radius);
 
-  Read(_T ( "FullScreenQuilt" ), &g_bFullScreenQuilt);
-
-  Read(_T ( "StartWithTrackActive" ), &g_bTrackCarryOver);
-  Read(_T ( "AutomaticDailyTracks" ), &g_bTrackDaily);
-  Read(_T ( "TrackRotateAt" ), &g_track_rotate_time);
-  Read(_T ( "TrackRotateTimeType" ), &g_track_rotate_time_type);
-  Read(_T ( "HighlightTracks" ), &g_bHighliteTracks);
+  Read(_T ( "FullScreenQuilt" ), &g_bFullScreenQuilt);      
 
   wxString stps;
   Read(_T ( "PlanSpeed" ), &stps);
@@ -1088,21 +1056,10 @@ int MyConfig::LoadMyConfigRaw(bool bAsTemplate) {
   Read(_T ( "CogArrowMinutes" ), &s);
   s.ToDouble(&g_ShowCOG_Mins);
 
-  Read(_T ( "bShowTargetTracks" ), &g_bAISShowTracks);
-
-  if (Read(_T ( "TargetTracksLimit" ), &s)) {
-    s.ToDouble(&g_AISShowTracks_Limit);
-    g_AISShowTracks_Limit = wxMax(300.0, g_AISShowTracks_Limit);
-  }
-  if (Read(_T ( "TargetTracksMinutes" ), &s)) {
-    s.ToDouble(&g_AISShowTracks_Mins);
-    g_AISShowTracks_Mins = wxMax(1.0, g_AISShowTracks_Mins);
-    g_AISShowTracks_Mins = wxMin(g_AISShowTracks_Limit, g_AISShowTracks_Mins);
-  }
-
   Read(_T ( "bHideMooredTargets" ), &g_bHideMoored);
-  if (Read(_T ( "MooredTargetMaxSpeedKnots" ), &s))
-    s.ToDouble(&g_ShowMoored_Kts);
+  if (Read(_T("MooredTargetMaxSpeedKnots"), &s)) {
+	  s.ToDouble(&g_ShowMoored_Kts);
+  }
 
   Read(_T ("bShowScaledTargets"), &g_bAllowShowScaled);
   Read(_T ( "AISScaledNumber" ), &g_ShowScaled_Num);
@@ -1406,29 +1363,12 @@ int MyConfig::LoadMyConfigRaw(bool bAsTemplate) {
   Read(_T ( "EnableZoomToCursor" ), &g_bEnableZoomToCursor);
 
   val.Clear();
-  Read(_T ( "TrackIntervalSeconds" ), &val);
-  if (val.Length() > 0) {
-    double tval = atof(val.mb_str());
-    if (tval >= 2.) g_TrackIntervalSeconds = tval;
-  }
+  Read(_T ( "TrackIntervalSeconds" ), &val);  
 
   val.Clear();
-  Read(_T ( "TrackDeltaDistance" ), &val);
-  if (val.Length() > 0) {
-    double tval = atof(val.mb_str());
-    if (tval >= 0.05) g_TrackDeltaDistance = tval;
-  }
-
-  Read(_T ( "TrackPrecision" ), &g_nTrackPrecision);
+  Read(_T ( "TrackDeltaDistance" ), &val);  
 
   Read(_T ( "NavObjectFileName" ), m_sNavObjSetFile);
-
-  Read(_T ( "RouteLineWidth" ), &g_route_line_width);
-  Read(_T ( "TrackLineWidth" ), &g_track_line_width);
-
-  wxString l_wxsTrackLineColour;
-  if (Read(_T( "TrackLineColour" ), &l_wxsTrackLineColour))
-    g_colourTrackLineColour.Set(l_wxsTrackLineColour);
 
   Read(_T ( "TideCurrentWindowScale" ), &g_tcwin_scale);
   Read(_T ( "DefaultWPIcon" ), &g_default_wp_icon);
@@ -2010,17 +1950,14 @@ void MyConfig::SaveConfigCanvas(canvasConfig *cConfig) {
     int restore_dbindex = 0;
     ChartStack *pcs = cConfig->canvas->GetpCurrentStack();
     if (pcs) restore_dbindex = pcs->GetCurrentEntrydbIndex();
-    if (cConfig->canvas->GetQuiltMode())
-      restore_dbindex = cConfig->canvas->GetQuiltReferenceChartIndex();
-    Write(_T ( "canvasInitialdBIndex" ), restore_dbindex);
+    if (cConfig->canvas->GetQuiltMode()) restore_dbindex = cConfig->canvas->GetQuiltReferenceChartIndex();    
 
     Write(_T ( "canvasbFollow" ), cConfig->canvas->m_bFollow);
     Write(_T ( "ActiveChartGroup" ), cConfig->canvas->m_groupIndex);
 
     Write(_T ( "canvasToolbarConfig" ),
           cConfig->canvas->GetToolbarConfigString());
-    Write(_T ( "canvasShowToolbar" ),
-          0);  // cConfig->canvas->GetToolbarEnable() );
+    Write(_T ( "canvasShowToolbar" ), 0);
 
     Write(_T ( "canvasQuilt" ), cConfig->canvas->GetQuiltMode());
     Write(_T ( "canvasShowGrid" ), cConfig->canvas->GetShowGrid());
@@ -2054,13 +1991,7 @@ void MyConfig::SaveConfigCanvas(canvasConfig *cConfig) {
     Write(_T ( "canvasHeadUp" ), cConfig->canvas->GetUpMode() == HEAD_UP_MODE);
     Write(_T ( "canvasLookahead" ), cConfig->canvas->GetLookahead());
 
-    int width = cConfig->canvas->GetSize().x;
-    //         if(cConfig->canvas->IsPrimaryCanvas()){
-    //             width = wxMax(width, gFrame->GetClientSize().x / 10);
-    //         }
-    //         else{
-    //             width = wxMin(width, gFrame->GetClientSize().x  * 9 / 10);
-    //         }
+    int width = cConfig->canvas->GetSize().x;    
 
     Write(_T ( "canvasSizeX" ), width);
     Write(_T ( "canvasSizeY" ), cConfig->canvas->GetSize().y);
@@ -2124,470 +2055,11 @@ void MyConfig::UpdateSettings() {
   Write(_T ( "FilterNMEA_Avg" ), g_bfilter_cogsog);
   Write(_T ( "FilterNMEA_Sec" ), g_COGFilterSec);
 
-  Write(_T ( "TrackContinuous" ), g_btrackContinuous);
-
   Write(_T ( "ShowTrue" ), g_bShowTrue);
   Write(_T ( "ShowMag" ), g_bShowMag);
-  //Write(_T ( "UserMagVariation" ), wxString::Format(_T("%.2f"), g_UserVar));
-//
-//  Write(_T ( "CM93DetailFactor" ), g_cm93_zoom_factor);
-//  Write(_T ( "CM93DetailZoomPosX" ), g_detailslider_dialog_x);
-//  Write(_T ( "CM93DetailZoomPosY" ), g_detailslider_dialog_y);
-//  Write(_T ( "ShowCM93DetailSlider" ), g_bShowDetailSlider);
-//
-//  Write(_T ( "SkewToNorthUp" ), g_bskew_comp);
-//  Write(_T ( "OpenGL" ), g_bopengl);
-//  Write(_T ( "DisableOpenGL" ), g_bdisable_opengl);
-//  Write(_T ( "SoftwareGL" ), g_bSoftwareGL);
-//  Write(_T ( "ShowFPS" ), g_bShowFPS);
-//
-//  Write(_T ( "ZoomDetailFactor" ), g_chart_zoom_modifier_raster);
-//  Write(_T ( "ZoomDetailFactorVector" ), g_chart_zoom_modifier_vector);
-//
-//  Write(_T ( "FogOnOverzoom" ), g_fog_overzoom);
-//  Write(_T ( "OverzoomVectorScale" ), g_oz_vector_scale);
-//  Write(_T ( "OverzoomEmphasisBase" ), g_overzoom_emphasis_base);
-//  Write(_T ( "PlusMinusZoomFactor" ), g_plus_minus_zoom_factor);
-//  Write("MouseZoomSensitivity",
-//        MouseZoom::ui_to_config(g_mouse_zoom_sensitivity_ui));
-//  Write(_T ( "ShowMUIZoomButtons" ), g_bShowMuiZoomButtons);
-//
-//#ifdef ocpnUSE_GL
-//  /* opengl options */
-//  //Write(_T ( "UseAcceleratedPanning" ), g_GLOptions.m_bUseAcceleratedPanning);
-//
-//  //Write(_T ( "GPUTextureCompression" ), g_GLOptions.m_bTextureCompression);
-//  /*Write(_T ( "GPUTextureCompressionCaching" ), g_GLOptions.m_bTextureCompressionCaching);
-//  Write(_T ( "GPUTextureDimension" ), g_GLOptions.m_iTextureDimension);
-//  Write(_T ( "GPUTextureMemSize" ), g_GLOptions.m_iTextureMemorySize);
-//  Write(_T ( "PolygonSmoothing" ), g_GLOptions.m_GLPolygonSmoothing);
-//  Write(_T ( "LineSmoothing" ), g_GLOptions.m_GLLineSmoothing);*/
-//#endif
-//  Write(_T ( "SmoothPanZoom" ), g_bsmoothpanzoom);
-//
-//  Write(_T ( "CourseUpMode" ), g_bCourseUp);
-//  if (!g_bInlandEcdis) Write(_T ( "LookAheadMode" ), g_bLookAhead);
-//  Write(_T ( "COGUPAvgSeconds" ), g_COGAvgSec);
-//  Write(_T ( "UseMagAPB" ), g_bMagneticAPB);
-//
-//  Write(_T ( "OwnshipCOGPredictorMinutes" ), g_ownship_predictor_minutes);
-//  Write(_T ( "OwnshipCOGPredictorWidth" ), g_cog_predictor_width);
-//  Write(_T ( "OwnshipHDTPredictorMiles" ), g_ownship_HDTpredictor_miles);
-//  Write(_T ( "OwnShipIconType" ), g_OwnShipIconType);
-//  Write(_T ( "OwnShipLength" ), g_n_ownship_length_meters);
-//  Write(_T ( "OwnShipWidth" ), g_n_ownship_beam_meters);
-//  Write(_T ( "OwnShipGPSOffsetX" ), g_n_gps_antenna_offset_x);
-//  Write(_T ( "OwnShipGPSOffsetY" ), g_n_gps_antenna_offset_y);
-//  Write(_T ( "OwnShipMinSize" ), g_n_ownship_min_mm);
-//  Write(_T ( "OwnShipSogCogCalc" ), g_own_ship_sog_cog_calc);
-//  Write(_T ( "OwnShipSogCogCalcDampSec"), g_own_ship_sog_cog_calc_damp_sec);
-//  Write(_T ( "ShowDirectRouteLine"), g_bShowShipToActive);
-//  Write(_T ( "DirectRouteLineStyle"), g_shipToActiveStyle);
-//  Write(_T ( "DirectRouteLineColor" ), g_shipToActiveColor);
-//
-//  wxString racr;
-//  //   racr.Printf( _T ( "%g" ), g_n_arrival_circle_radius );
-//  //   Write( _T ( "RouteArrivalCircleRadius" ), racr );
-//  Write(_T ( "RouteArrivalCircleRadius" ),
-//        wxString::Format(_T("%.2f"), g_n_arrival_circle_radius));
-//
-//  Write(_T ( "ChartQuilting" ), g_bQuiltEnable);
-//
-//  /*Write(_T ( "NMEALogWindowSizeX" ), NMEALogWindow::Get().GetSizeW());
-//  Write(_T ( "NMEALogWindowSizeY" ), NMEALogWindow::Get().GetSizeH());
-//  Write(_T ( "NMEALogWindowPosX" ), NMEALogWindow::Get().GetPosX());
-//  Write(_T ( "NMEALogWindowPosY" ), NMEALogWindow::Get().GetPosY());*/
-//
-//  Write(_T ( "PreserveScaleOnX" ), g_bPreserveScaleOnX);
-//
-//  Write(_T ( "StartWithTrackActive" ), g_bTrackCarryOver);
-//  Write(_T ( "AutomaticDailyTracks" ), g_bTrackDaily);
-//  Write(_T ( "TrackRotateAt" ), g_track_rotate_time);
-//  Write(_T ( "TrackRotateTimeType" ), g_track_rotate_time_type);
-//  Write(_T ( "HighlightTracks" ), g_bHighliteTracks);
-//
-//  Write(_T ( "InitialStackIndex" ), g_restore_stackindex);
-//  Write(_T ( "InitialdBIndex" ), g_restore_dbindex);
-//
-//  Write(_T( "NMEAAPBPrecision" ), g_NMEAAPBPrecision);
-//
-//  Write(_T("TalkerIdText"), g_TalkerIdText);
-//  Write(_T("ShowTrackPointTime"), g_bShowTrackPointTime);
-//
-//  Write(_T ( "AnchorWatch1GUID" ), g_AW1GUID);
-//  Write(_T ( "AnchorWatch2GUID" ), g_AW2GUID);
-//
-//  Write(_T ( "ToolbarX" ), g_maintoolbar_x);
-//  Write(_T ( "ToolbarY" ), g_maintoolbar_y);
-//  // Write( _T ( "ToolbarOrient" ), g_maintoolbar_orient );
-//
-//  Write(_T ( "iENCToolbarX" ), g_iENCToolbarPosX);
-//  Write(_T ( "iENCToolbarY" ), g_iENCToolbarPosY);
-//
-//  if (!g_bInlandEcdis) {
-//    Write(_T ( "GlobalToolbarConfig" ), g_toolbarConfig);
-//    Write(_T ( "DistanceFormat" ), g_iDistanceFormat);
-//    Write(_T ( "SpeedFormat" ), g_iSpeedFormat);
-//    Write(_T ( "ShowDepthUnits" ), g_bShowDepthUnits);
-//    Write(_T ( "TemperatureFormat" ), g_iTempFormat);
-//  }
-//  //Write(_T ( "GPSIdent" ), g_GPS_Ident);
-//  //Write(_T ( "UseGarminHostUpload" ), g_bGarminHostUpload);
-//
-//  Write(_T ( "ResponsiveGraphics" ), g_bresponsive);
-//  Write(_T ( "EnableRolloverBlock" ), g_bRollover);
-//
-//  Write(_T ( "AutoHideToolbar" ), g_bAutoHideToolbar);
-//  Write(_T ( "AutoHideToolbarSecs" ), g_nAutoHideToolbar);
-//
-//  Write(_T ( "DisplaySizeMM" ), g_config_display_size_mm);
-//  Write(_T ( "DisplaySizeManual" ), g_config_display_size_manual);
-//
-//  Write(_T ( "SelectionRadiusMM" ), g_selection_radius_mm);
-//  Write(_T ( "SelectionRadiusTouchMM" ), g_selection_radius_touch_mm);
-//
-//  wxString st0;
-//  st0.Printf(_T ( "%g" ), g_PlanSpeed);
-//  Write(_T ( "PlanSpeed" ), st0);
-//
-//  if (g_bLayersLoaded) {
-//    wxString vis, invis, visnames, invisnames;
-//    LayerList::iterator it;
-//    int index = 0;
-//    for (it = (*pLayerList).begin(); it != (*pLayerList).end(); ++it, ++index) {
-//      Layer *lay = (Layer *)(*it);
-//      if (lay->IsVisibleOnChart())
-//        vis += (lay->m_LayerName) + _T(";");
-//      else
-//        invis += (lay->m_LayerName) + _T(";");
-//
-//      if (lay->HasVisibleNames() == wxCHK_CHECKED) {
-//        visnames += (lay->m_LayerName) + _T(";");
-//      } else if (lay->HasVisibleNames() == wxCHK_UNCHECKED) {
-//        invisnames += (lay->m_LayerName) + _T(";");
-//      }
-//    }
-//    Write(_T ( "VisibleLayers" ), vis);
-//    Write(_T ( "InvisibleLayers" ), invis);
-//    Write(_T ( "VisNameInLayers" ), visnames);
-//    Write(_T ( "InvisNameInLayers" ), invisnames);
-//  }
-//  Write(_T ( "Locale" ), g_locale);
-//  Write(_T ( "LocaleOverride" ), g_localeOverride);
-//
-//  Write(_T ( "KeepNavobjBackups" ), g_navobjbackups);
-//  Write(_T ( "LegacyInputCOMPortFilterBehaviour" ),
-//        g_b_legacy_input_filter_behaviour);
-//  Write(_T( "AdvanceRouteWaypointOnArrivalOnly" ),
-//        g_bAdvanceRouteWaypointOnArrivalOnly);
-//
-//  // LIVE ETA OPTION
-//  Write(_T( "LiveETA" ), g_bShowLiveETA);
-//  Write(_T( "DefaultBoatSpeed" ), g_defaultBoatSpeed);
-//
-//  //    S57 Object Filter Settings
-//
-//  SetPath(_T ( "/Settings/ObjectFilter" ));
-//
-//  if (ps52plib) {
-//    for (unsigned int iPtr = 0; iPtr < ps52plib->pOBJLArray->GetCount();
-//         iPtr++) {
-//      OBJLElement *pOLE = (OBJLElement *)(ps52plib->pOBJLArray->Item(iPtr));
-//
-//      wxString st1(_T ( "viz" ));
-//      char name[7];
-//      strncpy(name, pOLE->OBJLName, 6);
-//      name[6] = 0;
-//      st1.Append(wxString(name, wxConvUTF8));
-//      Write(st1, pOLE->nViz);
-//    }
-//  }
-//
-//  //    Global State
-//
-//  SetPath(_T ( "/Settings/GlobalState" ));
-//
-//  wxString st1;
-//
-//  //     if( cc1 ) {
-//  //         ViewPort vp = cc1->GetVP();
-//  //
-//  //         if( vp.IsValid() ) {
-//  //             st1.Printf( _T ( "%10.4f,%10.4f" ), vp.clat, vp.clon );
-//  //             Write( _T ( "VPLatLon" ), st1 );
-//  //             st1.Printf( _T ( "%g" ), vp.view_scale_ppm );
-//  //             Write( _T ( "VPScale" ), st1 );
-//  //             st1.Printf( _T ( "%i" ), ((int)(vp.rotation * 180 / PI)) % 360
-//  //             ); Write( _T ( "VPRotation" ), st1 );
-//  //         }
-//  //     }
-//
-//  st1.Printf(_T ( "%10.4f, %10.4f" ), gLat, gLon);
-//  Write(_T ( "OwnShipLatLon" ), st1);
-//
-//  //    Various Options
-//  SetPath(_T ( "/Settings/GlobalState" ));
-//  if (!g_bInlandEcdis)
-//    Write(_T ( "nColorScheme" ), (int)gFrame->GetColorScheme());
-//
-//  Write(_T ( "FrameWinX" ), g_nframewin_x);
-//  Write(_T ( "FrameWinY" ), g_nframewin_y);
-//  Write(_T ( "FrameWinPosX" ), g_nframewin_posx);
-//  Write(_T ( "FrameWinPosY" ), g_nframewin_posy);
-//  Write(_T ( "FrameMax" ), g_bframemax);
-//
-//  Write(_T ( "ClientPosX" ), g_lastClientRectx);
-//  Write(_T ( "ClientPosY" ), g_lastClientRecty);
-//  Write(_T ( "ClientSzX" ), g_lastClientRectw);
-//  Write(_T ( "ClientSzY" ), g_lastClientRecth);
-//
-//  Write(_T ( "S52_DEPTH_UNIT_SHOW" ), g_nDepthUnitDisplay);
-//
-//  Write(_T( "RoutePropSizeX" ), g_route_prop_sx);
-//  Write(_T( "RoutePropSizeY" ), g_route_prop_sy);
-//  Write(_T( "RoutePropPosX" ), g_route_prop_x);
-//  Write(_T( "RoutePropPosY" ), g_route_prop_y);
-//
-//  // Sounds
-//  SetPath(_T ( "/Settings/Audio" ));
-//  Write(_T ( "AISAlertSoundFile" ), g_AIS_sound_file);
-//  Write(_T ( "DSCAlertSoundFile" ), g_DSC_sound_file);
-//  Write(_T ( "SARTAlertSoundFile" ), g_SART_sound_file);
-//  Write(_T ( "AnchorAlarmSoundFile" ), g_anchorwatch_sound_file);
-//
-//  Write(_T ( "bAIS_GCPA_AlertAudio" ), g_bAIS_GCPA_Alert_Audio);
-//  Write(_T ( "bAIS_SART_AlertAudio" ), g_bAIS_SART_Alert_Audio);
-//  Write(_T ( "bAIS_DSC_AlertAudio" ), g_bAIS_DSC_Alert_Audio);
-//  Write(_T ( "bAnchorAlertAudio" ), g_bAnchor_Alert_Audio);
-//
-//  //    AIS
-//  SetPath(_T ( "/Settings/AIS" ));
-//
-//  Write(_T ( "bNoCPAMax" ), g_bCPAMax);
-//  Write(_T ( "NoCPAMaxNMi" ), g_CPAMax_NM);
-//  Write(_T ( "bCPAWarn" ), g_bCPAWarn);
-//  Write(_T ( "CPAWarnNMi" ), g_CPAWarn_NM);
-//  Write(_T ( "bTCPAMax" ), g_bTCPA_Max);
-//  Write(_T ( "TCPAMaxMinutes" ), g_TCPA_Max);
-//  Write(_T ( "bMarkLostTargets" ), g_bMarkLost);
-//  Write(_T ( "MarkLost_Minutes" ), g_MarkLost_Mins);
-//  Write(_T ( "bRemoveLostTargets" ), g_bRemoveLost);
-//  Write(_T ( "RemoveLost_Minutes" ), g_RemoveLost_Mins);
-//  Write(_T ( "bShowCOGArrows" ), g_bShowCOG);
-//  Write(_T ( "bSyncCogPredictors" ), g_bSyncCogPredictors);
-//  Write(_T ( "CogArrowMinutes" ), g_ShowCOG_Mins);
-//  Write(_T ( "bShowTargetTracks" ), g_bAISShowTracks);
-//  Write(_T ( "TargetTracksMinutes" ), g_AISShowTracks_Mins);
-//
-//  Write(_T ( "bHideMooredTargets" ), g_bHideMoored);
-//  Write(_T ( "MooredTargetMaxSpeedKnots" ), g_ShowMoored_Kts);
-//
-//  Write(_T ( "bAISAlertDialog" ), g_bAIS_CPA_Alert);
-//  Write(_T ( "bAISAlertAudio" ), g_bAIS_CPA_Alert_Audio);
-//
-//  Write(_T ( "AISAlertAudioFile" ), g_sAIS_Alert_Sound_File);
-//  Write(_T ( "bAISAlertSuppressMoored" ), g_bAIS_CPA_Alert_Suppress_Moored);
-//  Write(_T ( "bShowAreaNotices" ), g_bShowAreaNotices);
-//  Write(_T ( "bDrawAISSize" ), g_bDrawAISSize);
-//  Write(_T ( "bDrawAISRealtime" ), g_bDrawAISRealtime);
-//  Write(_T ( "AISRealtimeMinSpeedKnots" ), g_AIS_RealtPred_Kts);
-//  Write(_T ( "bShowAISName" ), g_bShowAISName);
-//  Write(_T ( "ShowAISTargetNameScale" ), g_Show_Target_Name_Scale);
-//  //Write(_T ( "bWplIsAprsPositionReport" ), g_bWplUsePosition);
-//  Write(_T ( "WplSelAction" ), g_WplAction);
-//  Write(_T ( "AISCOGPredictorWidth" ), g_ais_cog_predictor_width);
-//  Write(_T ( "bShowScaledTargets" ), g_bAllowShowScaled);
-//  Write(_T ( "AISScaledNumber" ), g_ShowScaled_Num);
-//  Write(_T ( "AISScaledNumberWeightSOG" ), g_ScaledNumWeightSOG);
-//  Write(_T ( "AISScaledNumberWeightCPA" ), g_ScaledNumWeightCPA);
-//  Write(_T ( "AISScaledNumberWeightTCPA" ), g_ScaledNumWeightTCPA);
-//  Write(_T ( "AISScaledNumberWeightRange" ), g_ScaledNumWeightRange);
-//  Write(_T ( "AISScaledNumberWeightSizeOfTarget" ), g_ScaledNumWeightSizeOfT);
-//  Write(_T ( "AISScaledSizeMinimal" ), g_ScaledSizeMinimal);
-//  Write(_T ( "AISShowScaled"), g_bShowScaled);
-//
-//  Write(_T ( "AlertDialogSizeX" ), g_ais_alert_dialog_sx);
-//  Write(_T ( "AlertDialogSizeY" ), g_ais_alert_dialog_sy);
-//  Write(_T ( "AlertDialogPosX" ), g_ais_alert_dialog_x);
-//  Write(_T ( "AlertDialogPosY" ), g_ais_alert_dialog_y);
-//  Write(_T ( "QueryDialogPosX" ), g_ais_query_dialog_x);
-//  Write(_T ( "QueryDialogPosY" ), g_ais_query_dialog_y);
-//  Write(_T ( "AISTargetListPerspective" ), g_AisTargetList_perspective);
-//  Write(_T ( "AISTargetListRange" ), g_AisTargetList_range);
-//  Write(_T ( "AISTargetListSortColumn" ), g_AisTargetList_sortColumn);
-//  Write(_T ( "bAISTargetListSortReverse" ), g_bAisTargetList_sortReverse);
-//  Write(_T ( "AISTargetListColumnSpec" ), g_AisTargetList_column_spec);
-//  Write(_T ("AISTargetListColumnOrder"), g_AisTargetList_column_order);
-//
-//  Write(_T ( "S57QueryDialogSizeX" ), g_S57_dialog_sx);
-//  Write(_T ( "S57QueryDialogSizeY" ), g_S57_dialog_sy);
-//  Write(_T ( "S57QueryExtraDialogSizeX" ), g_S57_extradialog_sx);
-//  Write(_T ( "S57QueryExtraDialogSizeY" ), g_S57_extradialog_sy);
-//
-//  Write(_T ( "bAISRolloverShowClass" ), g_bAISRolloverShowClass);
-//  Write(_T ( "bAISRolloverShowCOG" ), g_bAISRolloverShowCOG);
-//  Write(_T ( "bAISRolloverShowCPA" ), g_bAISRolloverShowCPA);
-//
-//  Write(_T ( "bAISAlertAckTimeout" ), g_bAIS_ACK_Timeout);
-//  Write(_T ( "AlertAckTimeoutMinutes" ), g_AckTimeout_Mins);
-//
-//  SetPath(_T ( "/Settings/GlobalState" ));
-//  if (ps52plib) {
-//    Write(_T ( "bShowS57Text" ), ps52plib->GetShowS57Text());
-//    Write(_T ( "bShowS57ImportantTextOnly" ),
-//          ps52plib->GetShowS57ImportantTextOnly());
-//    if (!g_bInlandEcdis)
-//      Write(_T ( "nDisplayCategory" ), (long)ps52plib->GetDisplayCategory());
-//    Write(_T ( "nSymbolStyle" ), (int)ps52plib->m_nSymbolStyle);
-//    Write(_T ( "nBoundaryStyle" ), (int)ps52plib->m_nBoundaryStyle);
-//
-//    Write(_T ( "bShowSoundg" ), ps52plib->m_bShowSoundg);
-//    Write(_T ( "bShowMeta" ), ps52plib->m_bShowMeta);
-//    Write(_T ( "bUseSCAMIN" ), ps52plib->m_bUseSCAMIN);
-//    Write(_T ( "bUseSUPER_SCAMIN" ), ps52plib->m_bUseSUPER_SCAMIN);
-//    Write(_T ( "bShowAtonText" ), ps52plib->m_bShowAtonText);
-//    Write(_T ( "bShowLightDescription" ), ps52plib->m_bShowLdisText);
-//    Write(_T ( "bExtendLightSectors" ), ps52plib->m_bExtendLightSectors);
-//    Write(_T ( "bDeClutterText" ), ps52plib->m_bDeClutterText);
-//    Write(_T ( "bShowNationalText" ), ps52plib->m_bShowNationalTexts);
-//
-//    Write(_T ( "S52_MAR_SAFETY_CONTOUR" ),
-//          S52_getMarinerParam(S52_MAR_SAFETY_CONTOUR));
-//    Write(_T ( "S52_MAR_SHALLOW_CONTOUR" ),
-//          S52_getMarinerParam(S52_MAR_SHALLOW_CONTOUR));
-//    Write(_T ( "S52_MAR_DEEP_CONTOUR" ),
-//          S52_getMarinerParam(S52_MAR_DEEP_CONTOUR));
-//    Write(_T ( "S52_MAR_TWO_SHADES" ), S52_getMarinerParam(S52_MAR_TWO_SHADES));
-//    Write(_T ( "S52_DEPTH_UNIT_SHOW" ), ps52plib->m_nDepthUnitDisplay);
-//    Write(_T ( "ENCSoundingScaleFactor" ), g_ENCSoundingScaleFactor);
-//    Write(_T ( "ENCTextScaleFactor" ), g_ENCTextScaleFactor);
-//  }
-//  SetPath(_T ( "/Directories" ));
-//  Write(_T ( "S57DataLocation" ), _T(""));
-//  //    Write( _T ( "SENCFileLocation" ), _T("") );
-//
-//  SetPath(_T ( "/Directories" ));
-//  Write(_T ( "InitChartDir" ), *pInit_Chart_Dir);
-//  Write(_T ( "GPXIODir" ), g_gpx_path);
-//  Write(_T ( "TCDataDir" ), g_TCData_Dir);
-//  Write(_T ( "BasemapDir" ), g_Platform->NormalizePath(gWorldMapLocation));
-//  Write(_T ( "pluginInstallDir" ), g_Platform->NormalizePath(g_winPluginDir));
-//
-//  SetPath(_T ( "/Settings/NMEADataSource" ));
-//  //wxString connectionconfigs;
-//  /*for (size_t i = 0; i < TheConnectionParams()->Count(); i++) {
-//    if (i > 0) connectionconfigs.Append(_T("|"));
-//    connectionconfigs.Append(TheConnectionParams()->Item(i)->Serialize());
-//  }*/
-//  //Write(_T ( "DataConnections" ), connectionconfigs);
-//
-//  //    Fonts
-//
-//  //  Store the persistent Auxiliary Font descriptor Keys
-//  SetPath(_T ( "/Settings/AuxFontKeys" ));
-//
-//  /*wxArrayString keyArray = FontMgr::Get().GetAuxKeyArray();
-//  for (unsigned int i = 0; i < keyArray.GetCount(); i++) {
-//    wxString key;
-//    key.Printf(_T("Key%i"), i);
-//    wxString keyval = keyArray[i];
-//    Write(key, keyval);
-//  }*/
-//
-//  wxString font_path;
-//#ifdef __WXX11__
-//  font_path = (_T ( "/Settings/X11Fonts" ));
-//#endif
-//
-//#ifdef __WXGTK__
-//  font_path = (_T ( "/Settings/GTKFonts" ));
-//#endif
-//
-//#ifdef __WXMSW__
-//  font_path = (_T ( "/Settings/MSWFonts" ));
-//#endif
-//
-//#ifdef __WXMAC__
-//  font_path = (_T ( "/Settings/MacFonts" ));
-//#endif
-//
-//#ifdef __WXQT__
-//  font_path = (_T ( "/Settings/QTFonts" ));
-//#endif
-//
-//  DeleteGroup(font_path);
-//
-//  SetPath(font_path);
-//
-//  /*int nFonts = FontMgr::Get().GetNumFonts();
-//
-//  for (int i = 0; i < nFonts; i++) {
-//    wxString cfstring(FontMgr::Get().GetConfigString(i));
-//    wxString valstring = FontMgr::Get().GetFullConfigDesc(i);
-//    Write(cfstring, valstring);
-//  }*/
-//
-//  //  Tide/Current Data Sources
-//  DeleteGroup(_T ( "/TideCurrentDataSources" ));
-//  SetPath(_T ( "/TideCurrentDataSources" ));
-//  unsigned int id = 0;
-//  for (auto val : TideCurrentDataSet) {
-//    wxString key;
-//    key.Printf(_T("tcds%d"), id);
-//    Write(key, wxString(val));
-//    ++id;
-//  }
-//
-//  SetPath(_T ( "/Settings/Others" ));
-//
-//  // Radar rings
-//  Write(_T ( "ShowRadarRings" ),
-//        (bool)(g_iNavAidRadarRingsNumberVisible > 0));  // 3.0.0 config support
-//  Write(_T ( "RadarRingsNumberVisible" ), g_iNavAidRadarRingsNumberVisible);
-//  Write(_T ( "RadarRingsStep" ), g_fNavAidRadarRingsStep);
-//  Write(_T ( "RadarRingsStepUnits" ), g_pNavAidRadarRingsStepUnits);
-//  Write(_T ( "RadarRingsColour" ),
-//        g_colourOwnshipRangeRingsColour.GetAsString(wxC2S_HTML_SYNTAX));
-//  Write(_T( "WaypointUseScaMin" ), g_bUseWptScaMin);
-//  Write(_T( "WaypointScaMinValue" ), g_iWpt_ScaMin);
-//  Write(_T( "WaypointUseScaMinOverrule" ), g_bOverruleScaMin);
-//  Write(_T("WaypointsShowName"), g_bShowWptName);
-//
-//  // Waypoint Radar rings
-//  Write(_T ( "WaypointRangeRingsNumber" ), g_iWaypointRangeRingsNumber);
-//  Write(_T ( "WaypointRangeRingsStep" ), g_fWaypointRangeRingsStep);
-//  Write(_T ( "WaypointRangeRingsStepUnits" ), g_iWaypointRangeRingsStepUnits);
-//  Write(_T ( "WaypointRangeRingsColour" ),
-//        g_colourWaypointRangeRingsColour.GetAsString(wxC2S_HTML_SYNTAX));
-//
-//  Write(_T ( "ConfirmObjectDeletion" ), g_bConfirmObjectDelete);
-//
-//  // Waypoint dragging with mouse; toh, 2009.02.24
-//  Write(_T ( "WaypointPreventDragging" ), g_bWayPointPreventDragging);
-//
-//  Write(_T ( "EnableZoomToCursor" ), g_bEnableZoomToCursor);
-//
-//  Write(_T ( "TrackIntervalSeconds" ), g_TrackIntervalSeconds);
-//  Write(_T ( "TrackDeltaDistance" ), g_TrackDeltaDistance);
-//  Write(_T ( "TrackPrecision" ), g_nTrackPrecision);
-//
-//  Write(_T ( "RouteLineWidth" ), g_route_line_width);
-//  Write(_T ( "TrackLineWidth" ), g_track_line_width);
-//  Write(_T ( "TrackLineColour" ),
-//        g_colourTrackLineColour.GetAsString(wxC2S_HTML_SYNTAX));
-//  Write(_T ( "DefaultWPIcon" ), g_default_wp_icon);
-//  Write(_T ( "DefaultRPIcon" ), g_default_routepoint_icon);
-//
-//  DeleteGroup(_T ( "/MmsiProperties" ));
-//  SetPath(_T ( "/MmsiProperties" ));
-//  /*for (unsigned int i = 0; i < g_MMSI_Props_Array.GetCount(); i++) {
-//    wxString p;
-//    p.Printf(_T("Props%d"), i);
-//    Write(p, g_MMSI_Props_Array[i]->Serialize());
-//  }*/
-//
+  
   SaveCanvasConfigs();
-//
+
   Flush();
 }
 

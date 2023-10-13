@@ -147,7 +147,6 @@ extern bool g_config_display_size_manual;
 extern float g_selection_radius_mm;
 extern float g_selection_radius_touch_mm;
 
-extern bool g_bTrackDaily;
 extern double g_PlanSpeed;
 extern bool g_bFullScreenQuilt;
 extern bool g_bQuiltEnable;
@@ -160,7 +159,6 @@ extern int g_cm93_zoom_factor;
 extern int g_GUIScaleFactor;
 extern bool g_fog_overzoom;
 extern bool g_oz_vector_scale;
-extern int g_nTrackPrecision;
 extern wxString g_toolbarConfig;
 extern bool g_bPreserveScaleOnX;
 extern bool g_running;
@@ -1002,7 +1000,6 @@ void OCPNPlatform::SetDefaultOptions(void) {
   g_bSyncCogPredictors = false;
   g_bHideMoored = false;
   g_ShowMoored_Kts = 0.2;
-  g_bTrackDaily = false;
   g_PlanSpeed = 6.;
   g_bFullScreenQuilt = true;
   g_bQuiltEnable = true;
@@ -1011,8 +1008,7 @@ void OCPNPlatform::SetDefaultOptions(void) {
   g_bDrawAISSize = false;
   g_bDrawAISRealtime = false;
   g_AIS_RealtPred_Kts = 0.7;
-  g_bShowAISName = false;
-  g_nTrackPrecision = 2;
+  g_bShowAISName = false;  
   g_bPreserveScaleOnX = true;
   g_nAWDefault = 50;
   g_nAWMax = 1852;

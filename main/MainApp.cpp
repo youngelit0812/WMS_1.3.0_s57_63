@@ -172,10 +172,8 @@ wxColour g_colourOwnshipRangeRingsColour;
 bool g_bShowWptName;
 int g_maxzoomin;
 
-bool g_bTrackActive;
 bool g_bportable;
 bool g_benableUDPNullHeader;
-bool g_btrackContinuous;
 bool bGPSValid;
 bool bVelocityValid;
 bool AnchorAlertOn1, AnchorAlertOn2;
@@ -508,9 +506,6 @@ double g_RemoveLost_Mins;
 bool g_bShowCOG;
 bool g_bSyncCogPredictors;
 double g_ShowCOG_Mins;
-bool g_bAISShowTracks;
-double g_AISShowTracks_Mins;
-double g_AISShowTracks_Limit;
 bool g_bHideMoored;
 bool g_bAllowShowScaled;
 double g_ShowMoored_Kts;
@@ -531,21 +526,8 @@ int g_nAIS_activity_timer;
 
 bool g_bEnableZoomToCursor;
 
-bool g_bTrackCarryOver;
-bool g_bDeferredStartTrack;
-bool g_bTrackDaily;
-int g_track_rotate_time;
-int g_track_rotate_time_type;
-bool g_bHighliteTracks;
-int g_route_line_width;
-int g_track_line_width;
-wxColour g_colourTrackLineColour;
 wxString g_default_wp_icon;
 wxString g_default_routepoint_icon;
-
-double g_TrackIntervalSeconds;
-double g_TrackDeltaDistance;
-int g_nTrackPrecision;
 
 int g_total_NMEAerror_messages;
 
@@ -643,7 +625,6 @@ bool g_bGLexpert;
 int g_chart_zoom_modifier_raster;
 int g_chart_zoom_modifier_vector;
 
-
 bool g_bAdvanceRouteWaypointOnArrivalOnly;
 
 bool g_bSpaceDropMark;
@@ -654,7 +635,7 @@ bool b_reloadForPlugins;
 unsigned int g_canvasConfig;
 bool g_useMUI;
 bool g_bmasterToolbarFull = true;
-
+bool g_bSENCFileCreateFinish;
 int g_memUsed;
 
 wxString g_lastAppliedTemplateGUID;
@@ -663,6 +644,7 @@ bool b_inCloseWindow;
 extern ColorScheme GetColorScheme();
 
 void InitializeUserColors(void);
+void DeInitializeUserColors(void);
 
 //------------------------------------------------------------------------------
 //    PNG Icon resources
@@ -671,8 +653,6 @@ void InitializeUserColors(void);
 #if defined(__WXGTK__) || defined(__WXQT__)
 #include "../src/bitmaps/opencpn.xpm"
 #endif
-
-
 
 wxString newPrivateFileName(wxString home_locn, const char* name,
 	const char* windowsName) {
@@ -927,6 +907,10 @@ MainApp::MainApp()
 #endif   // __linux__
 }
 
+bool MainApp::GetSENCFileCreateState() {
+	return g_bSENCFileCreateFinish;
+}
+
 bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart) {
 	if (!wxApp::OnInit()) return false;
 		g_unit_test_2 = 0;
@@ -936,6 +920,7 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart) {
 		g_rebuild_gl_cache = false;
 		g_parse_all_enc = false;
 		g_unit_test_1 = 0;
+		g_bSENCFileCreateFinish = false;
 
 	GpxDocument::SeedRandom();
 	last_own_ship_sog_cog_calc_ts = wxInvalidDateTime;
@@ -1045,13 +1030,11 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart) {
 #if wxUSE_XLOCALE || !wxCHECK_VERSION(3, 0, 0)
 	g_Platform->SetLocaleSearchPrefixes();
 
-  wxString cflmsg = _T("Config file language:  ") + g_locale;
-  wxLogMessage(cflmsg);
+	printf("Config file language: %s\n", (const char*)g_locale.mb_str(wxConvUTF8));  
 
-  //  Make any adjustments necessary
-  g_locale = g_Platform->GetAdjustedAppLocale();
-  cflmsg = _T("Adjusted App language:  ") + g_locale;
-  wxLogMessage(cflmsg);
+	//  Make any adjustments necessary
+	g_locale = g_Platform->GetAdjustedAppLocale();
+	printf("Adjusted App language: %s\n", (const char*)g_locale.mb_str(wxConvUTF8));  
 
 	g_Platform->ChangeLocale(g_locale, plocale_def_lang, &plocale_def_lang);
 
@@ -1059,7 +1042,6 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart) {
 #endif
 
 	ConfigMgr::Get();
-
 	wxString vs = wxString("Version ") + VERSION_FULL + " Build " + VERSION_DATE;
 	g_bUpgradeInProcess = (vs != g_config_version_string);
 
@@ -1075,8 +1057,9 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart) {
 		wxFileName fn(g_Platform->GetExePath());
 		bool b_test_result = TestGLCanvas(fn.GetPathWithSep());
 
-		if (!b_test_result)
-			wxLogMessage(_T("OpenGL disabled due to test app failure."));
+		if (!b_test_result) {
+			printf("OpenGL disabled due to test app failure.");
+		}
 
 		g_bdisable_opengl = !b_test_result;
 	}
@@ -1295,9 +1278,6 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart) {
 	////  Most likely installations have no ownship heading information
 	g_bVAR_Rx = false;
 
-	//  Start up a new track if enabled in config file
-	if (g_bTrackCarryOver) g_bDeferredStartTrack = true;
-
 	Yield();
 
 	gFrame->DoChartUpdate();
@@ -1351,6 +1331,47 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart) {
 	printf("Wait for minutes to prepare... \n");
 	gFrame->UpdateDB_Canvas();
 	printf("pre-initialize finished! \n");
+
+	return true;
+}
+
+int MainApp::OnExit() {
+	if (ps52plib) delete ps52plib;
+
+	if (g_pGroupArray) {
+		for (unsigned int igroup = 0; igroup < g_pGroupArray->GetCount(); igroup++) {
+			delete g_pGroupArray->Item(igroup);
+		}
+
+		g_pGroupArray->Clear();
+		delete g_pGroupArray;
+	}
+
+	if (!g_Platform->InitializeLogFile()) return false;
+
+	if (pInit_Chart_Dir) delete pInit_Chart_Dir;
+
+	if (pMessageOnceArray) delete pMessageOnceArray;
+
+	DeInitializeUserColors();
+	
+	if (pLayerList) delete pLayerList;
+
+	if (g_StyleManager) delete g_StyleManager;
+
+#ifdef __WXMSW__
+#ifdef USE_GLU_TESS
+#ifdef USE_GLU_DLL
+	if (s_glu_dll_ready) FreeLibrary(s_hGLU_DLL);  // free the glu32.dll
+#endif
+#endif
+#endif
+
+	FontMgr::Shutdown();
+
+	if (m_checker) delete m_checker;
+
+	g_Platform->OnExit_2();
 
 	return true;
 }

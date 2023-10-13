@@ -1666,8 +1666,7 @@ int ChartDatabase::TraverseDirAndAddCharts(ChartDirInfo &dir_info, wxString &dir
   return nAdd;
 }
 
-bool ChartDatabase::DetectDirChange(const wxString &dir_path,
-                                    const wxString &prog_label,
+bool ChartDatabase::DetectDirChange(const wxString &dir_path, const wxString &prog_label,
                                     const wxString &magic, wxString &new_magic) {
   printf("DetectDirChange : ENC Directory Scan....\n");
 
@@ -1690,7 +1689,7 @@ bool ChartDatabase::DetectDirChange(const wxString &dir_path,
   // accumulator
   for (int ifile = 0; ifile < n_files; ifile++) {
 	  if ((ifile % (n_files / 60 + 1)) == 0) {
-		  wprintf(_T("DetectDirChange: label:%s, percent:%d\n"), prog_label.wc_str(), wxMin((ifile * 100) / n_files, 100));
+		  printf("DetectDirChange: label:%s, percent:%d\n", (const char *)prog_label.mb_str(wxConvUTF8), wxMin((ifile * 100) / n_files, 100));
 	  }
 
     wxFileName file(FileList[ifile]);

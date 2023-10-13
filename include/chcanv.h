@@ -554,7 +554,6 @@ private:
   void RenderVisibleSectorLights(ocpnDC &dc);
 
   void GridDraw(ocpnDC &dc);  // Display lat/lon Grid in chart display
-  void ScaleBarDraw(ocpnDC &dc);
 
   void DrawOverlayObjects(ocpnDC &dc, const wxRegion &ru);
   emboss_data *EmbossDepthScale();

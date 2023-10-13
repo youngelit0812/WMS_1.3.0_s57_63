@@ -1722,7 +1722,6 @@ void glChartCanvas::DrawFloatingOverlayObjects(ocpnDC &dc) {
   
   m_pParentCanvas->RenderVisibleSectorLights(dc);
 
-  m_pParentCanvas->ScaleBarDraw(dc);
   s57_DrawExtendedLightSectorsGL(dc, m_pParentCanvas->VPoint, m_pParentCanvas->extendedSectorLegs);  
 }
 

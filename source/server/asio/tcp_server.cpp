@@ -25,8 +25,8 @@ TCPServer::TCPServer(const std::shared_ptr<Service>& service, int port, Internet
       _bytes_received(0),
       _option_keep_alive(false),
       _option_no_delay(false),
-      _option_reuse_address(false),
-      _option_reuse_port(false)
+      _option_reuse_address(true),
+      _option_reuse_port(true)
 {
     assert((service != nullptr) && "Asio service is invalid!");
     if (service == nullptr)
@@ -59,8 +59,8 @@ TCPServer::TCPServer(const std::shared_ptr<Service>& service, const std::string&
       _bytes_received(0),
       _option_keep_alive(false),
       _option_no_delay(false),
-      _option_reuse_address(false),
-      _option_reuse_port(false)
+      _option_reuse_address(true),
+      _option_reuse_port(true)
 {
     assert((service != nullptr) && "Asio service is invalid!");
     if (service == nullptr)
@@ -86,8 +86,8 @@ TCPServer::TCPServer(const std::shared_ptr<Service>& service, const asio::ip::tc
       _bytes_received(0),
       _option_keep_alive(false),
       _option_no_delay(false),
-      _option_reuse_address(false),
-      _option_reuse_port(false)
+      _option_reuse_address(true),
+      _option_reuse_port(true)
 {
     assert((service != nullptr) && "Asio service is invalid!");
     if (service == nullptr)
@@ -96,9 +96,10 @@ TCPServer::TCPServer(const std::shared_ptr<Service>& service, const asio::ip::tc
 
 bool TCPServer::Start()
 {
-    assert(!IsStarted() && "TCP server is already started!");
-    if (IsStarted())
-        return false;
+    if (IsStarted()) {
+		//printf("TCP server is already started!\n");
+		return false;
+	}        
 
     // Post the start handler
     auto self(this->shared_from_this());
@@ -146,16 +147,17 @@ bool TCPServer::Start()
 
 bool TCPServer::Stop()
 {
-    assert(IsStarted() && "TCP server is not started!");
-    if (!IsStarted())
-        return false;
+	if (!IsStarted()) {
+		return false;
+	}
 
     // Post the stop handler
     auto self(this->shared_from_this());
     auto stop_handler = [this, self]()
     {
-        if (!IsStarted())
-            return;
+		if (!IsStarted()) {			
+			return;
+		}
 
         // Close the server acceptor
         _acceptor.close();
@@ -172,13 +174,14 @@ bool TCPServer::Stop()
         // Clear multicast buffer
         ClearBuffers();
 
-        // Call the server stopped handler
+        // Call the server stopped handler		
         onStopped();
     };
-    if (_strand_required)
-        _strand.post(stop_handler);
-    else
-        _io_service->post(stop_handler);
+	if (_strand_required) {
+		_strand.post(stop_handler);
+	} else {
+		_io_service->post(stop_handler);
+	}
 
     return true;
 }
@@ -258,28 +261,33 @@ bool TCPServer::Multicast(const void* buffer, size_t size)
 
 bool TCPServer::DisconnectAll()
 {
-    if (!IsStarted())
-        return false;
+	if (!IsStarted()) {		
+		return false;		
+	}
 
     // Dispatch the disconnect all handler
     auto self(this->shared_from_this());
     auto disconnect_all_handler = [this, self]()
     {
-        if (!IsStarted())
-            return;
+		if (!IsStarted()) {			
+			return;
+		}
 
         std::shared_lock<std::shared_mutex> locker(_sessions_lock);
 
         // Disconnect all sessions
-        for (auto& session : _sessions)
-            session.second->Disconnect();
+		for (auto& session : _sessions) {
+			session.second->Disconnect();
+		}
     };
-    if (_strand_required)
-        _strand.dispatch(disconnect_all_handler);
-    else
-        _io_service->dispatch(disconnect_all_handler);
+	if (_strand_required) {
+		_strand.dispatch(disconnect_all_handler);
+	}
+	else {
+		_io_service->dispatch(disconnect_all_handler);
+	}
 
-    return true;
+	return true;
 }
 
 std::shared_ptr<TCPSession> TCPServer::FindSession(const CppCommon::UUID& id)

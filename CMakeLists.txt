@@ -744,7 +744,7 @@ if(NOT CPPSERVER_MODULE)
     add_executable(WMSServer ${EXAMPLE_HEADER_FILES} ${EXAMPLE_INLINE_FILES} "main/https_server.cpp")
     target_include_directories(WMSServer
       PUBLIC
-      build_/include
+      prebuilt/include
       cache/buildwin/include/glew
       include
       buildwin/crashrpt
@@ -754,7 +754,7 @@ if(NOT CPPSERVER_MODULE)
       libs/picosha2
       libs/mongoose/include
       libs/mongoose/../../cache/buildwin/include
-      build_/_deps/rapidjson_src-src/include
+      prebuilt/_deps/rapidjson_src-src/include
       libs/mDNS/include
       libs/sqlite/include
       libs/SQLiteCpp/include
@@ -951,25 +951,25 @@ if(NOT CPPSERVER_MODULE)
     target_link_libraries(WMSServer
       PUBLIC
       debug ../cache/buildwin/glew32
-      debug ../build_/libs/observable/Debug/_OBSERVABLE
-      debug ../build_/libs/ssl_sha1/Debug/SHA1
-      debug ../build_/libs/mongoose/Debug/MONGOOSE
-      debug ../build_/libs/mDNS/Debug/MDNS
+      debug ../prebuilt/libs/observable/Debug/_OBSERVABLE
+      debug ../prebuilt/libs/ssl_sha1/Debug/SHA1
+      debug ../prebuilt/libs/mongoose/Debug/MONGOOSE
+      debug ../prebuilt/libs/mDNS/Debug/MDNS
       debug ../buildwin/crashrpt/CrashRpt1403
-      debug ../build_/libs/SQLiteCpp/Debug/SQLITE_CPP
-      debug ../build_/libs/wxcurl/Debug/WXCURL
-      debug ../build_/libs/serial/Debug/SERIAL
-      debug ../build_/libs/libtess2/Debug/TESS2
-      debug ../build_/libs/sound/Debug/SOUND
-      debug ../build_/libs/wxJSON/Debug/WXJSON
-      debug ../build_/libs/tinyxml/Debug/TINYXML      
-      debug ../build_/libs/s52plib/Debug/S52PLIB
-      debug ../build_/libs/pugixml/Debug/OCPN_PUGIXML
-      debug ../build_/libs/N2KParser/Debug/N2KPARSER
-      debug ../build_/Debug/S57ENC		
-      debug ../build_/libs/texcmp/Debug/TEXCMP
-      debug ../build_/libs/mipmap/Debug/MIPMAP
-      debug ../build_/libs/lz4/Debug/LZ4
+      debug ../prebuilt/libs/SQLiteCpp/Debug/SQLITE_CPP
+      debug ../prebuilt/libs/wxcurl/Debug/WXCURL
+      debug ../prebuilt/libs/serial/Debug/SERIAL
+      debug ../prebuilt/libs/libtess2/Debug/TESS2
+      debug ../prebuilt/libs/sound/Debug/SOUND
+      debug ../prebuilt/libs/wxJSON/Debug/WXJSON
+      debug ../prebuilt/libs/tinyxml/Debug/TINYXML      
+      debug ../prebuilt/libs/s52plib/Debug/S52PLIB
+      debug ../prebuilt/libs/pugixml/Debug/OCPN_PUGIXML
+      debug ../prebuilt/libs/N2KParser/Debug/N2KPARSER
+      debug ../prebuilt/Debug/S57ENC		
+      debug ../prebuilt/libs/texcmp/Debug/TEXCMP
+      debug ../prebuilt/libs/mipmap/Debug/MIPMAP
+      debug ../prebuilt/libs/lz4/Debug/LZ4
       debug ../cache/buildwxWidgets/lib/vc_dll/wxmsw32ud_gl
       debug ../cache/buildwxWidgets/lib/vc_dll/wxbase32ud_net
       debug ../cache/buildwxWidgets/lib/vc_dll/wxbase32ud_xml
@@ -994,38 +994,38 @@ if(NOT CPPSERVER_MODULE)
       debug psapi.lib 
       debug iphlpapi.lib
       debug gdiplus
-      debug ../build_/libs/nmea0183/Debug/NMEA0183
-      debug ../build_/libs/easywsclient/Debug/EASYWSCLIENT      
+      debug ../prebuilt/libs/nmea0183/Debug/NMEA0183
+      debug ../prebuilt/libs/easywsclient/Debug/EASYWSCLIENT      
       debug ../cache/buildwin/lzma
       debug ../cache/buildwin/libssl
       debug ../cache/buildwin/libcrypto
-      debug ../build_/libs/sqlite/Debug/SQLITE3
+      debug ../prebuilt/libs/sqlite/Debug/SQLITE3
       debug ../cache/buildwin/archive
       debug ../cache/buildwin/libcurl
       debug ../cache/buildwin/zlib1
-      debug ../build_/libs/iso8211/Debug/ISO8211
-      debug ../build_/libs/gdal/Debug/GDAL
+      debug ../prebuilt/libs/iso8211/Debug/ISO8211
+      debug ../prebuilt/libs/gdal/Debug/GDAL
       debug ws2_32      
       optimized ../cache/buildwin/glew32
-      optimized ../build_/libs/observable/Release/_OBSERVABLE
-      optimized ../build_/libs/ssl_sha1/Release/SHA1
-      optimized ../build_/libs/mongoose/Release/MONGOOSE
-      optimized ../build_/libs/mDNS/Release/MDNS
+      optimized ../prebuilt/libs/observable/Release/_OBSERVABLE
+      optimized ../prebuilt/libs/ssl_sha1/Release/SHA1
+      optimized ../prebuilt/libs/mongoose/Release/MONGOOSE
+      optimized ../prebuilt/libs/mDNS/Release/MDNS
       optimized ../buildwin/crashrpt/CrashRpt1403
-      optimized ../build_/libs/SQLiteCpp/Release/SQLITE_CPP
-      optimized ../build_/libs/wxcurl/Release/WXCURL
-      optimized ../build_/libs/serial/Release/SERIAL
-      optimized ../build_/libs/libtess2/Release/TESS2
-      optimized ../build_/libs/sound/Release/SOUND
-      optimized ../build_/libs/wxJSON/Release/WXJSON
-      optimized ../build_/libs/tinyxml/Release/TINYXML      
-      optimized ../build_/libs/s52plib/Release/S52PLIB
-      optimized ../build_/libs/pugixml/Release/OCPN_PUGIXML
-      optimized ../build_/libs/N2KParser/Release/N2KPARSER
-      optimized ../build_/Release/S57ENC		
-      optimized ../build_/libs/texcmp/Release/TEXCMP
-      optimized ../build_/libs/mipmap/Release/MIPMAP
-      optimized ../build_/libs/lz4/Release/LZ4
+      optimized ../prebuilt/libs/SQLiteCpp/Release/SQLITE_CPP
+      optimized ../prebuilt/libs/wxcurl/Release/WXCURL
+      optimized ../prebuilt/libs/serial/Release/SERIAL
+      optimized ../prebuilt/libs/libtess2/Release/TESS2
+      optimized ../prebuilt/libs/sound/Release/SOUND
+      optimized ../prebuilt/libs/wxJSON/Release/WXJSON
+      optimized ../prebuilt/libs/tinyxml/Release/TINYXML      
+      optimized ../prebuilt/libs/s52plib/Release/S52PLIB
+      optimized ../prebuilt/libs/pugixml/Release/OCPN_PUGIXML
+      optimized ../prebuilt/libs/N2KParser/Release/N2KPARSER
+      optimized ../prebuilt/Release/S57ENC		
+      optimized ../prebuilt/libs/texcmp/Release/TEXCMP
+      optimized ../prebuilt/libs/mipmap/Release/MIPMAP
+      optimized ../prebuilt/libs/lz4/Release/LZ4
       optimized ../cache/buildwxWidgets/lib/vc_dll/wxmsw32u_gl
       optimized ../cache/buildwxWidgets/lib/vc_dll/wxbase32u_net
       optimized ../cache/buildwxWidgets/lib/vc_dll/wxbase32u_xml
@@ -1046,22 +1046,21 @@ if(NOT CPPSERVER_MODULE)
       optimized shlwapi
       optimized version
       optimized wsock32
-      optimized setupapi.lib 
-      # optimized "GLU_static" 
+      optimized setupapi.lib       
       optimized psapi.lib 
       optimized iphlpapi.lib      
       optimized gdiplus
-      optimized ../build_/libs/nmea0183/Release/NMEA0183
-      optimized ../build_/libs/easywsclient/Release/EASYWSCLIENT      
+      optimized ../prebuilt/libs/nmea0183/Release/NMEA0183
+      optimized ../prebuilt/libs/easywsclient/Release/EASYWSCLIENT      
       optimized ../cache/buildwin/lzma
       optimized ../cache/buildwin/libssl
       optimized ../cache/buildwin/libcrypto
-      optimized ../build_/libs/sqlite/Release/SQLITE3
+      optimized ../prebuilt/libs/sqlite/Release/SQLITE3
       optimized ../cache/buildwin/archive
       optimized ../cache/buildwin/libcurl
       optimized ../cache/buildwin/zlib1      
-      optimized ../build_/libs/iso8211/Release/ISO8211
-      optimized ../build_/libs/gdal/Release/GDAL
+      optimized ../prebuilt/libs/iso8211/Release/ISO8211
+      optimized ../prebuilt/libs/gdal/Release/GDAL
       optimized ws2_32      
     )
 

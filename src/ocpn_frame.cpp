@@ -1,27 +1,3 @@
-/***************************************************************************
- *
- * Project:  OpenCPN
- * Purpose:  OpenCPN Main wxWidgets Program
- * Author:   David Register
- *
- ***************************************************************************
- *   Copyright (C) 2010 by David S. Register                               *
- *                                                                         *
- *   This program is free software; you can redistribute it and/or modify  *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation; either version 2 of the License, or     *
- *   (at your option) any later version.                                   *
- *                                                                         *
- *   This program is distributed in the hope that it will be useful,       *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
- *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program; if not, write to the                         *
- *   Free Software Foundation, Inc.,                                       *
- *   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301,  USA.         *
- **************************************************************************/
 #include "config.h"
 
 #ifdef __MINGW32__
@@ -38,7 +14,6 @@
 #ifdef __WXMSW__
 //#include "c:\\Program Files\\visual leak detector\\include\\vld.h"
 #endif
-
 
 #ifdef __WXMSW__
 #include <math.h>
@@ -130,8 +105,6 @@ extern BasePlatform
     *g_BasePlatform;  // points to g_platform, handles brain-dead MS linker.
 
 extern s52plib *ps52plib;
-
-extern bool g_bTrackActive;
 extern ocpnStyle::StyleManager *g_StyleManager;
 extern bool g_bmasterToolbarFull;
 extern bool g_bInlandEcdis;
@@ -191,7 +164,6 @@ extern bool g_bPlayShipsBells;
 extern wxDateTime g_loglast_time;
 extern int g_nAWDefault;
 extern int g_nAWMax;
-extern bool g_bDeferredStartTrack;
 extern bool bDBUpdateInProgress;
 extern int quitflag;
 extern int g_tick;
@@ -224,7 +196,6 @@ extern bool g_bQuiltEnable;
 extern wxString *pInit_Chart_Dir;
 extern bool g_bAIS_CPA_Alert;
 extern bool g_bAIS_CPA_Alert_Audio;
-extern bool g_bAISShowTracks;
 extern bool g_bAllowShowScaled;
 extern bool g_bHideMoored;
 extern bool g_bShowScaled;
@@ -289,11 +260,11 @@ extern bool g_bCPAWarn;
 extern bool g_bUseGLL;
 extern int g_MemFootSec;
 extern int g_MemFootMB;
-//extern Multiplexer *g_pMUX;
 extern int g_memUsed;
 extern int g_chart_zoom_modifier_vector;
 extern bool g_config_display_size_manual;
-
+extern bool g_bresponsive;
+extern bool g_bSENCFileCreateFinish;
 
 #ifdef __WXMSW__
 // System color control support
@@ -419,7 +390,7 @@ void ParseAllENC(wxWindow * parent) {
 
 	if (count == 0) return;
 
-	wxLogMessage(wxString::Format(_T("ParseAllENC() count = %d"), count));
+	printf("ParseAllENC() count = %d\n", count);
 
 	//  Build another array of sorted compression targets.
 	//  We need to do this, as the chart table will not be invariant
@@ -483,7 +454,19 @@ void ParseAllENC(wxWindow * parent) {
 			newChart->DisableBackgroundSENC();
 
 			newChart->FindOrCreateSenc(filename, false);  // no progress dialog required
+#ifdef __linux__
+			newChart->PostInit(FULL_INIT, global_color_scheme);
+#endif
 			delete newChart;
+#ifdef __linux__
+			// ..For each canvas, force an S52PLIB reconfig...
+			for (unsigned int i = 0; i < g_canvasArray.GetCount(); i++) {
+				ChartCanvas* cc = g_canvasArray.Item(i);
+				if (cc) cc->ClearS52PLIBStateHash();  // Force a S52 PLIB re-configure
+			}
+
+			gFrame->ReloadAllVP();
+#endif			
 		}
 
 #if defined(__WXMSW__) || defined(__WXOSX__)
@@ -501,6 +484,7 @@ void ParseAllENC(wxWindow * parent) {
 	}
 	delete[] workers;
 #endif
+	g_bSENCFileCreateFinish = true;
 }
 
 
@@ -1856,17 +1840,6 @@ void MyFrame::ToggleFullScreen() {
 }
 
 void MyFrame::TrackOn(void) {
-  g_bTrackActive = true;
-    
-  // The main toolbar may still be NULL here and we will do nothing...
-  SetMasterToolbarItemState(ID_TRACK, g_bTrackActive);  
-
-  SetMenubarItemState(ID_MENU_NAV_TRACK, g_bTrackActive);
-
-#ifdef __OCPN__ANDROID__
-  androidSetTrackTool(true);
-#endif
-
   wxJSONValue v;
   wxDateTime now;
   now = now.Now().ToUTC();  
@@ -2299,16 +2272,14 @@ void MyFrame::UpdateGlobalMenuItems() {
   m_pMenuBar->FindItem(ID_MENU_CHART_COGUP)
       ->Check(GetPrimaryCanvas()->GetUpMode() == COURSE_UP_MODE);
   m_pMenuBar->FindItem(ID_MENU_CHART_HEADUP)
-      ->Check(GetPrimaryCanvas()->GetUpMode() == HEAD_UP_MODE);
-  m_pMenuBar->FindItem(ID_MENU_NAV_TRACK)->Check(g_bTrackActive);
+      ->Check(GetPrimaryCanvas()->GetUpMode() == HEAD_UP_MODE);  
   m_pMenuBar->FindItem(ID_MENU_CHART_OUTLINES)->Check(g_bShowOutlines);
   m_pMenuBar->FindItem(ID_MENU_CHART_QUILTING)->Check(g_bQuiltEnable);
   m_pMenuBar->FindItem(ID_MENU_UI_CHARTBAR)->Check(g_bShowChartBar);
   m_pMenuBar->FindItem(ID_MENU_AIS_TARGETS)->Check(g_bShowAIS);
   m_pMenuBar->FindItem(ID_MENU_AIS_MOORED_TARGETS)->Check(g_bHideMoored);
   m_pMenuBar->FindItem(ID_MENU_AIS_SCALED_TARGETS)->Check(g_bShowScaled);
-  m_pMenuBar->FindItem(ID_MENU_AIS_SCALED_TARGETS)->Enable(g_bAllowShowScaled);
-  m_pMenuBar->FindItem(ID_MENU_AIS_TRACKS)->Check(g_bAISShowTracks);
+  m_pMenuBar->FindItem(ID_MENU_AIS_SCALED_TARGETS)->Enable(g_bAllowShowScaled);  
   m_pMenuBar->FindItem(ID_MENU_AIS_CPADIALOG)->Check(g_bAIS_CPA_Alert);
   m_pMenuBar->FindItem(ID_MENU_AIS_CPASOUND)->Check(g_bAIS_CPA_Alert_Audio);
   m_pMenuBar->FindItem(ID_MENU_AIS_CPAWARNING)->Check(g_bCPAWarn);
@@ -2364,15 +2335,13 @@ void MyFrame::UpdateGlobalMenuItems(ChartCanvas *cc) {
   else
     m_pMenuBar->FindItem(ID_MENU_CHART_HEADUP)->Check(true);
 
-  m_pMenuBar->FindItem(ID_MENU_NAV_TRACK)->Check(g_bTrackActive);
   m_pMenuBar->FindItem(ID_MENU_CHART_OUTLINES)->Check(cc->GetShowOutlines());
   m_pMenuBar->FindItem(ID_MENU_CHART_QUILTING)->Check(cc->GetQuiltMode());
   m_pMenuBar->FindItem(ID_MENU_UI_CHARTBAR)->Check(cc->GetShowChartbar());
   m_pMenuBar->FindItem(ID_MENU_AIS_TARGETS)->Check(cc->GetShowAIS());
   m_pMenuBar->FindItem(ID_MENU_AIS_MOORED_TARGETS)->Check(g_bHideMoored);
   m_pMenuBar->FindItem(ID_MENU_AIS_SCALED_TARGETS)->Check(cc->GetAttenAIS());
-  m_pMenuBar->FindItem(ID_MENU_AIS_SCALED_TARGETS)->Enable(g_bAllowShowScaled);
-  m_pMenuBar->FindItem(ID_MENU_AIS_TRACKS)->Check(g_bAISShowTracks);
+  m_pMenuBar->FindItem(ID_MENU_AIS_SCALED_TARGETS)->Enable(g_bAllowShowScaled);  
   m_pMenuBar->FindItem(ID_MENU_AIS_CPADIALOG)->Check(g_bAIS_CPA_Alert);
   m_pMenuBar->FindItem(ID_MENU_AIS_CPASOUND)->Check(g_bAIS_CPA_Alert_Audio);
   m_pMenuBar->FindItem(ID_MENU_AIS_CPAWARNING)->Check(g_bCPAWarn);
@@ -2548,8 +2517,6 @@ int MyFrame::DoOptionsDialog() {
 #endif
 
   g_options->SetInitialPage(options_lastPage, options_subpage);
-
-#ifndef __OCPN__ANDROID__  //    if(!g_bresponsive){
   g_options->lastWindowPos = options_lastWindowPos;
   if (options_lastWindowPos != wxPoint(0, 0)) {
     g_options->Move(options_lastWindowPos);
@@ -2566,8 +2533,6 @@ int MyFrame::DoOptionsDialog() {
 #ifdef __WXGTK3__
   if (options_lastWindowSize != wxSize(0, 0))
     g_options->SetSize(options_lastWindowSize.x - 1, options_lastWindowSize.y);
-#endif
-
 #endif
 
   unsigned int last_canvasConfig = g_canvasConfig;
@@ -3053,8 +3018,7 @@ wxDEFINE_EVENT(EVT_GPS_WATCHDOG, ObservedEvt);
 
 void MyFrame::UpdateDB_Canvas() {
 	ParseAllENC(NULL);
-	g_Platform->SetFullscreen(g_bFullscreen);
-	
+
 	pConfig->LoadNavObjects();
 	//    Re-enable anchor watches if set in config file      
 
@@ -3073,7 +3037,7 @@ void MyFrame::UpdateDB_Canvas() {
 
 	g_bDeferredInitDone = true;
 
-	GetPrimaryCanvas()->SetFocus();
+	//GetPrimaryCanvas()->SetFocus();
 	g_focusCanvas = GetPrimaryCanvas();
 
 	if (b_reloadForPlugins) {
@@ -3264,20 +3228,6 @@ void MyFrame::OnFrameTimer1(wxTimerEvent &event) {
   if (bDBUpdateInProgress) return;
 
   FrameTimer1.Stop();
-
-  //  If tracking carryover was found in config file, enable tracking as soon as
-  //  GPS become valid
-  if (g_bDeferredStartTrack) {
-    if (!g_bTrackActive) {
-      if (bGPSValid) {
-        gFrame->TrackOn();
-        g_bDeferredStartTrack = false;
-      }
-    } else {  // tracking has been manually activated
-      g_bDeferredStartTrack = false;
-    }
-  }
-
 //  Send current nav status data to log file on every half hour   // pjotrc
   //  2010.02.09
 
@@ -5149,7 +5099,7 @@ void LoadS57() {
     b_force_legacy = true;
   }
 
-  ps52plib = new s52plib(plib_data, g_Platform, b_force_legacy);
+  ps52plib = new s52plib(plib_data, g_Platform, g_bresponsive, b_force_legacy);
 
   //  If the library load failed, try looking for the s57 data elsewhere
 
@@ -5180,7 +5130,7 @@ void LoadS57() {
     plib_data.Append(_T("S52RAZDS.RLE"));
 
     wxLogMessage(_T("Looking for s57data in ") + look_data_dir);
-    ps52plib = new s52plib(plib_data, g_Platform);
+    ps52plib = new s52plib(plib_data, g_Platform, g_bresponsive);
 
     if (ps52plib->m_bOK) {
       g_csv_locn = look_data_dir;
@@ -5204,7 +5154,7 @@ void LoadS57() {
     plib_data.Append(_T("S52RAZDS.RLE"));
 
     wxLogMessage(_T("Looking for s57data in ") + look_data_dir);
-    ps52plib = new s52plib(plib_data, g_Platform);
+    ps52plib = new s52plib(plib_data, g_Platform, g_bresponsive);
 
     if (ps52plib->m_bOK) g_csv_locn = look_data_dir;
   }

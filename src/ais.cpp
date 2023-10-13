@@ -710,8 +710,7 @@ static void AISSetMetrics() {
 
 }
 
-static void AISDrawTarget(AisTargetData *td, ocpnDC &dc, ViewPort &vp,
-                          ChartCanvas *cp) {
+static void AISDrawTarget(AisTargetData *td, ocpnDC &dc, ViewPort &vp, ChartCanvas *cp) {
   //      Target data must be valid
   if (NULL == td) return;
 
@@ -745,18 +744,7 @@ static void AISDrawTarget(AisTargetData *td, ocpnDC &dc, ViewPort &vp,
   }
   else {
       //    Is target in Vpoint?
-    if (vp.GetBBox().Contains(td->Lat, td->Lon))
-      drawit++;  // yep
-    else {
-      //  If AIS tracks are shown, is the first point of the track on-screen?
-      if (1 /*g_bAISShowTracks*/ && td->b_show_track) {
-        if (td->m_ptrack.size() > 0) {
-          const AISTargetTrackPoint &ptrack_point = td->m_ptrack.front();
-          if (vp.GetBBox().Contains(ptrack_point.m_lat, ptrack_point.m_lon))
-            drawit++;
-        }
-      }
-    }
+    if (vp.GetBBox().Contains(td->Lat, td->Lon)) drawit++;  // yep    
   }
 
   //    Calculate AIS target Position Predictor, using global static variable
@@ -1654,7 +1642,7 @@ static void AISDrawTarget(AisTargetData *td, ocpnDC &dc, ViewPort &vp,
   bool b_forceshow = false;
 
   int TrackLength = td->m_ptrack.size();
-  if (((!b_noshow && td->b_show_track) || b_forceshow) && (TrackLength > 1)) {
+  if ((!b_noshow || b_forceshow) && (TrackLength > 1)) {
     //  create vector of x-y points
     int TrackPointCount;
     wxPoint *TrackPoints = 0;

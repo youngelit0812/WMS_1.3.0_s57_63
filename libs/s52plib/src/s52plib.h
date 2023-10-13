@@ -183,7 +183,7 @@ typedef struct {
 
 class s52plib {
 public:
-  s52plib(const wxString &PLib, OCPNPlatform *pPlatform, bool b_forceLegacy = false);
+  s52plib(const wxString &PLib, OCPNPlatform *pPlatform, bool bResponsive = false, bool b_forceLegacy = false);
   ~s52plib();
 
   void SetPPMM(float ppmm);
@@ -319,6 +319,8 @@ public:
   void SaveObjNoshow() { m_saved_noshow = m_noshow_array; };
   void RestoreObjNoshow() { m_noshow_array = m_saved_noshow; };
 
+  wxFont* GetS52PLIBOCPNScaledFont(wxString, int);
+
   void SetVPointCompat(int pix_width,int pix_height,
                       double view_scale_ppm, double rotation,
                       double clat, double clon,
@@ -326,6 +328,8 @@ public:
                       wxRect rv_rect, LLBBox &bbox,
                       double ref_scale, double display_scale
                       );
+
+  bool m_bResponsive;
 
   // Todo accessors
   LUPname m_nSymbolStyle;
