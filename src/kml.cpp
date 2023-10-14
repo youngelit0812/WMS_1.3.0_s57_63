@@ -57,10 +57,7 @@ bool Kml::insertQtVlmExtendedData = false;
 
 int Kml::ParseCoordinates(TiXmlNode* node, dPointList& points) {
   TiXmlElement* e = node->FirstChildElement("coordinates");
-  if (!e) {
-    wxString msg(_T("KML Parser found no <coordinates> for the element: "));
-    msg << wxString(node->ToElement()->Value(), wxConvUTF8);
-    wxLogMessage(msg);
+  if (!e) {    
     return 0;
   }
 
@@ -151,9 +148,7 @@ KmlPastebufferType Kml::ParseOnePlacemarkPoint(TiXmlNode* node,
     newLon = coordinates[0].x;
   }
 
-  if (newLat == 0.0 && newLon == 0.0) {
-    wxString msg(_T("KML Parser failed to convert <Point> coordinates."));
-    wxLogMessage(msg);
+  if (newLat == 0.0 && newLon == 0.0) {    
     return KML_PASTE_INVALID;
   }
   wxString pointName = wxEmptyString;
@@ -228,9 +223,7 @@ KmlPastebufferType Kml::ParsePasteBuffer() {
   if (!placemark) {
     placemark = docHandle.FirstChild("Placemark").ToElement();
   }
-  if (!placemark) {
-    wxString msg(_T("KML Parser found no <Placemark> tag in the KML."));
-    wxLogMessage(msg);
+  if (!placemark) {    
     return KML_PASTE_INVALID;
   }
 
@@ -272,10 +265,6 @@ KmlPastebufferType Kml::ParsePasteBuffer() {
           docHandle.FirstChild("Placemark").FirstChild("gx:Track").ToNode();
     if (element) return ParseTrack(element, name);
 
-    wxString msg(
-        _T("KML Parser found a single <Placemark> in the KML, but no useable ")
-        _T("data in it."));
-    wxLogMessage(msg);
     return KML_PASTE_INVALID;
   }
 
@@ -314,10 +303,7 @@ KmlPastebufferType Kml::ParsePasteBuffer() {
     }
   }
 
-  if (foundPoints && parsedRoute->GetnPoints() < 2) {
-    wxString msg(
-        _T("KML Parser did not find enough <Point>s to make a route."));
-    wxLogMessage(msg);
+  if (foundPoints && parsedRoute->GetnPoints() < 2) {    
     foundPoints = false;
   }
 

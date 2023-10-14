@@ -51,11 +51,9 @@ void DrawGLThickLine(float x1, float y1, float x2, float y2, wxPen pen,
 //----------------------------------------------------------------------------
 
 class wxGLCanvas;
-class glChartCanvas;
 
 class ocpnDC {
 public:
-  ocpnDC(glChartCanvas &canvas);
   ocpnDC(wxGLCanvas &canvas);
   ocpnDC(wxDC &pdc);
   ocpnDC();
@@ -64,14 +62,11 @@ public:
 
   void Init();
 
-  void SetGLCanvas(glChartCanvas *canvas);
   void SetBackground(const wxBrush &brush);
   void SetPen(const wxPen &pen);
   void SetBrush(const wxBrush &brush);
   void SetTextForeground(const wxColour &colour);
-  void SetFont(const wxFont &font);
-  static void SetGLAttrs(bool highQuality);
-  void SetGLStipple() const;
+  void SetFont(const wxFont &font);  
 
   const wxPen &GetPen() const;
   const wxBrush &GetBrush() const;
@@ -82,12 +77,7 @@ public:
   void DrawLine(wxCoord x1, wxCoord y1, wxCoord x2, wxCoord y2,
                 bool b_hiqual = true);
   void DrawLines(int n, wxPoint points[], wxCoord xoffset = 0,
-                 wxCoord yoffset = 0, bool b_hiqual = true);
-  void DrawGLThickLine(float x1, float y1, float x2, float y2, wxPen pen,
-                     bool b_hiqual);
-  void DrawGLThickLines(int n, wxPoint points[], wxCoord xoffset, wxCoord yoffset,
-                      wxPen pen, bool b_hiqual);
-
+                 wxCoord yoffset = 0, bool b_hiqual = true);  
   void StrokeLine(wxCoord x1, wxCoord y1, wxCoord x2, wxCoord y2);
   void StrokeLine(wxPoint a, wxPoint b) { StrokeLine(a.x, a.y, b.x, b.y); }
   void StrokeLines(int n, wxPoint *points);
@@ -150,15 +140,10 @@ protected:
   bool ConfigurePen();
   bool ConfigureBrush();
 
-  void GLDrawBlendData(wxCoord x, wxCoord y, wxCoord w, wxCoord h, int format,
-                       const unsigned char *data);
-
-  void drawrrhelperGLES2(wxCoord x0, wxCoord y0, wxCoord r, int quadrant,
-                         int steps);
+  void GLDrawBlendData(wxCoord x, wxCoord y, wxCoord w, wxCoord h, int format, const unsigned char *data);
 
   void BuildShaders();
 
-  glChartCanvas *m_glchartCanvas;
   wxGLCanvas *m_glcanvas;
 
   wxDC *dc;

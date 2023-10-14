@@ -32,6 +32,7 @@
 #include <iostream>
 #include <map>
 #include <mutex>
+#include <signal.h>
 
 #include "Json.hpp"
 #include "MainApp.h"
@@ -39,6 +40,8 @@
 #if defined(__WXGTK__) || defined(__WXQT__)
 #include <gtk/gtk.h>
 #endif
+
+bool g_isRunning;
 
 class Cache : public CppCommon::Singleton<Cache>
 {
@@ -253,7 +256,7 @@ void loadEnvironment(char* szEnvFilePath, Environments& envConfig)
 		envConfig.nPortForHTTPS = jsonData.value("PortForHTTPS", 0);
 		envConfig.rebuildCharts = jsonData.value("rebuildCharts", 0) == 0 ? false : true;
 		envConfig.sENCDirPath = jsonData.value("ENCDirPath", "");
-		envConfig.sIMGFilePath = jsonData.value("IMGFilePath", "");
+		envConfig.sIMGDirPath = jsonData.value("IMGDirPath", "");
 	}
 	catch (nlohmann::json::parse_error & e)
 	{
@@ -263,9 +266,19 @@ void loadEnvironment(char* szEnvFilePath, Environments& envConfig)
 	json_file.close();
 }
 
+void signalHandler(int signal) 
+{
+	if (signal == SIGINT) {
+		g_isRunning = false; // Set the global flag to stop the server
+	}
+}
+
 int main(int argc, char** argv)
 {
 	std::string sConfigPath = "./env/config.json";
+
+	g_isRunning = true;
+	signal(SIGINT, signalHandler);
 
 	Environments envConfig;
 	loadEnvironment((char*)sConfigPath.c_str(), envConfig);
@@ -327,9 +340,9 @@ int main(int argc, char** argv)
 
     // Perform text input
     std::string line;
-    while (getline(std::cin, line))
+    while (!g_isRunning || getline(std::cin, line))
     {
-        if (line.empty())
+        if (!g_isRunning || line.empty())
             break;
 
         // Restart the server
@@ -345,7 +358,7 @@ int main(int argc, char** argv)
 
     // Stop the server
 	std::cout << "Server stopping..." << std::endl;
-	if (app->OnExit()) delete app;
+	if (app->OnExit(envConfig.sIMGDirPath)) delete app;
 
 	serverHTTPS->Stop();
 	serverHTTP->Stop();			

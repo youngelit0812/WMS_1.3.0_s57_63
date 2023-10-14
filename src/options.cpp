@@ -1,27 +1,3 @@
-/***************************************************************************
- *
- * Project:  OpenCPN
- * Purpose:  Options Dialog
- * Author:   David Register
- *
- ***************************************************************************
- *   Copyright (C) 2010 by David S. Register                               *
- *                                                                         *
- *   This program is free software; you can redistribute it and/or modify  *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation; either version 2 of the License, or     *
- *   (at your option) any later version.                                   *
- *                                                                         *
- *   This program is distributed in the hope that it will be useful,       *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
- *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program; if not, write to the                         *
- *   Free Software Foundation, Inc.,                                       *
- *   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301,  USA.         *
- **************************************************************************/
 #include <memory>
 
 #ifdef __linux__
@@ -67,9 +43,6 @@
 
 #include "config.h"
 
-#include "ais_decoder.h"
-#include "ais.h"
-#include "ais_target_data.h"
 #include "chart_ctx_factory.h"
 #include "chartdbs.h"
 #include "chcanv.h"
@@ -79,7 +52,6 @@
 #include "FontMgr.h"
 #include "idents.h"
 #include "MarkInfo.h"
-#include "multiplexer.h"
 #include "navutil_base.h"
 #include "navutil.h"
 #include "observable_globvar.h"
@@ -94,26 +66,10 @@
 #include "styles.h"
 #include "svg_utils.h"
 #include "SystemCmdSound.h"
-#include "usb_devices.h"
-#include "waypointman_gui.h"
 #include "wx28compat.h"
-
-#ifdef ocpnUSE_GL
-#include "glChartCanvas.h"
-extern GLuint g_raster_format;
-#endif
-
 
 #ifdef __linux__
 #include "udev_rule_mgr.h"
-#endif
-
-#ifdef __OCPN__ANDROID__
-#include "androidUTIL.h"
-#endif
-
-#ifdef __OCPN__ANDROID__
-#include <QtWidgets/QScroller>
 #endif
 
 #ifdef __WXOSX__
@@ -132,7 +88,6 @@ wxString GetOCPNKnownLanguage(const wxString lang_canonical);
 
 extern OCPNPlatform* g_Platform;
 
-extern MyFrame* gFrame;
 extern bool g_bSoftwareGL;
 extern bool g_bShowFPS;
 
@@ -151,7 +106,6 @@ extern int g_nDepthUnitDisplay;
 extern bool g_bUIexpert;
 
 extern wxString* pInit_Chart_Dir;
-extern Multiplexer* g_pMUX;
 extern bool g_bfilter_cogsog;
 extern int g_COGFilterSec;
 extern int g_SOGFilterSec;
@@ -182,7 +136,6 @@ extern bool g_bSyncCogPredictors;
 extern double g_ShowMoored_Kts;
 extern bool g_bHideMoored;
 extern bool g_bAllowShowScaled;
-extern int g_ShowScaled_Num;
 extern bool g_bAIS_CPA_Alert;
 extern bool g_bAIS_CPA_Alert_Audio;
 extern wxString g_sAIS_Alert_Sound_File;
@@ -258,6 +211,7 @@ extern bool g_bQuiltEnable;
 extern bool g_bFullScreenQuilt;
 extern bool g_bConfirmObjectDelete;
 extern wxString g_compatOS;
+extern MyFrame* gFrame;
 
 #if wxUSE_XLOCALE || !wxCHECK_VERSION(3, 0, 0)
 extern wxLocale* plocale_def_lang;
@@ -291,18 +245,12 @@ extern bool g_bdisable_opengl;
 extern ChartGroupArray* g_pGroupArray;
 extern ocpnStyle::StyleManager* g_StyleManager;
 
-#ifdef ocpnUSE_GL
-extern ocpnGLOptions g_GLOptions;
-#endif
-
 extern bool g_bGLexpert;
 //    Some constants
 #define ID_CHOICE_NMEA wxID_HIGHEST + 1
 
 extern std::vector<std::string> TideCurrentDataSet;
 extern wxString g_TCData_Dir;
-
-extern AisDecoder* g_pAIS;
 
 options* g_pOptions;
 
@@ -337,11 +285,6 @@ bool g_bOverruleScaMin;
 extern int osMajor, osMinor;
 extern bool g_bShowMuiZoomButtons;
 extern MyConfig* pConfig;
-
-#ifdef __OCPN__ANDROID__
-extern int g_Android_SDK_Version;
-extern MigrateAssistantDialog* g_migrateDialog;
-#endif
 
 extern wxString GetShipNameFromFile(int);
 
@@ -587,17 +530,14 @@ public:
   void DoChartSelected();
   void SetSelected(bool selected);
   void OnPaint(wxPaintEvent& event);
-  // void OnEraseBackground( wxEraseEvent &event );
   void OnSize(wxSizeEvent& event);
   ChartDirInfo GetCDI() { return m_cdi; }
   int GetUnselectedHeight() { return m_unselectedHeight; }
   int GetRefHeight() { return m_refHeight; }
   bool IsSelected() { return m_bSelected; }
   void OnClickDown(wxMouseEvent& event);
-  void OnClickUp(wxMouseEvent& event);
 
 private:
-  // shopPanel *m_pContainer;
   bool m_bSelected;
   wxColour m_boxColour;
   int m_unselectedHeight;
@@ -610,7 +550,6 @@ private:
 
 BEGIN_EVENT_TABLE(OCPNChartDirPanel, wxPanel)
 EVT_PAINT(OCPNChartDirPanel::OnPaint)
-// EVT_ERASE_BACKGROUND( OCPNChartDirPanel::OnEraseBackground)
 EVT_SIZE(OCPNChartDirPanel::OnSize)
 END_EVENT_TABLE()
 
@@ -632,49 +571,18 @@ OCPNChartDirPanel::OCPNChartDirPanel(wxWindow* parent, wxWindowID id,
 
   m_unselectedHeight = 2 * m_refHeight;
 
-  // #ifdef __OCPN__ANDROID__
-  //     m_unselectedHeight = 2 * m_refHeight;
-  // #endif
-
   SetMinSize(wxSize(-1, m_unselectedHeight));
 
   Connect(wxEVT_LEFT_DOWN, wxMouseEventHandler(OCPNChartDirPanel::OnClickDown),
           NULL, this);
-#ifdef __OCPN__ANDROID__
-  Connect(wxEVT_LEFT_UP, wxMouseEventHandler(OCPNChartDirPanel::OnClickUp),
-          NULL, this);
-#endif
 }
 
 OCPNChartDirPanel::~OCPNChartDirPanel() {}
 
 static wxStopWatch swclick;
-#ifdef __OCPN__ANDROID__
-static int downx, downy;
-#endif
 
 void OCPNChartDirPanel::OnClickDown(wxMouseEvent& event) {
-#ifdef __OCPN__ANDROID__
-  swclick.Start();
-  event.GetPosition(&downx, &downy);
-#else
   DoChartSelected();
-#endif
-}
-
-void OCPNChartDirPanel::OnClickUp(wxMouseEvent& event) {
-#ifdef __OCPN__ANDROID__
-  qDebug() << swclick.Time();
-  if (swclick.Time() < 200) {
-    int upx, upy;
-    event.GetPosition(&upx, &upy);
-    if ((fabs(upx - downx) < GetCharWidth()) &&
-        (fabs(upy - downy) < GetCharWidth())) {
-      DoChartSelected();
-    }
-  }
-  swclick.Start();
-#endif
 }
 
 void OCPNChartDirPanel::DoChartSelected() {
@@ -692,10 +600,10 @@ void OCPNChartDirPanel::SetSelected(bool selected) {
   wxColour colour;
 
   if (selected) {
-    GetGlobalColor(_T("UIBCK"), &colour);
+    colour = GetGlobalColor(_T("UIBCK"));
     m_boxColour = colour;
   } else {
-    GetGlobalColor(_T("DILG0"), &colour);
+    colour = GetGlobalColor(_T("DILG0"));
     m_boxColour = colour;
   }
 
@@ -703,10 +611,6 @@ void OCPNChartDirPanel::SetSelected(bool selected) {
 
   g_pOptions->SetDirActionButtons();
 }
-
-// void OCPNChartDirPanel::OnEraseBackground( wxEraseEvent &event )
-// {
-// }
 
 void OCPNChartDirPanel::OnSize(wxSizeEvent& event) {
   if (m_pChartDir.Length()) {
@@ -745,7 +649,7 @@ void OCPNChartDirPanel::OnPaint(wxPaintEvent& event) {
   if (m_bSelected) {
     dc.SetBrush(wxBrush(m_boxColour));
 
-    GetGlobalColor(_T ( "UITX1" ), &c);
+	c = GetGlobalColor(_T("UITX1"));
     dc.SetPen(wxPen(wxColor(0xCE, 0xD5, 0xD6), 3));
 
     dc.DrawRoundedRectangle(0, 0, width - 1, height - 1, height / 10);
@@ -753,7 +657,7 @@ void OCPNChartDirPanel::OnPaint(wxPaintEvent& event) {
     int offset = height / 10;
     int text_x = offset * 2;
 
-    wxFont* dFont = GetOCPNScaledFont_PlugIn(_("Dialog"));
+    wxFont* dFont = GetOCPNScaledFont(_("Dialog"), 0);
     dc.SetFont(*dFont);
 
     dc.SetTextForeground(wxColour(64, 64, 64));
@@ -770,7 +674,7 @@ void OCPNChartDirPanel::OnPaint(wxPaintEvent& event) {
   else {
     dc.SetBrush(wxBrush(m_boxColour));
 
-    GetGlobalColor(_T ( "GREY1" ), &c);
+    c = GetGlobalColor(_T ( "GREY1" ));
     dc.SetPen(wxPen(c, 1));
 
     int offset = height / 10;
@@ -779,7 +683,7 @@ void OCPNChartDirPanel::OnPaint(wxPaintEvent& event) {
 
     int text_x = offset * 2;
 
-    wxFont* dFont = GetOCPNScaledFont_PlugIn(_("Dialog"));
+    wxFont* dFont = GetOCPNScaledFont(_("Dialog"), 0);
     dc.SetFont(*dFont);
 
     dc.SetTextForeground(wxColour(64, 64, 64));
@@ -845,11 +749,6 @@ bool OCPNCheckedListCtrl::Create(wxWindow* parent, wxWindowID id,
                                  const wxPoint& pt, const wxSize& sz,
                                  long style, const wxString& name) {
   if (!wxScrolledWindow::Create(parent, id, pt, sz, style, name)) return FALSE;
-
-#ifdef __OCPN__ANDROID__
-  GetHandle()->setObjectName("OCPNCheckedListCtrl");
-  GetHandle()->setStyleSheet(getAdjustedDialogStyleSheet());
-#endif
 
   SetScrollRate(0, 2);
   m_sizer = new wxBoxSizer(wxVERTICAL);
@@ -986,7 +885,6 @@ EVT_BUTTON(ID_BUTTONADD, options::OnButtonaddClick)
 EVT_BUTTON(ID_BUTTONDELETE, options::OnButtondeleteClick)
 EVT_BUTTON(ID_PARSEENCBUTTON, options::OnButtonParseENC)
 EVT_BUTTON(ID_BUTTONCOMPRESS, options::OnButtoncompressClick)
-EVT_BUTTON(ID_BUTTONMIGRATE, options::OnButtonmigrateClick)
 EVT_BUTTON(ID_TCDATAADD, options::OnInsertTideDataLocation)
 EVT_BUTTON(ID_TCDATADEL, options::OnRemoveTideDataLocation)
 EVT_BUTTON(ID_APPLY, options::OnApplyClick)
@@ -1001,9 +899,7 @@ EVT_CLOSE(options::OnClose)
 #if defined(__WXGTK__) || defined(__WXQT__)
 EVT_BUTTON(ID_BUTTONFONTCOLOR, options::OnChooseFontColor)
 #endif
-#ifdef ocpnUSE_GL
-EVT_BUTTON(ID_OPENGLOPTIONS, options::OnOpenGLOptions)
-#endif
+
 EVT_CHOICE(ID_RADARDISTUNIT, options::OnDisplayCategoryRadioButton)
 EVT_CHOICE(ID_DEPTHUNITSCHOICE, options::OnUnitsChoice)
 EVT_BUTTON(ID_CLEARLIST, options::OnButtonClearClick)
@@ -1032,7 +928,6 @@ options::options(wxWindow* parent, wxWindowID id, const wxString& caption, const
 
   wxDEFINE_EVENT(EVT_COMPAT_OS_CHANGE, wxCommandEvent);
   GlobalVar<wxString> compat_os(&g_compatOS);
-  compat_os_listener.Listen(compat_os, this, EVT_COMPAT_OS_CHANGE);
   Bind(EVT_COMPAT_OS_CHANGE, [&](wxCommandEvent&) {
     
   });
@@ -1068,15 +963,11 @@ void options::RecalculateSize(int hint_x, int hint_y) {
     // Protect against unreasonable small size
     // And also handle the empty config file init case.
     if ((hint_x < 200) || (hint_y < 200)){
-
       // Constrain size on small displays
       int display_width, display_height;
       wxDisplaySize(&display_width, &display_height);
 
-      if(display_height < 600){
-        SetSize(wxSize(GetOCPNCanvasWindow()->GetSize() ));
-      }
-      else {
+      if(display_height >= 600){        
         vectorPanel-> SetSizeHints(ps57Ctl);
         Fit();
       }
@@ -1256,10 +1147,6 @@ size_t options::CreatePanel(const wxString& title) {
 
 wxScrolledWindow* options::AddPage(size_t parent, const wxString& title) {
   if (parent > m_pListbook->GetPageCount() - 1) {
-    wxLogMessage(
-        wxString::Format(
-            _T("Warning: invalid parent in options::AddPage( %d, "), parent) +
-        title + _T(" )"));
     return NULL;
   }
   wxNotebookPage* page = m_pListbook->GetPage(parent);
@@ -1304,10 +1191,6 @@ wxScrolledWindow* options::AddPage(size_t parent, const wxString& title) {
     m_pListbook->SetSelection(0);  // avoid gtk assertions
     m_pListbook->DeletePage(parent + 1);
   }
-
-#ifdef __OCPN__ANDROID__
-  sw->GetHandle()->setStyleSheet(getAdjustedDialogStyleSheet());
-#endif
 
   return sw;
 }
@@ -1745,11 +1628,7 @@ void options::CreatePanel_ChartsLoad(size_t parent, int border_size,
 
   activeSizer->Add(m_scrollWinChartList, 1, wxALL | wxEXPAND, 5);
 
-#ifndef __OCPN__ANDROID__
   m_scrollRate = 5;
-#else
-  m_scrollRate = 1;
-#endif
   m_scrollWinChartList->SetScrollRate(m_scrollRate, m_scrollRate);
 
   boxSizerCharts = new wxBoxSizer(wxVERTICAL);
@@ -1785,14 +1664,6 @@ void options::CreatePanel_ChartsLoad(size_t parent, int border_size,
   m_compressBtn->Disable();
 #else
   m_compressBtn = NULL;
-#endif
-
-#ifdef __OCPN__ANDROID__
-  if (g_Android_SDK_Version >= 30) {
-    m_migrateBtn =
-        new wxButton(chartPanelWin, ID_BUTTONMIGRATE, _("Migrate Charts.."));
-    cmdButtonSizer->Add(m_migrateBtn, 1, wxALL | wxEXPAND, group_item_spacing);
-  }
 #endif
 
   cmdButtonSizer->AddSpacer(GetCharHeight());
@@ -1861,16 +1732,8 @@ void options::UpdateChartDirList() {
   // scrollable range of the window.
   // Workarounds here...
   // n.b. according to wx docs, none of this should be necessary...
-#ifdef __OCPN__ANDROID__
-  // This works on Android, but seems pretty drastic
-  wxSize sza = GetSize();
-  sza.y -= 1;
-  SetSize(sza);
-#else
   // This works, except on Android
   m_scrollWinChartList->GetParent()->Layout();
-#endif
-
   m_scrollWinChartList->Scroll(0, 0);
 }
 
@@ -2151,8 +2014,7 @@ void options::OnConfigMouseSelected(wxMouseEvent& event) {
         wxPanel* panel = wxDynamicCast(win, wxPanel);
         if (panel) {
           if (panel == selectedPanel) {
-            wxColour colour;
-            GetGlobalColor(_T("UIBCK"), &colour);
+            wxColour colour = GetGlobalColor(_T("UIBCK"));
             panel->SetBackgroundColour(colour);
             ConfigPanel* cPanel = wxDynamicCast(panel, ConfigPanel);
             if (cPanel) m_selectedConfigPanelGUID = cPanel->GetConfigGUID();
@@ -2200,21 +2062,6 @@ void options::CreatePanel_Advanced(size_t parent, int border_size,
     wxBoxSizer* OpenGLSizer = new wxBoxSizer(wxVERTICAL);
     itemBoxSizerUI->Add(OpenGLSizer, 0, 0, 0);
 
-    pOpenGL = new wxCheckBox(m_ChartDisplayPage, ID_OPENGLBOX,
-                             _("Use Accelerated Graphics (OpenGL)"));
-    OpenGLSizer->Add(pOpenGL, inputFlags);
-    pOpenGL->Enable(!g_bdisable_opengl && g_Platform->IsGLCapable());
-
-    wxButton* bOpenGL = new wxButton(m_ChartDisplayPage, ID_OPENGLOPTIONS,
-                                     _("OpenGL Options") + _T("..."));
-    OpenGLSizer->Add(bOpenGL, inputFlags);
-    bOpenGL->Enable(!g_bdisable_opengl && g_Platform->IsGLCapable());
-
-#ifdef __OCPN__ANDROID__
-    pOpenGL->Hide();
-    bOpenGL->Hide();
-#endif
-
     itemBoxSizerUI->Add(0, border_size * 3);
     itemBoxSizerUI->Add(0, border_size * 3);
 
@@ -2259,10 +2106,6 @@ void options::CreatePanel_Advanced(size_t parent, int border_size,
     m_pSlider_Zoom_Raster =
         new wxSlider(m_ChartDisplayPage, ID_RASTERZOOM, 0, -5, 5,
                      wxDefaultPosition, m_sliderSize, SLIDER_STYLE);
-
-#ifdef __OCPN__ANDROID__
-    prepareSlider(m_pSlider_Zoom_Raster);
-#endif
 
     itemBoxSizerUI->Add(m_pSlider_Zoom_Raster, inputFlags);
 
@@ -2420,10 +2263,6 @@ With a higher value, the same zoom level shows a more detailed chart."));
         new wxSlider(m_ChartDisplayPage, ID_RASTERZOOM, 0, -5, 5,
                      wxDefaultPosition, m_sliderSize, SLIDER_STYLE);
 
-#ifdef __OCPN__ANDROID__
-    prepareSlider(m_pSlider_Zoom_Raster);
-#endif
-
     itemBoxSizerUI->Add(m_pSlider_Zoom_Raster, inputFlags);
 
     itemBoxSizerUI->Add(
@@ -2432,10 +2271,6 @@ With a higher value, the same zoom level shows a more detailed chart."));
     m_pSlider_Zoom_Vector =
         new wxSlider(m_ChartDisplayPage, ID_VECZOOM, 0, -5, 5,
                      wxDefaultPosition, m_sliderSize, SLIDER_STYLE);
-
-#ifdef __OCPN__ANDROID__
-    prepareSlider(m_pSlider_Zoom_Vector);
-#endif
 
     itemBoxSizerUI->Add(m_pSlider_Zoom_Vector, inputFlags);
 
@@ -2495,29 +2330,7 @@ With a higher value, the same zoom level shows a more detailed chart."));
     wxBoxSizer* OpenGLSizer = new wxBoxSizer(wxHORIZONTAL);
     itemBoxSizerUI->Add(OpenGLSizer, 0, 0, 0);
 
-    pOpenGL = new wxCheckBox(m_ChartDisplayPage, ID_OPENGLBOX,
-                             _("Use Accelerated Graphics (OpenGL)"));
-    OpenGLSizer->Add(pOpenGL, inputFlags);
-    pOpenGL->Enable(!g_bdisable_opengl && g_Platform->IsGLCapable());
-
-#ifdef __OCPN__ANDROID__
-    pOpenGL->Disable();
-#endif
-
-    wxButton* bOpenGL = new wxButton(m_ChartDisplayPage, ID_OPENGLOPTIONS,
-                                     _("Options") + _T("..."));
-    OpenGLSizer->Add(bOpenGL, inputFlags);
-    bOpenGL->Enable(!g_bdisable_opengl && g_Platform->IsGLCapable());
-
     itemBoxSizerUI->Add(0, border_size * 3);
-    /*
-        pTransparentToolbar =
-            new wxCheckBox(m_ChartDisplayPage, ID_TRANSTOOLBARCHECKBOX,
-                           _("Enable Transparent Toolbar"));
-        itemBoxSizerUI->Add(pTransparentToolbar, 0, wxALL, border_size);
-        if (g_bopengl && !g_bTransparentToolbarInOpenGLOK)
-          pTransparentToolbar->Disable();
-    */
   }
 }
 
@@ -2842,9 +2655,6 @@ void options::CreatePanel_VectorCharts(size_t parent, int border_size,
     pPointStyle = new wxChoice(ps57Ctl, ID_RADARDISTUNIT, wxDefaultPosition,
                                wxSize(m_fontHeight * 3, m_fontHeight), 2,
                                pPointStyleStrings);
-#ifdef __OCPN__ANDROID__
-    setChoiceStyleSheet(pPointStyle, m_fontHeight * 8 / 10);
-#endif
 
     StyleColumn->Add(pPointStyle, inputFlags);
 
@@ -2857,10 +2667,6 @@ void options::CreatePanel_VectorCharts(size_t parent, int border_size,
     pBoundStyle = new wxChoice(ps57Ctl, ID_RADARDISTUNIT, wxDefaultPosition,
                                wxSize(m_fontHeight * 3, m_fontHeight), 2,
                                pBoundStyleStrings);
-#ifdef __OCPN__ANDROID__
-    setChoiceStyleSheet(pBoundStyle, m_fontHeight * 8 / 10);
-#endif
-
     StyleColumn->Add(pBoundStyle, inputFlags);
 
     StyleColumn->Add(new wxStaticText(ps57Ctl, wxID_ANY, _("Colors")),
@@ -2873,9 +2679,6 @@ void options::CreatePanel_VectorCharts(size_t parent, int border_size,
     p24Color = new wxChoice(ps57Ctl, ID_RADARDISTUNIT, wxDefaultPosition,
                             wxSize(m_fontHeight * 3, m_fontHeight), 2,
                             pColorNumStrings);
-#ifdef __OCPN__ANDROID__
-    setChoiceStyleSheet(p24Color, m_fontHeight * 8 / 10);
-#endif
     StyleColumn->Add(p24Color, inputFlags);
 
     // spacer
@@ -3059,15 +2862,9 @@ void ChartGroupsUI::CompletePanel(void) {
   wxBoxSizer* activeListSizer = new wxBoxSizer(wxVERTICAL);
   sizerCharts->Add(activeListSizer, 1, wxALL | wxEXPAND, 5);
 
-#ifdef __OCPN__ANDROID__
   allAvailableCtl =
       new wxGenericDirCtrl(m_panel, ID_GROUPAVAILABLE, _T(""),
                            wxDefaultPosition, wxDefaultSize, wxVSCROLL);
-#else
-  allAvailableCtl =
-      new wxGenericDirCtrl(m_panel, ID_GROUPAVAILABLE, _T(""),
-                           wxDefaultPosition, wxDefaultSize, wxVSCROLL);
-#endif
   activeListSizer->Add(allAvailableCtl, 1, wxEXPAND);
 
   m_pAddButton = new wxButton(m_panel, ID_GROUPINSERTDIR, _("Add"));
@@ -3306,7 +3103,6 @@ void options::CreatePanel_Display(size_t parent, int border_size,
     // --------------------------------------
     // END OF CUSTOMIZATION - LIVE ETA OPTION
 
-#ifndef __OCPN__ANDROID__
     // MultiChart selection panel
     if (g_Platform->GetDisplayAreaCM2() > 100) {
       wxStaticBox* itemStaticBoxScreenConfig =
@@ -3341,8 +3137,6 @@ void options::CreatePanel_Display(size_t parent, int border_size,
 
       itemStaticBoxSizerScreenConfig->AddSpacer(GetCharHeight());
     }
-#endif
-
   } else {  // compact follows
     wxFlexGridSizer* generalSizer = new wxFlexGridSizer(2);
     generalSizer->SetHGap(border_size);
@@ -3423,11 +3217,6 @@ void options::CreatePanel_Display(size_t parent, int border_size,
     pEnableZoomToCursor->SetValue(FALSE);
     boxCtrls->Add(pEnableZoomToCursor, verticleInputFlags);
 
-#ifdef __OCPN__ANDROID__
-    pSmoothPanZoom->Hide();
-    pEnableZoomToCursor->Hide();
-#endif
-
     // spacer
     generalSizer->Add(0, border_size * 4);
     generalSizer->Add(0, border_size * 4);
@@ -3491,7 +3280,6 @@ void options::CreatePanel_Display(size_t parent, int border_size,
     // --------------------------------------
     // END OF CUSTOMIZATION - LIVE ETA OPTION
 
-#ifndef __OCPN__ANDROID__
     if (g_Platform->GetDisplayAreaCM2() > 100) {
       // MultiChart selection panel
       wxStaticBox* itemStaticBoxScreenConfig =
@@ -3526,7 +3314,6 @@ void options::CreatePanel_Display(size_t parent, int border_size,
 
       itemStaticBoxSizerScreenConfig->AddSpacer(GetCharHeight());
     }
-#endif
   }
 }
 
@@ -3560,9 +3347,6 @@ void options::CreatePanel_Units(size_t parent, int border_size,
         new wxChoice(panelUnits, ID_DISTANCEUNITSCHOICE, wxDefaultPosition,
                      wxSize(m_fontHeight * 4, -1), m_DistanceFormatsNChoices,
                      pDistanceFormats);
-#ifdef __OCPN__ANDROID__
-    setChoiceStyleSheet(pDistanceFormat, m_fontHeight * 8 / 10);
-#endif
     unitsSizer->Add(pDistanceFormat, inputFlags);
 
     // speed units
@@ -3573,9 +3357,6 @@ void options::CreatePanel_Units(size_t parent, int border_size,
     pSpeedFormat = new wxChoice(panelUnits, ID_SPEEDUNITSCHOICE,
                                 wxDefaultPosition, wxSize(m_fontHeight * 4, -1),
                                 m_SpeedFormatsNChoices, pSpeedFormats);
-#ifdef __OCPN__ANDROID__
-    setChoiceStyleSheet(pSpeedFormat, m_fontHeight * 8 / 10);
-#endif
     unitsSizer->Add(pSpeedFormat, inputFlags);
 
     // depth units
@@ -3589,9 +3370,6 @@ void options::CreatePanel_Units(size_t parent, int border_size,
     pDepthUnitSelect =
         new wxChoice(panelUnits, ID_DEPTHUNITSCHOICE, wxDefaultPosition,
                      wxSize(m_fontHeight * 4, -1), 3, pDepthUnitStrings);
-#ifdef __OCPN__ANDROID__
-    setChoiceStyleSheet(pDepthUnitSelect, m_fontHeight * 8 / 10);
-#endif
     unitsSizer->Add(pDepthUnitSelect, inputFlags);
 
     // temperature units
@@ -3605,9 +3383,6 @@ void options::CreatePanel_Units(size_t parent, int border_size,
     pTempFormat =
         new wxChoice(panelUnits, ID_TEMPUNITSCHOICE, wxDefaultPosition,
                      wxSize(m_fontHeight * 4, -1), 3, pTempUnitStrings);
-#ifdef __OCPN__ANDROID__
-    setChoiceStyleSheet(pTempFormat, m_fontHeight * 8 / 10);
-#endif
     unitsSizer->Add(pTempFormat, inputFlags);
 
     // spacer
@@ -3624,9 +3399,6 @@ void options::CreatePanel_Units(size_t parent, int border_size,
     pSDMMFormat = new wxChoice(panelUnits, ID_SDMMFORMATCHOICE,
                                wxDefaultPosition, wxSize(m_fontHeight * 4, -1),
                                m_SDMMFormatsNChoices, pSDMMFormats);
-#ifdef __OCPN__ANDROID__
-    setChoiceStyleSheet(pSDMMFormat, m_fontHeight * 8 / 10);
-#endif
     unitsSizer->Add(pSDMMFormat, inputFlags);
 
     // spacer
@@ -3895,17 +3667,6 @@ OCPNSoundPanel::OCPNSoundPanel( wxWindow *parent, wxWindowID id, const wxPoint &
 
   // Sound file
   wxString LabelWrapped;
-
-#ifdef __OCPN__ANDROID__
-  // Count the likely number of lines in the wrapped file name
-  // to set the default wxStaticText size.
-  ChartDirPanelHardBreakWrapper wrapper(this, m_sound_file, g_pOptions->GetSize().x * 8 / 10);
-  wxArrayString LabelWrappedArray = wrapper.GetLineArray();
-  for (unsigned int i=0 ; i < LabelWrappedArray.GetCount() ; i++){
-     LabelWrapped += "\n";
-  }
-  LabelWrapped += "\n";
-#endif
 
   m_AudioFileNameText = new wxStaticText(this, wxID_ANY, LabelWrapped);
   m_AudioFileNameText->Wrap(-1);
@@ -4320,9 +4081,6 @@ public:
       : wxSlider(parent, wxID_ANY, 10, 1, 100, wxDefaultPosition, size,
                  SLIDER_STYLE) {
     Show();
-#ifdef __OCPN__ANDROID__
-    GetHandle()->setStyleSheet(getQtStyleSheet());
-#endif
   }
 };
 
@@ -4347,9 +4105,6 @@ void options::CreatePanel_UI(size_t parent, int border_size,
 
   itemLangStaticBoxSizer->Add(m_itemLangListBox, 0, wxEXPAND | wxALL,
                               border_size);
-#ifdef __OCPN__ANDROID__
-  m_itemLangListBox->Disable();
-#endif
 
   wxStaticBox* itemFontStaticBox =
       new wxStaticBox(itemPanelFont, wxID_ANY, _("Fonts"));
@@ -4357,13 +4112,6 @@ void options::CreatePanel_UI(size_t parent, int border_size,
   wxSize fontChoiceSize = wxSize(-1, -1);
 
   int fLayout = wxHORIZONTAL;
-#ifdef __OCPN__ANDROID__
-  // Compensate for very narrow displays on Android
-  if (m_nCharWidthMax < 40) fLayout = wxVERTICAL;
-
-  // Need to set wxChoice vertical size explicitely in Android
-  fontChoiceSize = wxSize(-1, m_fontHeight * 3 / 4);
-#endif
 
   wxStaticBoxSizer* itemFontStaticBoxSizer =
       new wxStaticBoxSizer(itemFontStaticBox, fLayout);
@@ -4439,10 +4187,6 @@ void options::CreatePanel_UI(size_t parent, int border_size,
   miscOptions->Add(pShowMenuBar, 0, wxALL, border_size);
 #endif
 
-#ifdef __OCPN__ANDROID__
-  pShowMenuBar->Hide();
-#endif
-
   pShowChartBar = new wxCheckBox(itemPanelFont, wxID_ANY, _("Show Chart Bar"));
   pShowChartBar->SetValue(g_bShowChartBar);
   miscOptions->Add(pShowChartBar, 0, wxALL, border_size);
@@ -4474,7 +4218,6 @@ void options::CreatePanel_UI(size_t parent, int border_size,
       new wxCheckBox(itemPanelFont, ID_BELLSCHECKBOX, _("Play Ships Bells"));
   pShipsBellsSizer->Add(pPlayShipsBells, 0, wxALL | wxEXPAND, border_size);
 
-#ifndef __OCPN__ANDROID__
   if (g_bUIexpert && (bool)dynamic_cast<SystemCmdSound*>(SoundFactory())) {
     wxBoxSizer* pSoundSizer = new wxBoxSizer(wxVERTICAL);
     pShipsBellsSizer->Add(pSoundSizer, 0, wxALL | wxEXPAND, group_item_spacing);
@@ -4486,11 +4229,9 @@ void options::CreatePanel_UI(size_t parent, int border_size,
         wxALIGN_CENTER_HORIZONTAL | wxALL);
     pSoundSizer->Add(pCmdSoundString, 1, wxEXPAND | wxALIGN_LEFT, border_size);
   }
-#endif
 
   auto sound = std::unique_ptr<OcpnSound>(SoundFactory());
   int deviceCount = sound->DeviceCount();
-  wxLogMessage("options: got device count: %d", deviceCount);
   if (deviceCount >= 1) {
     wxArrayString labels;
     for (int i = 0; i < deviceCount; i += 1) {
@@ -4535,10 +4276,6 @@ void options::CreatePanel_UI(size_t parent, int border_size,
       pSoundDeviceIndexGrid->Add(pSoundDeviceIndex, 0, wxALL, border_size);
     }
   }
-#ifdef __OCPN__ANDROID__
-  stSoundDeviceIndex->Hide();
-  pSoundDeviceIndex->Hide();
-#endif
 
   //  Mobile/Touchscreen checkboxes
   pMobile = new wxCheckBox(itemPanelFont, ID_MOBILEBOX,
@@ -4549,21 +4286,13 @@ void options::CreatePanel_UI(size_t parent, int border_size,
                                _("Enable Scaled Graphics interface"));
   miscOptions->Add(pResponsive, 0, wxALL, border_size);
 
-  //  These two options are always needed ON for Android
-#ifdef __OCPN__ANDROID__
-  pMobile->Hide();
-  pResponsive->Hide();
-#endif
-
   //  "Responsive graphics" option deprecated in O58+
   pResponsive->Hide();
 
   pZoomButtons =
       new wxCheckBox(itemPanelFont, ID_ZOOMBUTTONS, _("Show Zoom buttons"));
   miscOptions->Add(pZoomButtons, 0, wxALL, border_size);
-#ifndef __OCPN__ANDROID__
   pZoomButtons->Hide();
-#endif
 
   pInlandEcdis = new wxCheckBox(itemPanelFont, ID_INLANDECDISBOX,
                                 _("Use Inland ECDIS"));
@@ -4573,12 +4302,6 @@ void options::CreatePanel_UI(size_t parent, int border_size,
       new wxButton(itemPanelFont, ID_BUTTONECDISHELP, _("Inland ECDIS Manual"),
                    wxDefaultPosition, wxDefaultSize, 0);
   miscOptions->Add(itemEcdisHelp, 0, wxALL, border_size);
-
-#ifdef __OCPN__ANDROID__
-  pInlandEcdis->Hide();
-  itemEcdisHelp->Hide();
-#endif
-
   miscOptions->AddSpacer(10);
 
   wxFlexGridSizer* sliderSizer;
@@ -4597,10 +4320,6 @@ void options::CreatePanel_UI(size_t parent, int border_size,
   sliderSizer->Add(m_pSlider_GUI_Factor, 0, wxALL, border_size);
   m_pSlider_GUI_Factor->Show();
 
-#ifdef __OCPN__ANDROID__
-  prepareSlider(m_pSlider_GUI_Factor);
-#endif
-
   m_pSlider_Chart_Factor =
       new wxSlider(itemPanelFont, wxID_ANY, 0, -5, 5, wxDefaultPosition,
                    m_sliderSize, SLIDER_STYLE);
@@ -4610,10 +4329,6 @@ void options::CreatePanel_UI(size_t parent, int border_size,
       inputFlags);
   sliderSizer->Add(m_pSlider_Chart_Factor, 0, wxALL, border_size);
   m_pSlider_Chart_Factor->Show();
-
-#ifdef __OCPN__ANDROID__
-  prepareSlider(m_pSlider_Chart_Factor);
-#endif
 
   m_pSlider_Ship_Factor =
       new wxSlider(itemPanelFont, wxID_ANY, 0, -5, 5, wxDefaultPosition,
@@ -4625,10 +4340,6 @@ void options::CreatePanel_UI(size_t parent, int border_size,
   sliderSizer->Add(m_pSlider_Ship_Factor, 0, wxALL, border_size);
   m_pSlider_Ship_Factor->Show();
 
-#ifdef __OCPN__ANDROID__
-  m_pSlider_Ship_Factor->GetHandle()->setStyleSheet(getQtStyleSheet());
-#endif
-
   m_pSlider_Text_Factor =
       new wxSlider(itemPanelFont, wxID_ANY, 0, -5, 5, wxDefaultPosition,
                    m_sliderSize, SLIDER_STYLE);
@@ -4639,10 +4350,6 @@ void options::CreatePanel_UI(size_t parent, int border_size,
   sliderSizer->Add(m_pSlider_Text_Factor, 0, wxALL, border_size);
   m_pSlider_Text_Factor->Show();
 
-#ifdef __OCPN__ANDROID__
-  m_pSlider_Text_Factor->GetHandle()->setStyleSheet(getQtStyleSheet());
-#endif
-
   m_pSlider_ENCText_Factor =
       new wxSlider(itemPanelFont, wxID_ANY, 0, -5, 5, wxDefaultPosition,
                    m_sliderSize, SLIDER_STYLE);
@@ -4652,10 +4359,6 @@ void options::CreatePanel_UI(size_t parent, int border_size,
       inputFlags);
   sliderSizer->Add(m_pSlider_ENCText_Factor, 0, wxALL, border_size);
   m_pSlider_ENCText_Factor->Show();
-
-#ifdef __OCPN__ANDROID__
-  m_pSlider_ENCText_Factor->GetHandle()->setStyleSheet(getQtStyleSheet());
-#endif
 
   sliderSizer->Add(
       new wxStaticText(itemPanelFont, wxID_ANY, _("Mouse wheel zoom sensitivity")),
@@ -4810,15 +4513,7 @@ void options::CreateControls(void) {
   GetTextExtent(_T("0"), NULL, &font_size_y, &font_descent, &font_lead);
   m_fontHeight = font_size_y + font_descent + font_lead;
 
-#ifdef __OCPN__ANDROID__
-  m_sliderSize =
-      wxSize(wxMin(m_fontHeight * 8, g_Platform->getDisplaySize().x / 2),
-             m_fontHeight * 8 / 10);
-#else
-  m_sliderSize =
-      wxSize(wxMin(m_fontHeight * 8, g_Platform->getDisplaySize().x / 2),
-             m_fontHeight * 2);
-#endif
+  m_sliderSize = wxSize(wxMin(m_fontHeight * 8, g_Platform->getDisplaySize().x / 2), m_fontHeight * 2);
 
   m_small_button_size =
       wxSize(-1, (int)(1.2 * (font_size_y + font_descent /*+ font_lead*/)));
@@ -4935,21 +4630,12 @@ void options::CreateControls(void) {
     ConnTab = _("Connect");
 
   m_pageConnections = CreatePanel(ConnTab);
-#ifndef __OCPN__ANDROID__
   CreatePanel_NMEA(m_pageConnections, border_size, group_item_spacing);
-#else
-  CreatePanel_NMEA(m_pageConnections, border_size, group_item_spacing);
-// CreatePanel_NMEA_Compact(m_pageConnections, border_size, group_item_spacing);
-#endif
-
-  //    SetDefaultConnectionParams();
 
   m_pageShips = CreatePanel(_("Ships"));
   CreatePanel_Ownship(m_pageShips, border_size, group_item_spacing);
   CreatePanel_AIS(m_pageShips, border_size, group_item_spacing);
-#ifndef __OCPN__ANDROID__
   CreatePanel_MMSI(m_pageShips, border_size, group_item_spacing);
-#endif
 
   CreatePanel_Routes(m_pageShips, border_size, group_item_spacing);
 
@@ -5313,9 +4999,6 @@ void options::SetInitialSettings(void) {
 
   m_pCheck_Scale_Priority->SetValue(g_bAllowShowScaled);
 
-  s.Printf(_T("%i"), g_ShowScaled_Num);
-  m_pText_Scale_Priority->SetValue(s);
-
   m_pCheck_Show_Area_Notices->SetValue(g_bShowAreaNotices);
 
   m_pCheck_Draw_Target_Size->SetValue(g_bDrawAISSize);
@@ -5471,10 +5154,6 @@ void options::SetInitialVectorSettings(void) {
   if (ps52plib) {
     m_bVectorInit = true;
     resetMarStdList(true, false);
-
-#ifdef __OCPN__ANDROID__
-    ps57CtlListBox->GetHandle()->setStyleSheet(getAdjustedDialogStyleSheet());
-#endif
 
     int nset = 2;  // default OTHER
     switch (ps52plib->GetDisplayCategory()) {
@@ -5689,57 +5368,6 @@ void options::OnGLClicked(wxCommandEvent& event) {
   //     pTransparentToolbar->Enable(!pOpenGL->GetValue());
 }
 
-void options::OnOpenGLOptions(wxCommandEvent& event) {
-#ifdef ocpnUSE_GL
-  OpenGLOptionsDlg dlg(this);
-
-  if (dlg.ShowModal() == wxID_OK) {
-    if (gFrame->GetPrimaryCanvas()->GetglCanvas()) {
-      g_GLOptions.m_bUseAcceleratedPanning = g_bGLexpert
-                                                 ? dlg.GetAcceleratedPanning()
-                                                 : gFrame->GetPrimaryCanvas()
-                                                       ->GetglCanvas()
-                                                       ->CanAcceleratePanning();
-    }
-
-    g_bShowFPS = dlg.GetShowFPS();
-    g_bSoftwareGL = dlg.GetSoftwareGL();
-
-    g_GLOptions.m_GLPolygonSmoothing = dlg.GetPolygonSmoothing();
-    g_GLOptions.m_GLLineSmoothing = dlg.GetLineSmoothing();
-
-    if (g_bGLexpert) {
-      // user defined
-      g_GLOptions.m_bTextureCompressionCaching =
-          dlg.GetTextureCompressionCaching();
-      g_GLOptions.m_iTextureMemorySize = dlg.GetTextureMemorySize();
-    } else {
-      // caching is on if textures are compressed
-      g_GLOptions.m_bTextureCompressionCaching = dlg.GetTextureCompression();
-    }
-
-    if (g_bopengl && g_glTextureManager &&
-        g_GLOptions.m_bTextureCompression != dlg.GetTextureCompression()) {
-      // new g_GLoptions setting is needed in callees
-      g_GLOptions.m_bTextureCompression = dlg.GetTextureCompression();
-
-      if (gFrame->GetPrimaryCanvas()->GetglCanvas()) {
-        ::wxBeginBusyCursor();
-        gFrame->GetPrimaryCanvas()->GetglCanvas()->SetupCompression();
-        g_glTextureManager->ClearAllRasterTextures();
-        ::wxEndBusyCursor();
-      }
-    } else
-      g_GLOptions.m_bTextureCompression = dlg.GetTextureCompression();
-  }
-
-  if (dlg.GetRebuildCache()) {
-    m_returnChanges = REBUILD_RASTER_CACHE;
-    Finish();
-  }
-#endif
-}
-
 void options::OnChartDirListSelect(wxCommandEvent& event) {
 #if 0
   bool selected = (pActiveChartsList->GetSelectedItemCount() > 0);
@@ -5918,10 +5546,7 @@ void options::OnApplyClick(wxCommandEvent& event) {
   g_bOverruleScaMin = pScaMinOverruleChckB->GetValue();
 
   //  Any Font changes?
-  if (m_bfontChanged){
-    if (gFrame->GetPrimaryCanvas()->GetglCanvas()) {
-      gFrame->GetPrimaryCanvas()->GetglCanvas()->ResetGridFont();
-    }
+  if (m_bfontChanged){    
     m_returnChanges |= FONT_CHANGED;
   }
 
@@ -6004,23 +5629,12 @@ void options::OnApplyClick(wxCommandEvent& event) {
   g_nAutoHideToolbar = wxMin(static_cast<int>(hide_val), 100);
   g_nAutoHideToolbar = wxMax(g_nAutoHideToolbar, 2);
 
-  // g_fog_overzoom = !pOverzoomEmphasis->GetValue();
-  // g_oz_vector_scale = !pOZScaleVector->GetValue();
-
   g_bsmoothpanzoom = pSmoothPanZoom->GetValue();
-#ifdef __OCPN__ANDROID__
-  g_bsmoothpanzoom = false;
-#endif
   if (pSmoothPanZoom) g_bsmoothpanzoom = pSmoothPanZoom->GetValue();
-#ifdef __OCPN__ANDROID__
-  g_bsmoothpanzoom = false;
-#endif
 
   long update_val = 1;
   pCOGUPUpdateSecs->GetValue().ToLong(&update_val);
   g_COGAvgSec = wxMin(static_cast<int>(update_val), MAX_COG_AVERAGE_SECONDS);
-
-  // TODO if (g_bCourseUp != pCBCourseUp->GetValue()) gFrame->ToggleCourseUp();
 
   if (pCBLookAhead) g_bLookAhead = pCBLookAhead->GetValue();
 
@@ -6126,7 +5740,6 @@ void options::OnApplyClick(wxCommandEvent& event) {
   g_bAllowShowScaled = m_pCheck_Scale_Priority->GetValue();
   long l;
   m_pText_Scale_Priority->GetValue().ToLong(&l);
-  g_ShowScaled_Num = (int)l;
 
   g_bShowAreaNotices = m_pCheck_Show_Area_Notices->GetValue();
   g_bDrawAISSize = m_pCheck_Draw_Target_Size->GetValue();
@@ -6628,7 +6241,6 @@ static bool compress(lzma_stream* strm, FILE* infile, FILE* outfile) {
           break;
       }
 
-      wxLogMessage(_T("LZMA Encoder error: %s (error code %u)\n"), msg, ret);
       return false;
     }
   }
@@ -6661,35 +6273,17 @@ static bool CompressChart(wxString in, wxString out) {
   return false;
 }
 
-void options::OnButtonmigrateClick(wxCommandEvent& event) {
-#ifdef __OCPN__ANDROID__
-
-  // Run the chart migration assistant
-  g_migrateDialog =
-      new MigrateAssistantDialog(gFrame, true);  // skip Folder scan
-  g_migrateDialog->SetSize(gFrame->GetSize());
-  g_migrateDialog->Centre();
-  g_migrateDialog->Raise();
-  g_migrateDialog->ShowModal();
-#endif
-}
-
 void options::OnButtonEcdisHelp(wxCommandEvent& event) {
 
   wxString testFile = "/doc/iECDIS/index.html";
 
-  if (!::wxFileExists(testFile)) {    
-    
-  } else {
+  if (::wxFileExists(testFile)) {    
 #ifdef __WXMSW__
-    wxLaunchDefaultBrowser("file:///" + *GetpSharedDataLocation() +
-                           testFile);
+    wxLaunchDefaultBrowser("file:///" + *(g_Platform->GetSharedDataDirPtr()) + testFile);
 #else
-    wxLaunchDefaultBrowser("file://" + *GetpSharedDataLocation() +
-                           testFile);
+    wxLaunchDefaultBrowser("file://" + *(g_Platform->GetSharedDataDirPtr()) + testFile);
 #endif
   }
-
 }
 
 void options::OnButtoncompressClick(wxCommandEvent& event) {
@@ -6849,10 +6443,6 @@ void options::OnFontChoice(wxCommandEvent& event) {
 }
 
 void options::OnChooseFont(wxCommandEvent& event) {
-#ifdef __OCPN__ANDROID__
-  androidDisableRotation();
-#endif
-
   wxString sel_text_element = m_itemFontElementListBox->GetStringSelection();
   wxFontData font_data;
 
@@ -6904,10 +6494,6 @@ void options::OnChooseFont(wxCommandEvent& event) {
     OnFontChoice(event);
   }
 
-#ifdef __OCPN__ANDROID__
-  androidEnableRotation();
-#endif
-
   event.Skip();
 }
 
@@ -6920,33 +6506,6 @@ void options::OnChooseFontColor(wxCommandEvent& event) {
   wxFont* pif = FontMgr::Get().GetFont(sel_text_element);
   wxColour init_color = FontMgr::Get().GetFontColor(sel_text_element);
 
-#ifdef __OCPN__ANDROID__
-  androidDisableRotation();
-
-  unsigned int cco = 0;
-  cco |= 0xff;
-  cco = cco << 8;
-  cco |= init_color.Red();
-  cco = cco << 8;
-  cco |= init_color.Green();
-  cco = cco << 8;
-  cco |= init_color.Blue();
-  unsigned int cc = androidColorPicker(cco);
-
-  wxColor cn;
-  unsigned char blue = (unsigned char)cc % 256;
-  unsigned char green = (unsigned char)(cc >> 8) % 256;
-  ;
-  unsigned char red = (unsigned char)(cc >> 16) % 256;
-  cn.Set(red, green, blue);
-
-  FontMgr::Get().SetFont(sel_text_element, pif, cn);
-
-  gFrame->UpdateAllFonts();
-  m_bfontChanged = true;
-
-  androidEnableRotation();
-#else
   wxScrolledWindow* sw =
       new wxScrolledWindow(this, wxID_ANY, wxDefaultPosition, wxSize(400, 400));
 
@@ -6968,7 +6527,6 @@ void options::OnChooseFontColor(wxCommandEvent& event) {
   }
 
   sw->Destroy();
-#endif
   event.Skip();
 }
 #endif
@@ -7619,10 +7177,6 @@ void ChartGroupsUI::OnNewGroup(wxCommandEvent& event) {
   wxTextEntryDialog* pd = new wxTextEntryDialog();
   pd->Create(m_panel, _("Enter Group Name"), _("New Chart Group"));
 
-#ifdef __OCPN__ANDROID__
-  androidDisableRotation();
-#endif
-
   if (pd->ShowModal() == wxID_OK) {
     if (pd->GetValue().Length()) {
       AddEmptyGroupPage(pd->GetValue());
@@ -7638,10 +7192,6 @@ void ChartGroupsUI::OnNewGroup(wxCommandEvent& event) {
     }
   }
   delete pd;
-
-#ifdef __OCPN__ANDROID__
-  androidEnableRotation();
-#endif
 }
 
 void ChartGroupsUI::OnDeleteGroup(wxCommandEvent& event) {
@@ -7803,230 +7353,6 @@ void options::OnRemoveTideDataLocation(wxCommandEvent& event) {
 // OpenGLOptionsDlg
 enum { ID_BUTTON_REBUILD, ID_BUTTON_CLEAR };
 
-#ifdef ocpnUSE_GL
-BEGIN_EVENT_TABLE(OpenGLOptionsDlg, wxDialog)
-EVT_BUTTON(ID_BUTTON_REBUILD, OpenGLOptionsDlg::OnButtonRebuild)
-EVT_BUTTON(ID_BUTTON_CLEAR, OpenGLOptionsDlg::OnButtonClear)
-END_EVENT_TABLE()
-
-OpenGLOptionsDlg::OpenGLOptionsDlg(wxWindow* parent)
-    : wxDialog(parent, wxID_ANY, _T( "OpenGL Options" ), wxDefaultPosition,
-               wxDefaultSize,
-               wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER
-#ifdef __WXOSX__
-                   | wxSTAY_ON_TOP
-#endif
-               ),
-      m_brebuild_cache(FALSE) {
-
-  
-  wxBoxSizer* mainSizer = new wxBoxSizer(wxVERTICAL);
-  wxFlexGridSizer* flexSizer = new wxFlexGridSizer(2);
-
-  m_cbTextureCompression =
-      new wxCheckBox(this, wxID_ANY,
-                     g_bGLexpert ? _("Texture Compression")
-                                 : _("Texture Compression with Caching"));
-  m_cbTextureCompressionCaching =
-      new wxCheckBox(this, wxID_ANY, _("Texture Compression Caching"));
-  m_memorySize =
-      new wxStaticText(this, wxID_ANY, _("Texture Memory Size (MB)"));
-  m_sTextureMemorySize = new wxSpinCtrl(this);
-  m_sTextureMemorySize->SetRange(1, 16384);
-  m_cacheSize =
-      new wxStaticText(this, wxID_ANY, _("Size: ") + GetTextureCacheSize());
-  wxButton* btnRebuild =
-      new wxButton(this, ID_BUTTON_REBUILD, _("Rebuild Texture Cache"));
-  wxButton* btnClear =
-      new wxButton(this, ID_BUTTON_CLEAR, _("Clear Texture Cache"));
-  btnRebuild->Enable(g_GLOptions.m_bTextureCompressionCaching);
-  if (!g_bopengl || g_raster_format == GL_RGB) btnRebuild->Disable();
-  btnClear->Enable(g_GLOptions.m_bTextureCompressionCaching);
-  m_cbShowFPS = new wxCheckBox(this, wxID_ANY, _("Show FPS"));
-  m_cbPolygonSmoothing = new wxCheckBox(this, wxID_ANY, _("Polygon Smoothing"));
-  m_cbLineSmoothing = new wxCheckBox(this, wxID_ANY, _("Line Smoothing"));
-  m_cbSoftwareGL =
-      new wxCheckBox(this, wxID_ANY, _("Software OpenGL (restart OpenCPN)"));
-  m_cbUseAcceleratedPanning =
-      new wxCheckBox(this, wxID_ANY, _("Use Accelerated Panning"));
-
-  flexSizer->Add(new wxStaticText(this, wxID_ANY, _("Texture Settings")), 0,
-                 wxALIGN_RIGHT | wxALIGN_CENTER_VERTICAL, 5);
-  flexSizer->Add(m_cbTextureCompression, 0, wxALL | wxEXPAND, 5);
-  flexSizer->AddSpacer(0);
-  flexSizer->Add(m_cbTextureCompressionCaching, 0, wxALL | wxEXPAND, 5);
-  flexSizer->Add(m_memorySize, 0, wxALIGN_RIGHT | wxALIGN_CENTER_VERTICAL, 5);
-  flexSizer->Add(m_sTextureMemorySize, 0, wxALL | wxEXPAND, 5);
-  flexSizer->Add(new wxStaticText(this, wxID_ANY, _("Texture Cache")), 0,
-                 wxALIGN_RIGHT | wxALIGN_CENTER_VERTICAL, 5);
-  flexSizer->Add(m_cacheSize, 0, wxALIGN_CENTER | wxALIGN_CENTER_VERTICAL, 5);
-  flexSizer->AddSpacer(0);
-  flexSizer->Add(btnRebuild, 0, wxALL | wxEXPAND, 5);
-  flexSizer->AddSpacer(0);
-  flexSizer->Add(btnClear, 0, wxALL | wxEXPAND, 5);
-  flexSizer->Add(new wxStaticText(this, wxID_ANY, _("Miscellaneous")), 0,
-                 wxALIGN_RIGHT | wxALIGN_CENTER_VERTICAL, 5);
-  flexSizer->Add(m_cbPolygonSmoothing, 0, wxALL | wxEXPAND, 5);
-  flexSizer->AddSpacer(0);
-  flexSizer->Add(m_cbLineSmoothing, 0, wxALL | wxEXPAND, 5);
-  flexSizer->AddSpacer(0);
-  flexSizer->Add(m_cbShowFPS, 0, wxALL | wxEXPAND, 5);
-  flexSizer->AddSpacer(0);
-  flexSizer->Add(m_cbSoftwareGL, 0, wxALL | wxEXPAND, 5);
-  flexSizer->AddSpacer(0);
-  flexSizer->Add(m_cbUseAcceleratedPanning, 0, wxALL | wxEXPAND, 5);
-  flexSizer->AddGrowableCol(1);
-  mainSizer->Add(flexSizer, 0, wxALL | wxEXPAND, 5);
-
-  wxStdDialogButtonSizer* btnSizer = new wxStdDialogButtonSizer();
-  btnSizer->AddButton(new wxButton(this, wxID_OK));
-  btnSizer->AddButton(new wxButton(this, wxID_CANCEL, _("Cancel")));
-  btnSizer->Realize();
-
-  mainSizer->AddStretchSpacer();
-  mainSizer->Add(btnSizer, 0, wxALL | wxEXPAND, 5);
-
-  Populate();
-
-  SetSizer(mainSizer);
-  mainSizer->SetSizeHints(this);
-  Centre();
-}
-
-bool OpenGLOptionsDlg::GetAcceleratedPanning(void) const {
-  return m_cbUseAcceleratedPanning->GetValue();
-}
-
-bool OpenGLOptionsDlg::GetTextureCompression(void) const {
-  return m_cbTextureCompression->GetValue();
-}
-
-bool OpenGLOptionsDlg::GetPolygonSmoothing(void) const {
-  return m_cbPolygonSmoothing->GetValue();
-}
-
-bool OpenGLOptionsDlg::GetLineSmoothing(void) const {
-  return m_cbLineSmoothing->GetValue();
-}
-
-bool OpenGLOptionsDlg::GetShowFPS(void) const {
-  return m_cbShowFPS->GetValue();
-}
-
-bool OpenGLOptionsDlg::GetSoftwareGL(void) const {
-  return m_cbSoftwareGL->GetValue();
-}
-
-bool OpenGLOptionsDlg::GetTextureCompressionCaching(void) const {
-  return m_cbTextureCompressionCaching->GetValue();
-}
-
-bool OpenGLOptionsDlg::GetRebuildCache(void) const { return m_brebuild_cache; }
-
-int OpenGLOptionsDlg::GetTextureMemorySize(void) const {
-  return m_sTextureMemorySize->GetValue();
-}
-
-void OpenGLOptionsDlg::Populate(void) {
-
-  m_cbTextureCompression->SetValue(g_GLOptions.m_bTextureCompression);
-  /* disable caching if unsupported */
-//   if (b_glEntryPointsSet && !s_glCompressedTexImage2D) {
-//     g_GLOptions.m_bTextureCompressionCaching = FALSE;
-//     m_cbTextureCompression->Disable();
-//     m_cbTextureCompression->SetValue(FALSE);
-//   }
-
-  m_cbTextureCompressionCaching->Show(g_bGLexpert);
-  m_memorySize->Show(g_bGLexpert);
-  m_sTextureMemorySize->Show(g_bGLexpert);
-  if (g_bGLexpert) {
-    m_cbTextureCompressionCaching->SetValue(
-        g_GLOptions.m_bTextureCompressionCaching);
-    m_sTextureMemorySize->SetValue(g_GLOptions.m_iTextureMemorySize);
-  }
-  m_cbShowFPS->SetValue(g_bShowFPS);
-  m_cbPolygonSmoothing->SetValue(g_GLOptions.m_GLPolygonSmoothing);
-  m_cbLineSmoothing->SetValue(g_GLOptions.m_GLLineSmoothing);
-
-#if defined(__UNIX__) && !defined(__OCPN__ANDROID__) && !defined(__WXOSX__)
-  if (gFrame->GetPrimaryCanvas()->GetglCanvas()) {
-    if (gFrame->GetPrimaryCanvas()
-            ->GetglCanvas()
-            ->GetVersionString()
-            .Upper()
-            .Find(_T( "MESA" )) != wxNOT_FOUND)
-      m_cbSoftwareGL->SetValue(g_bSoftwareGL);
-  }
-#else
-  m_cbSoftwareGL->Hide();
-#endif
-
-  if (g_bGLexpert) {
-    if (gFrame->GetPrimaryCanvas()->GetglCanvas()) {
-      if (gFrame->GetPrimaryCanvas()->GetglCanvas()->CanAcceleratePanning()) {
-        m_cbUseAcceleratedPanning->Enable();
-        m_cbUseAcceleratedPanning->SetValue(
-            g_GLOptions.m_bUseAcceleratedPanning);
-      } else {
-        m_cbUseAcceleratedPanning->SetValue(FALSE);
-        m_cbUseAcceleratedPanning->Disable();
-      }
-    } else {
-      m_cbUseAcceleratedPanning->SetValue(g_GLOptions.m_bUseAcceleratedPanning);
-    }
-  } else {
-    m_cbUseAcceleratedPanning->SetValue(g_GLOptions.m_bUseAcceleratedPanning);
-    m_cbUseAcceleratedPanning->Disable();
-  }
-}
-
-void OpenGLOptionsDlg::OnButtonRebuild(wxCommandEvent& event) {
-  if (g_GLOptions.m_bTextureCompressionCaching) {
-    m_brebuild_cache = TRUE;
-    EndModal(wxID_CANCEL);
-  }
-}
-
-void OpenGLOptionsDlg::OnButtonClear(wxCommandEvent& event) {
-  if (g_bopengl && g_glTextureManager) {
-    ::wxBeginBusyCursor();
-    g_glTextureManager->ClearAllRasterTextures();
-
-    wxString path = g_Platform->GetPrivateDataDir();
-    appendOSDirSlash(&path);
-    path.append(_T("raster_texture_cache"));
-
-    if (::wxDirExists(path)) {
-      wxArrayString files;
-      size_t nfiles = wxDir::GetAllFiles(path, &files);
-      for (unsigned int i = 0; i < files.GetCount(); i++)
-        ::wxRemoveFile(files[i]);
-    }
-
-    m_cacheSize->SetLabel(_("Size: ") + GetTextureCacheSize());
-    ::wxEndBusyCursor();
-  }
-}
-
-wxString OpenGLOptionsDlg::GetTextureCacheSize(void) {
-  wxString path = g_Platform->GetPrivateDataDir();
-  appendOSDirSlash(&path);
-  path.append(_T("raster_texture_cache"));
-  long long total = 0;
-
-  if (::wxDirExists(path)) {
-    wxArrayString files;
-    size_t nfiles = wxDir::GetAllFiles(path, &files);
-    for (unsigned int i = 0; i < files.GetCount(); i++)
-      total += wxFile(files[i]).Length();
-  }
-  double mb = total / (1024.0 * 1024.0);
-  if (mb < 10000.0) return wxString::Format(_T( "%.1f MB" ), mb);
-  mb = mb / 1024.0;
-  return wxString::Format(_T( "%.1f GB" ), mb);
-}
-
 //-------------------------------------------------------------------------------------------------
 //  CanvasConfig selection panel
 //-------------------------------------------------------------------------------------------------
@@ -8049,8 +7375,7 @@ CanvasConfigSelect::CanvasConfigSelect(wxWindow* parent, options* parentOptions,
   SetMinSize(wxSize(bmp.GetSize().x + m_borderWidth * 2,
                     bmp.GetSize().y + m_borderWidth * 2));
 
-  Connect(wxEVT_LEFT_DOWN,
-          wxMouseEventHandler(CanvasConfigSelect::OnMouseSelected), NULL, this);
+  Connect(wxEVT_LEFT_DOWN, wxMouseEventHandler(CanvasConfigSelect::OnMouseSelected), NULL, this);
 }
 
 CanvasConfigSelect::~CanvasConfigSelect() {}
@@ -8070,10 +7395,10 @@ void CanvasConfigSelect::SetSelected(bool selected) {
   wxColour colour;
 
   if (selected) {
-    GetGlobalColor(_T("UIBCK"), &colour);
+    colour = GetGlobalColor(_T("UIBCK"));
     m_boxColour = colour;
   } else {
-    GetGlobalColor(_T("DILG0"), &colour);
+    colour = GetGlobalColor(_T("DILG0"));
     m_boxColour = colour;
   }
 
@@ -8096,14 +7421,14 @@ void CanvasConfigSelect::OnPaint(wxPaintEvent& event) {
   if (m_bSelected) {
     dc.SetBrush(wxBrush(m_boxColour));
 
-    GetGlobalColor(_T ( "UITX1" ), &c);
+    c = GetGlobalColor(_T ( "UITX1" ));
     dc.SetPen(wxPen(wxColor(0xCE, 0xD5, 0xD6), 3));
 
     dc.DrawRoundedRectangle(0, 0, width - 1, height - 1, height / 10);
   } else {
     dc.SetBrush(wxBrush(m_boxColour));
 
-    GetGlobalColor(_T ( "UITX1" ), &c);
+    c = GetGlobalColor(_T ( "UITX1" ));
     dc.SetPen(wxPen(wxColor(0xCE, 0xD5, 0xD6), 3));
 
     dc.DrawRoundedRectangle(0, 0, width - 1, height - 1, height / 10);
@@ -8111,5 +7436,3 @@ void CanvasConfigSelect::OnPaint(wxPaintEvent& event) {
 
   dc.DrawBitmap(m_bmpNormal, m_borderWidth, m_borderWidth, false);
 }
-
-#endif  // ocpnUSE_GL

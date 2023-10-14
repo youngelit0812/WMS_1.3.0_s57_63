@@ -51,10 +51,6 @@
 #define UINT32 unsigned int
 #endif
 
-#ifdef __OCPN__ANDROID__
-#include "androidUTIL.h"
-#endif
-
 extern wxString gWorldMapLocation;
 
 static int s_dbVersion;  //    Database version currently in use at runtime
@@ -127,35 +123,17 @@ bool ChartTableHeader::CheckValid() {
   char vb[5];
   sprintf(vb, "V%03d", DB_VERSION_CURRENT);
   if (strncmp(vb, dbVersion, sizeof(dbVersion))) {
-    wxString msg;
     char vbo[5];
     memcpy(vbo, dbVersion, 4);
     vbo[4] = 0;
-    msg.Append(wxString(vbo, wxConvUTF8));
-    msg.Prepend(wxT("   Warning: found incorrect chart db version: "));
-    wxLogMessage(msg);
 
-    //          return false;       // no match....
-
-    // Try previous version....
+	// Try previous version....
     sprintf(vb, "V%03d", DB_VERSION_PREVIOUS);
     if (strncmp(vb, dbVersion, sizeof(dbVersion)))
       return false;
     else {
-      wxLogMessage(
-          _T("   Scheduling db upgrade to current db version on ")
-          _T("Options->Charts page visit..."));
       return true;
     }
-
-  } else {
-    wxString msg;
-    char vbo[5];
-    memcpy(vbo, dbVersion, 4);
-    vbo[4] = 0;
-    msg.Append(wxString(vbo, wxConvUTF8));
-    msg.Prepend(wxT("Loading chart db version: "));
-    wxLogMessage(msg);
   }
 
   return true;
@@ -505,9 +483,6 @@ bool ChartTableEntry::Read(const ChartDatabase *pDb, wxInputStream &is) {
     *m_psFullPath = fullfilename;
     m_fullSystemPath = fullfilename;
 
-#ifdef __OCPN__ANDROID__
-    m_fullSystemPath = wxString(fullfilename.mb_str(wxConvUTF8));
-#endif
     // Read the table entry
     ChartTableEntry_onDisk_18 cte;
     is.Read(&cte, sizeof(ChartTableEntry_onDisk_18));
@@ -1185,11 +1160,6 @@ bool ChartDatabase::Read(const wxString &filePath) {
   m_dbversion = atoi(&vbo[1]);
   s_dbVersion = m_dbversion;  // save the static copy
 
-  wxLogVerbose(wxT("Chartdb:Reading %d directory entries, %d table entries"),
-               cth.GetDirEntries(), cth.GetTableEntries());
-  wxLogMessage(_T("Chartdb: Chart directory list follows"));
-  if (0 == cth.GetDirEntries()) wxLogMessage(_T("  Nil"));
-
   int ind = 0;
   for (int iDir = 0; iDir < cth.GetDirEntries(); iDir++) {
     wxString dir;
@@ -1203,10 +1173,6 @@ bool ChartDatabase::Read(const wxString &filePath) {
       dirlen -= alen;
       dir.Append(wxString(dirbuf, wxConvUTF8));
     }
-    wxString msg;
-    msg.Printf(wxT("  Chart directory #%d: "), iDir);
-    msg.Append(dir);
-    wxLogMessage(msg);
     m_chartDirs.Add(dir);
   }
 
@@ -1623,10 +1589,6 @@ int ChartDatabase::TraverseDirAndAddCharts(ChartDirInfo &dir_info, wxString &dir
                                   new_magic);
 
   if (!bForce && !b_dirchange) {
-    wxString msg(_T("   No change detected on directory "));
-    msg.Append(dir_path);
-    wxLogMessage(msg);
-
     //    Traverse the database, and mark as valid all charts coming from this
     //    dir, or anywhere in its tree
 
@@ -1800,110 +1762,6 @@ bool ChartDatabase::Check_CM93_Structure(wxString dir_name) {
   return false;
 }
 
-/*
-//-----------------------------------------------------------------------------
-// Validate a given directory as a cm93 root database
-// If it appears to be a cm93 database, then return the name of an existing cell
-file
-// File name will be unique with respect to member element m_cm93_filename_array
-// If not cm93, return empty string
-//-----------------------------------------------------------------------------
-wxString ChartDatabase::Get_CM93_FileName(wxString dir_name)
-{
-      wxString filespec;
-
-      wxRegEx test(_T("[0-9]+"));
-
-      wxDir dirt(dir_name);
-      wxString candidate;
-
-      bool b_maybe_found_cm93 = false;
-      bool b_cont = dirt.GetFirst(&candidate);
-
-      while(b_cont)
-      {
-            if(test.Matches(candidate)&& (candidate.Len() == 8))
-            {
-                  b_maybe_found_cm93 = true;
-                  break;
-            }
-
-            b_cont = dirt.GetNext(&candidate);
-
-      }
-
-      if(b_maybe_found_cm93)
-      {
-            wxString dir_next = dir_name;
-            dir_next += _T("/");
-            dir_next += candidate;
-            if(wxDir::Exists(dir_next))
-            {
-                  wxDir dir_n(dir_next);
-                  wxString candidate_n;
-
-                  wxRegEx test_n(_T("^[A-Ga-g]"));
-                  bool b_probably_found_cm93 = false;
-                  bool b_cont_n = dir_n.GetFirst(&candidate_n);
-                  while(b_cont_n)
-                  {
-                        if(test_n.Matches(candidate_n) && (candidate_n.Len() ==
-1))
-                        {
-                              b_probably_found_cm93 = true;
-                              break;
-                        }
-                        b_cont_n = dir_n.GetNext(&candidate_n);
-                  }
-
-                  if(b_probably_found_cm93)           // found a directory that
-looks like {dir_name}/12345678/A   probably cm93 { // and we want to try and
-shorten the recursive search
-                        // make sure the dir exists
-                        wxString dir_luk = dir_next;
-                        dir_luk += _T("/");
-                        dir_luk += candidate_n;
-                        if(wxDir::Exists(dir_luk))
-                        {
-                              wxString msg(_T("Found probable CM93 database in
-")); msg += dir_name; wxLogMessage(msg);
-
-                              wxString dir_name_plus = dir_luk; // be very
-specific about the dir_name,
-
-                              wxDir dir_get(dir_name_plus);
-                              wxString one_file;
-                              dir_get.GetFirst(&one_file);
-
-                              //    We must return a unique file name, i.e. one
-that has not bee seen
-                              //    before in this invocation of chart dir
-scans. bool find_unique = false; while(!find_unique)
-                              {
-                                    find_unique = true;
-                                    for(unsigned int ifile=0; ifile <
-m_cm93_filename_array.GetCount(); ifile++)
-                                    {
-                                          if(m_cm93_filename_array[ifile] ==
-one_file) find_unique = false;
-                                    }
-                                    if(!find_unique)
-                                          dir_get.GetNext(&one_file);
-                              }
-
-                              m_cm93_filename_array.Add(one_file);
-
-                              filespec = one_file;
-                        }
-
-                  }
-            }
-      }
-
-      return filespec;
-}
-*/
-
 // ----------------------------------------------------------------------------
 // Populate Chart Table by directory search for specified file type
 // If bupdate flag is true, search the Chart Table for matching chart.
@@ -1913,8 +1771,6 @@ one_file) find_unique = false;
 WX_DECLARE_STRING_HASH_MAP(int, ChartCollisionsHashMap);
 
 int ChartDatabase::SearchDirAndAddCharts(wxString &dir_name_base, ChartClassDescriptor &chart_desc) {
-	//wprintf(_T("SearchDirAndAddCharts 1:\n Searching directory: %s for %s.\n"), dir_name_base.wc_str(), chart_desc.m_search_mask.wc_str());  
-
   wxString dir_name = dir_name_base;
   
   if (!wxDir::Exists(dir_name)) return 0;
@@ -2067,10 +1923,6 @@ int ChartDatabase::SearchDirAndAddCharts(wxString &dir_name_base, ChartClassDesc
     wxString msg_fn(full_name);
     msg_fn.Replace(_T("%"), _T("%%"));
     if (file_time_is_same) {
-      // Produce the same output without actually calling
-      // `CreateChartTableEntry()`.
-      wxLogMessage(
-          wxString::Format(_T("Loading chart data for %s"), msg_fn.c_str()));
     } else {
 		//printf("SearchDirAndAddCharts 2: CreateChartTableEntry\n");
       pnewChart = CreateChartTableEntry(full_name, utf8_path, chart_desc);
@@ -2082,9 +1934,6 @@ int ChartDatabase::SearchDirAndAddCharts(wxString &dir_name_base, ChartClassDesc
     if (!collision || !pnewChart) {
       // Do nothing.
     } else if (file_path_is_same) {
-      wxLogMessage(
-          wxString::Format(_T("   Replacing older chart file of same path: %s"),
-                           msg_fn.c_str()));
     } else if (!file_time_is_same) {
       //  Look at the chart file name (without directory prefix) for a further
       //  check for duplicates This catches the case in which the "same" chart
@@ -2097,9 +1946,6 @@ int ChartDatabase::SearchDirAndAddCharts(wxString &dir_name_base, ChartClassDesc
         if (table_file.IsFileReadable()) {
           pEntry->SetValid(true);
           bAddFinal = false;
-          wxLogMessage(wxString::Format(
-              _T("   Retaining newer chart file of same name: %s"),
-              msg_fn.c_str()));
         }
       } else if (pnewChart->IsEqualTo(*pEntry)) {
         //    The file names (without dir prefix) are identical,
@@ -2111,24 +1957,15 @@ int ChartDatabase::SearchDirAndAddCharts(wxString &dir_name_base, ChartClassDesc
       } else {
         pEntry->SetValid(false);
         bAddFinal = true;
-        wxLogMessage(wxString::Format(
-            _T("   Replacing older chart file of same name: %s"),
-            msg_fn.c_str()));
       }
     }
 
-    if (bAddFinal) {
-      if (0 == b_add_msg) {
-        wxLogMessage(
-            wxString::Format(_T("   Adding chart file: %s"), msg_fn.c_str()));
-      }
+    if (bAddFinal) {      
       collision_map[file_name] = active_chartTable.GetCount();
       active_chartTable.Add(pnewChart);
       nDirEntry++;
     } else {
       if (pnewChart) delete pnewChart;
-      //                    wxLogMessage(wxString::Format(_T("   Not adding
-      //                    chart file: %s"), msg_fn.c_str()));
     }
   }
 
@@ -2148,13 +1985,7 @@ bool ChartDatabase::AddChart(wxString &chartfilename,
 
   //    Validate the file name again, considering MSW's semi-random treatment of
   //    case....
-  // TODO...something fishy here - may need to normalize saved name?
-  //    if(!file_name.Matches(lowerFileSpec) && !file_name.Matches(filespec) &&
-  //    !b_found_cm93)
-  //        continue;
-
-  if (pprog)
-    pprog->Update(wxMin((m_pdifile * 100) / m_pdnFile, 100), full_name);
+  if (pprog) pprog->Update(wxMin((m_pdifile * 100) / m_pdnFile, 100), full_name);
 
   ChartTableEntry *pnewChart = NULL;
   bool bAddFinal = true;
@@ -2165,8 +1996,6 @@ bool ChartDatabase::AddChart(wxString &chartfilename,
   pnewChart = CreateChartTableEntry(full_name, full_name, chart_desc);
   if (!pnewChart) {
     bAddFinal = false;
-    wxLogMessage(wxString::Format(
-        _T("   CreateChartTableEntry() failed for file: %s"), msg_fn.c_str()));
     return false;
   } else  // traverse the existing database looking for duplicates, and choosing
           // the right one
@@ -2190,9 +2019,6 @@ bool ChartDatabase::AddChart(wxString &chartfilename,
         } else {
           bAddFinal = true;
           active_chartTable[isearch].SetValid(false);
-          wxLogMessage(wxString::Format(
-              _T("   Replacing older chart file of same path: %s"),
-              msg_fn.c_str()));
         }
 
         break;
@@ -2211,9 +2037,6 @@ bool ChartDatabase::AddChart(wxString &chartfilename,
           if (table_file.IsFileReadable()) {
             active_chartTable[isearch].SetValid(true);
             bAddFinal = false;
-            wxLogMessage(wxString::Format(
-                _T("   Retaining newer chart file of same name: %s"),
-                msg_fn.c_str()));
           }
         } else if (pnewChart->IsEqualTo(active_chartTable[isearch])) {
           //    The file names (without dir prefix) are identical,
@@ -2227,9 +2050,6 @@ bool ChartDatabase::AddChart(wxString &chartfilename,
         else {
           active_chartTable[isearch].SetValid(false);
           bAddFinal = true;
-          wxLogMessage(wxString::Format(
-              _T("   Replacing older chart file of same name: %s"),
-              msg_fn.c_str()));
         }
 
         break;
@@ -2243,18 +2063,11 @@ bool ChartDatabase::AddChart(wxString &chartfilename,
   }
 
   if (bAddFinal) {
-    if (0 == b_add_msg) {
-      wxLogMessage(
-          wxString::Format(_T("   Adding chart file: %s"), msg_fn.c_str()));
-    }
-
     active_chartTable.Add(pnewChart);
 
     rv = true;
   } else {
     delete pnewChart;
-    //                  wxLogMessage(wxString::Format(_T("   Not adding chart
-    //                  file: %s"), msg_fn.c_str()));
     rv = false;
   }
 

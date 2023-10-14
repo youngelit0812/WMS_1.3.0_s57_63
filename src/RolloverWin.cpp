@@ -44,11 +44,6 @@
 #include "ocpn_frame.h"
 #include "OCPNPlatform.h"
 
-#ifdef ocpnUSE_GL
-#include "glChartCanvas.h"
-#include "chcanv.h"
-#endif
-
 extern bool g_bopengl;
 #ifdef ocpnUSE_GL
 extern GLenum g_texture_rectangle_format;
@@ -179,10 +174,6 @@ void RolloverWin::SetBitmap(int rollover) {
 
     } else
       glBindTexture(g_texture_rectangle_format, m_texture);
-
-    wxString msg;
-    msg.Printf(_T("Render texture  %d"), m_texture);
-    wxLogMessage(msg);
 
     // make texture data
     wxImage image = m_pbm->ConvertToImage();

@@ -16,17 +16,12 @@ TCDataSource::TCDataSource() {
 }
 
 TCDataSource::~TCDataSource() {
-  wxLogMessage(_T("UnLoading Tide/Current data source: %s"),
-               m_data_source_path.c_str());
-
   delete pTCDS_Ascii_Harmonic;
   delete pTCDS_Binary_Harmonic;
 }
 
 TC_Error_Code TCDataSource::LoadData(const wxString &data_file_path) {
   m_data_source_path = data_file_path;
-  wxLogMessage(_T("Loading Tide/Current data source: %s"),
-               m_data_source_path.c_str());
 
   wxFileName fname(data_file_path);
 

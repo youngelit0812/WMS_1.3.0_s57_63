@@ -346,8 +346,6 @@ void about::Populate(void) {
         for ( wxString str = license_filea.GetFirstLine(); !license_filea.Eof() ; str = license_filea.GetNextLine() )
             licenseText.Append( str + _T("<br>") );
         license_filea.Close();
-    } else {
-        wxLogMessage( _T("Could not open License file: ") + m_DataLocn );
     }
 
     wxString suppLicense = g_Platform->GetSupplementalLicenseString();
@@ -546,8 +544,6 @@ void about::OnNBPageChange(wxNotebookEvent& event) {
            str = license_filea.GetNextLine())
         licenseText.Append(str + _T("<br>"));
       license_filea.Close();
-    } else {
-      wxLogMessage(_T("Could not open License file: ") + m_DataLocn);
     }
 
     wxString suppLicense = g_Platform->GetSupplementalLicenseString();
@@ -592,8 +588,7 @@ void about::OnCopyClick(wxCommandEvent& event) {
 
   wxFFile file(filename);
 
-  if (!file.IsOpened()) {
-    wxLogMessage(_T("Failed to open file for Copy to Clipboard."));
+  if (!file.IsOpened()) {    
     return;
   }
 
@@ -619,11 +614,8 @@ void about::OnCopyClick(wxCommandEvent& event) {
 
   ::wxBeginBusyCursor();
   if (wxTheClipboard->Open()) {
-    if (!wxTheClipboard->SetData(new wxTextDataObject(fileContent)))
-      wxLogMessage(_T("wxTheClipboard->Open() failed."));
+    wxTheClipboard->SetData(new wxTextDataObject(fileContent));
     wxTheClipboard->Close();
-  } else {
-    wxLogMessage(_T("wxTheClipboard->Open() failed."));
   }
   ::wxEndBusyCursor();
 }

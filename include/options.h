@@ -1,28 +1,3 @@
-/***************************************************************************
- *
- * Project:  OpenCPN
- * Purpose:  Options Dialog
- * Author:   David Register
- *
- ***************************************************************************
- *   Copyright (C) 2010 by David S. Register                               *
- *                                                                         *
- *   This program is free software; you can redistribute it and/or modify  *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation; either version 2 of the License, or     *
- *   (at your option) any later version.                                   *
- *                                                                         *
- *   This program is distributed in the hope that it will be useful,       *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
- *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program; if not, write to the                         *
- *   Free Software Foundation, Inc.,                                       *
- *   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301,  USA.         *
- **************************************************************************/
-
 #ifndef _OPTIONS_H_
 #define _OPTIONS_H_
 
@@ -41,7 +16,6 @@
 #include <wx/collpane.h>
 #include <wx/clrpicker.h>
 #include <wx/colourdata.h>
-#include "connections_dialog.h"
 
 #if wxUSE_TIMEPICKCTRL
 #include <wx/timectrl.h>
@@ -62,11 +36,8 @@
 #endif
 
 #include "chartdbs.h"
-#include "pluginmanager.h"  // FIXME: Refactor
 
-#ifndef __OCPN__ANDROID__
 #define __OCPN__OPTIONS_USE_LISTBOOK__
-#endif
 
 // Forward Declarations
 class wxGenericDirCtrl;
@@ -308,14 +279,11 @@ public:
 
   void SetConfigPtr(MyConfig *p) { m_pConfig = p; }
   void OnDebugcheckbox1Click(wxCommandEvent &event);
-  void OnDirctrlSelChanged(wxTreeEvent &event);
   void OnButtonaddClick(wxCommandEvent &event);
   void OnButtondeleteClick(wxCommandEvent &event);
   void OnButtonParseENC(wxCommandEvent &event);
   void OnButtoncompressClick(wxCommandEvent &event);
-  void OnButtonmigrateClick(wxCommandEvent &event);
   void OnButtonEcdisHelp(wxCommandEvent &event);
-  void OnRadioboxSelected(wxCommandEvent &event);
   void OnApplyClick(wxCommandEvent &event);
   void OnXidOkClick(wxCommandEvent &event);
   void OnCancelClick(wxCommandEvent &event);
@@ -330,7 +298,6 @@ public:
   void OnChooseFontColor(wxCommandEvent &event);
 #endif
   void OnGLClicked(wxCommandEvent &event);
-  void OnOpenGLOptions(wxCommandEvent &event);
   void OnDisplayCategoryRadioButton(wxCommandEvent &event);
   void OnButtonClearClick(wxCommandEvent &event);
   void OnButtonSelectClick(wxCommandEvent &event);
@@ -547,7 +514,6 @@ public:
   // For "AIS Options"
   wxComboBox *m_itemAISListBox;
 
-  AddPluginPanel *m_AddPluginPanel;  
   wxScrolledWindow *itemPanelPlugins;
   wxBoxSizer *itemBoxSizerPanelPlugins;
   wxFlexGridSizer *radarGrid, *waypointradarGrid;
@@ -641,8 +607,6 @@ private:
 
   //wxScrolledWindow *m_pNMEAForm;
   void resetMarStdList(bool bsetConfig, bool bsetStd);
-
-  ObservableListener compat_os_listener;
 
   int m_screenConfig;
 
@@ -750,38 +714,6 @@ private:
 
   DECLARE_EVENT_TABLE()
 };
-
-#ifdef ocpnUSE_GL
-class OpenGLOptionsDlg : private Uncopyable, public wxDialog {
-public:
-  explicit OpenGLOptionsDlg(wxWindow *parent);
-  bool GetAcceleratedPanning(void) const;
-  bool GetTextureCompression(void) const;
-  bool GetPolygonSmoothing(void) const;
-  bool GetLineSmoothing(void) const;
-  bool GetShowFPS(void) const;
-  bool GetSoftwareGL(void) const;
-  bool GetTextureCompressionCaching(void) const;
-  bool GetRebuildCache(void) const;
-  int GetTextureMemorySize(void) const;
-
-private:
-  void Populate(void);
-  void OnButtonRebuild(wxCommandEvent &event);
-  void OnButtonClear(wxCommandEvent &event);
-  wxString GetTextureCacheSize(void);
-
-  wxCheckBox *m_cbUseAcceleratedPanning, *m_cbTextureCompression;
-  wxCheckBox *m_cbTextureCompressionCaching, *m_cbShowFPS, *m_cbSoftwareGL,
-      *m_cbPolygonSmoothing, *m_cbLineSmoothing;
-  wxSpinCtrl *m_sTextureDimension, *m_sTextureMemorySize;
-  wxStaticText *m_cacheSize, *m_memorySize;
-
-  bool m_brebuild_cache;
-
-  DECLARE_EVENT_TABLE()
-};
-#endif
 
 #define ID_MMSI_PROPS_LIST 10073
 

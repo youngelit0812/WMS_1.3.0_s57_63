@@ -49,11 +49,6 @@
 #define new DEBUG_NEW
 #endif
 
-#ifdef ocpnUSE_GL
-#include "glChartCanvas.h"
-#include "linmath.h"
-#endif
-
 #include <algorithm>  // for std::sort
 #include <map>
 
@@ -83,7 +78,6 @@ extern bool g_bGDAL_Debug;
 extern bool g_bDebugS57;
 extern MyFrame *gFrame;
 extern bool g_b_overzoom_x;
-extern bool g_b_EnableVBO;
 extern OCPNPlatform *g_Platform;
 extern SENCThreadManager *g_SencThreadManager;
 
@@ -1345,149 +1339,10 @@ void s57chart::AssembleLineGeometry(void) {
     delete pcs;
   }
   m_vc_hash.clear();
-
-#ifdef ocpnUSE_GL
-  if (g_b_EnableVBO) {
-    if (grow_buffer) {
-      if (m_LineVBO_name > 0){
-          glDeleteBuffers(1, (GLuint *)&m_LineVBO_name);
-          m_LineVBO_name = -1;
-      }
-    }
-  }
-#endif
-
-
  }
 
 void s57chart::BuildLineVBO(void) {
-#ifdef ocpnUSE_GL
-  if (!g_b_EnableVBO) return;
 
-  if (m_LineVBO_name == -1) {
-    //      Create the VBO
-    GLuint vboId;
-    glGenBuffers(1, &vboId);
-
-    // bind VBO in order to use
-    glBindBuffer(GL_ARRAY_BUFFER, vboId);
-
-    // upload data to VBO
-    // Choice:  Line VBO only, or full VBO with areas.
-
-#if 1
-#ifndef USE_ANDROID_GLES2
-    glEnableClientState(GL_VERTEX_ARRAY);  // activate vertex coords array
-#endif
-    glBufferData(GL_ARRAY_BUFFER, m_vbo_byte_length, m_line_vertex_buffer,
-                  GL_STATIC_DRAW);
-
-#else
-    // get the size of VBO data block needed for all AREA objects
-    ObjRazRules *top, *crnt;
-    int vbo_area_size_bytes = 0;
-    for (int i = 0; i < PRIO_NUM; ++i) {
-      if (ps52plib->m_nBoundaryStyle == SYMBOLIZED_BOUNDARIES)
-        top = razRules[i][4];  // Area Symbolized Boundaries
-      else
-        top = razRules[i][3];  // Area Plain Boundaries
-
-      while (top != NULL) {
-        crnt = top;
-        top = top->next;  // next object
-
-        //  Get the vertex data for this object
-        PolyTriGroup *ppg_vbo = crnt->obj->pPolyTessGeo->Get_PolyTriGroup_head();
-        //add the byte length
-        vbo_area_size_bytes += ppg_vbo->single_buffer_size;
-      }
-    }
-
-    glGetError();     //clear it
-
-    // Allocate the VBO
-    glBufferData(GL_ARRAY_BUFFER, m_vbo_byte_length + vbo_area_size_bytes,
-                 NULL, GL_STATIC_DRAW);
-
-    GLenum err = glGetError();
-          if (err) {
-            wxString msg;
-            msg.Printf(_T("S57 VBO Error 1: %d"), err);
-            wxLogMessage(msg);
-            printf("S57 VBO Error 1: %d", err);
-          }
-
-    // Upload the line vertex data
-    glBufferSubData(GL_ARRAY_BUFFER, 0, m_vbo_byte_length, m_line_vertex_buffer);
-
-    err = glGetError();
-          if (err) {
-            wxString msg;
-            msg.Printf(_T("S57 VBO Error 2: %d"), err);
-            wxLogMessage(msg);
-            printf("S57 VBO Error 2: %d", err);
-          }
-
-
-    // Get the Area Object vertices, and add to the VBO, one by one
-    int vbo_load_offset = m_vbo_byte_length;
-
-    for (int i = 0; i < PRIO_NUM; ++i) {
-      if (ps52plib->m_nBoundaryStyle == SYMBOLIZED_BOUNDARIES)
-        top = razRules[i][4];  // Area Symbolized Boundaries
-      else
-        top = razRules[i][3];  // Area Plain Boundaries
-
-      while (top != NULL) {
-        crnt = top;
-        top = top->next;  // next object
-
-        //  Get the vertex data for this object
-        PolyTriGroup *ppg_vbo = crnt->obj->pPolyTessGeo->Get_PolyTriGroup_head();
-
-        // append  data to VBO
-        glBufferSubData(GL_ARRAY_BUFFER, vbo_load_offset,
-                        ppg_vbo->single_buffer_size,
-                        ppg_vbo->single_buffer);
-        // store the VBO offset in the object
-        crnt->obj->vboAreaOffset = vbo_load_offset;
-        vbo_load_offset += ppg_vbo->single_buffer_size;
-      }
-    }
-
-    err = glGetError();
-          if (err) {
-            wxString msg;
-            msg.Printf(_T("S57 VBO Error 3: %d"), err);
-            wxLogMessage(msg);
-            printf("S57 VBO Error 3: %d", err);
-          }
-
-#endif
-
-#ifndef USE_ANDROID_GLES2
-    glDisableClientState(GL_VERTEX_ARRAY);  // deactivate vertex array
-#endif
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-    //  Loop and populate all the objects
-    //  with the name of the line/area vertex VBO
-    for (int i = 0; i < PRIO_NUM; ++i) {
-      for (int j = 0; j < LUPNAME_NUM; j++) {
-        ObjRazRules *top = razRules[i][j];
-        while (top != NULL) {
-          S57Obj *obj = top->obj;
-          obj->auxParm2 = vboId;
-          top = top->next;
-        }
-      }
-    }
-
-    m_LineVBO_name = vboId;
-    m_this_chart_context->vboID = vboId;
-  }
-
-#endif
 }
 
 /*              RectRegion:
@@ -1539,17 +1394,6 @@ bool s57chart::RenderViewOnGLTextOnly(const wxGLContext &glc,
                                       const ViewPort &VPoint) {
   if (!m_RAZBuilt) return false;
 
-#ifdef ocpnUSE_GL
-
-  if (!ps52plib) return false;
-
-  SetVPParms(VPoint);
-  PrepareForRender((ViewPort *)&VPoint, ps52plib);
-
-  glChartCanvas::DisableClipRegion();
-  DoRenderOnGLText(glc, VPoint);
-
-#endif
   return true;
 }
 
@@ -1559,247 +1403,16 @@ bool s57chart::DoRenderRegionViewOnGL(const wxGLContext &glc,
                                       const LLRegion &Region, bool b_overlay) {
   if (!m_RAZBuilt) return false;
 
-#ifdef ocpnUSE_GL
-
-  if (!ps52plib) return false;
-
-  if (g_bDebugS57) printf("\n");
-
-  SetVPParms(VPoint);
-
- PrepareForRender((ViewPort *)&VPoint, ps52plib);
-
-  if (m_plib_state_hash != ps52plib->GetStateHash()) {
-    m_bLinePrioritySet = false;  // need to reset line priorities
-    UpdateLUPs(this);            // and update the LUPs
-    ClearRenderedTextCache();    // and reset the text renderer,
-                               // for the case where depth(height) units change
-    ResetPointBBoxes(m_last_vp, VPoint);
-    SetSafetyContour();
-
-    m_plib_state_hash = ps52plib->GetStateHash();
-  }
-
-  if (VPoint.view_scale_ppm != m_last_vp.view_scale_ppm) {
-    ResetPointBBoxes(m_last_vp, VPoint);
-  }
-
-  BuildLineVBO();
-  SetLinePriorities();
-
-  //        Clear the text declutter list
-  ps52plib->ClearTextList();
-
-  ViewPort vp = VPoint;
-
-// printf("\n");
-  // region always has either 1 or 2 rectangles (full screen or panning
-  // rectangles)
-  for (OCPNRegionIterator upd(RectRegion); upd.HaveRects(); upd.NextRect()) {
-    wxRect upr = upd.GetRect();
-    //printf("updRect: %d %d %d %d\n",upr.x, upr.y, upr.width, upr.height);
-
-    LLRegion chart_region = vp.GetLLRegion(upd.GetRect());
-    chart_region.Intersect(Region);
-
-    if (!chart_region.Empty()) {
-      // TODO  I think this needs nore work for alternate Projections...
-      //  cm93 vpoint crossing Greenwich, panning east, was rendering areas
-      //  incorrectly.
-      ViewPort cvp = glChartCanvas::ClippedViewport(VPoint, chart_region);
-//  printf("CVP:  %g %g       %g %g\n",
-//         cvp.GetBBox().GetMinLat(),
-//         cvp.GetBBox().GetMaxLat(),
-//         cvp.GetBBox().GetMinLon(),
-//         cvp.GetBBox().GetMaxLon());
-
-      
-        ps52plib->SetReducedBBox(cvp.GetBBox());
-        glChartCanvas::SetClipRect(cvp, upd.GetRect(), false);
-
-      DoRenderOnGL(glc, cvp);
-
-      glChartCanvas::DisableClipRegion();
-    }
-  }
-
-  //      Update last_vp to reflect current state
-  //m_last_vp = VPoint;
-
-  //      CALLGRIND_STOP_INSTRUMENTATION
-
-#endif
   return true;
 }
 
 
 bool s57chart::DoRenderOnGL(const wxGLContext &glc, const ViewPort &VPoint) {
-#ifdef ocpnUSE_GL
-
-  int i;
-  ObjRazRules *top;
-  ObjRazRules *crnt;
-  ViewPort tvp = VPoint;  // undo const  TODO fix this in PLIB
-
-#if 1
-
-  //      Render the areas quickly
-  // bind VBO in order to use
-
-  for (i = 0; i < PRIO_NUM; ++i) {
-    if (ps52plib->m_nBoundaryStyle == SYMBOLIZED_BOUNDARIES)
-      top = razRules[i][4];  // Area Symbolized Boundaries
-    else
-      top = razRules[i][3];  // Area Plain Boundaries
-
-    while (top != NULL) {
-      crnt = top;
-      top = top->next;  // next object
-      crnt->sm_transform_parms = &vp_transform;
-      ps52plib->RenderAreaToGL(glc, crnt);
-    }
-  }
-
-#else
-  //      Render the areas quickly
-  for (i = 0; i < PRIO_NUM; ++i) {
-	  int nBoundaryStyleFromS52 = 0;
-	  if (ps52plib) nBoundaryStyleFromS52 = ps52plib->m_nBoundaryStyle;
-    if (PI_GetPLIBBoundaryStyle() == SYMBOLIZED_BOUNDARIES)
-      top = razRules[i][4];  // Area Symbolized Boundaries
-    else
-      top = razRules[i][3];  // Area Plain Boundaries
-
-    while (top != NULL) {
-      crnt = top;
-      top = top->next;  // next object
-      crnt->sm_transform_parms = &vp_transform;
-
-      // This may be a deferred tesselation
-      // Don't pre-process the geometry unless the object is to be actually
-      // rendered
-      if (!crnt->obj->pPolyTessGeo->IsOk()) {
-        if (ps52plib->ObjectRenderCheckRules(crnt, &tvp, true)) {
-          if (!crnt->obj->pPolyTessGeo->m_pxgeom)
-            crnt->obj->pPolyTessGeo->m_pxgeom = buildExtendedGeom(crnt->obj);
-        }
-      }
-      ps52plib->RenderAreaToGL(glc, crnt, &tvp);
-    }
-  }
-#endif
-  // qDebug() << "Done areas" << sw.GetTime();
-
-  //    Render the lines and points
-  for (i = 0; i < PRIO_NUM; ++i) {
-    if (ps52plib->m_nBoundaryStyle == SYMBOLIZED_BOUNDARIES)
-      top = razRules[i][4];  // Area Symbolized Boundaries
-    else
-      top = razRules[i][3];  // Area Plain Boundaries
-    while (top != NULL) {
-      crnt = top;
-      top = top->next;  // next object
-      crnt->sm_transform_parms = &vp_transform;
-      ps52plib->RenderObjectToGL(glc, crnt);
-    }
-  }
-  // qDebug() << "Done Boundaries" << sw.GetTime();
-
-  for (i = 0; i < PRIO_NUM; ++i) {
-    top = razRules[i][2];  // LINES
-    while (top != NULL) {
-      crnt = top;
-      top = top->next;
-      crnt->sm_transform_parms = &vp_transform;
-      ps52plib->RenderObjectToGL(glc, crnt);
-    }
-  }
-
-  // qDebug() << "Done Lines" << sw.GetTime();
-
-  for (i = 0; i < PRIO_NUM; ++i) {
-    if (ps52plib->m_nSymbolStyle == SIMPLIFIED)
-      top = razRules[i][0];  // SIMPLIFIED Points
-    else
-      top = razRules[i][1];  // Paper Chart Points Points
-
-    while (top != NULL) {
-      crnt = top;
-      top = top->next;
-      crnt->sm_transform_parms = &vp_transform;
-      ps52plib->RenderObjectToGL(glc, crnt);
-    }
-  }
-  // qDebug() << "Done Points" << sw.GetTime();
-
-#endif  //#ifdef ocpnUSE_GL
-
   return true;
 }
 
 bool s57chart::DoRenderOnGLText(const wxGLContext &glc,
                                 const ViewPort &VPoint) {
-#ifdef ocpnUSE_GL
-
-  int i;
-  ObjRazRules *top;
-  ObjRazRules *crnt;
-  ViewPort tvp = VPoint;  // undo const  TODO fix this in PLIB
-
-#if 0
-    //      Render the areas quickly
-    for( i = 0; i < PRIO_NUM; ++i ) {
-        if( ps52plib->m_nBoundaryStyle == SYMBOLIZED_BOUNDARIES )
-            top = razRules[i][4]; // Area Symbolized Boundaries
-        else
-            top = razRules[i][3];           // Area Plain Boundaries
-
-            while( top != NULL ) {
-                crnt = top;
-                top = top->next;               // next object
-                crnt->sm_transform_parms = &vp_transform;
-///                ps52plib->RenderAreaToGL( glc, crnt, &tvp );
-            }
-    }
-#endif
-
-  //    Render the lines and points
-  for (i = 0; i < PRIO_NUM; ++i) {
-    if (ps52plib->m_nBoundaryStyle == SYMBOLIZED_BOUNDARIES)
-      top = razRules[i][4];  // Area Symbolized Boundaries
-    else
-      top = razRules[i][3];  // Area Plain Boundaries
-
-    while (top != NULL) {
-      crnt = top;
-      top = top->next;  // next object
-      crnt->sm_transform_parms = &vp_transform;
-      ps52plib->RenderObjectToGLText(glc, crnt);
-    }
-
-    top = razRules[i][2];  // LINES
-    while (top != NULL) {
-      crnt = top;
-      top = top->next;
-      crnt->sm_transform_parms = &vp_transform;
-      ps52plib->RenderObjectToGLText(glc, crnt);
-    }
-
-    if (ps52plib->m_nSymbolStyle == SIMPLIFIED)
-      top = razRules[i][0];  // SIMPLIFIED Points
-    else
-      top = razRules[i][1];  // Paper Chart Points Points
-
-    while (top != NULL) {
-      crnt = top;
-      top = top->next;
-      crnt->sm_transform_parms = &vp_transform;
-      ps52plib->RenderObjectToGLText(glc, crnt);
-    }
-  }
-
-#endif  //#ifdef ocpnUSE_GL
-
   return true;
 }
 
@@ -2455,8 +2068,6 @@ InitReturn s57chart::Init(const wxString &name, ChartInitFlag flags) {
   m_FullPath = name;
   //    Use a static semaphore flag to prevent recursion
   if (s_bInS57) {
-    //          printf("s57chart::Init() recursion..., retry\n");
-    //          wxLogMessage(_T("Recursion"));
     return INIT_FAIL_NOERROR;
   }
 
@@ -2612,11 +2223,6 @@ int s57chart::FindOrCreateSenc(const wxString &name, bool b_progress) {
   wxFileName FileName000(m_TempFilePath);
 
   //      Look for SENC file in the target directory
-
-  wxString msg(_T("S57chart::Checking SENC file: "));
-  msg.Append(m_SENCFileName);
-  wxLogMessage(msg);
-
   {
     int force_make_senc = 0;
 
@@ -2625,7 +2231,6 @@ int s57chart::FindOrCreateSenc(const wxString &name, bool b_progress) {
       Osenc senc;
       if (senc.ingestHeader(m_SENCFileName)) {
         bbuild_new_senc = true;
-        wxLogMessage(_T("    Rebuilding SENC due to ingestHeader failure."));
       } else {
         int senc_file_version = senc.getSencReadVersion();
 
@@ -2635,11 +2240,7 @@ int s57chart::FindOrCreateSenc(const wxString &name, bool b_progress) {
         wxDateTime SENCCreateDate;
         SENCCreateDate.ParseFormat(str, _T("%Y%m%d"));
 
-        if (SENCCreateDate.IsValid())
-          SENCCreateDate.ResetTime();  // to midnight
-
-        //                wxULongLong size000 = senc.getFileSize000();
-        //                wxString ssize000 = senc.getsFileSize000();
+        if (SENCCreateDate.IsValid()) SENCCreateDate.ResetTime();  // to midnight
 
         wxString senc_base_edtn = senc.getSENCReadBaseEdition();
         long isenc_edition;
@@ -2652,7 +2253,6 @@ int s57chart::FindOrCreateSenc(const wxString &name, bool b_progress) {
         //  SENC file version has to be correct for other tests to make sense
         if (senc_file_version != CURRENT_SENC_FORMAT_VERSION) {
           bbuild_new_senc = true;
-          wxLogMessage(_T("    Rebuilding SENC due to SENC format update."));
         }
 
         //  Senc EDTN must be the same as .000 file EDTN.
@@ -2661,13 +2261,6 @@ int s57chart::FindOrCreateSenc(const wxString &name, bool b_progress) {
 
         else if (ifile_edition > isenc_edition) {
           bbuild_new_senc = true;
-          wxLogMessage(_T("    Rebuilding SENC due to cell edition update."));
-          wxString msg;
-          msg = _T("    Last edition recorded in SENC: ");
-          msg += senc_base_edtn;
-          msg += _T("  most recent edition cell file: ");
-          msg += m_edtn000;
-          wxLogMessage(msg);
         } else {
           //    See if there are any new update files  in the ENC directory
           int most_recent_update_file =
@@ -2676,14 +2269,6 @@ int s57chart::FindOrCreateSenc(const wxString &name, bool b_progress) {
           if (ifile_edition == isenc_edition) {
             if (most_recent_update_file > last_update) {
               bbuild_new_senc = true;
-              wxLogMessage(
-                  _T("    Rebuilding SENC due to incremental cell update."));
-              wxString msg;
-              msg.Printf(
-                  _T("    Last update recorded in SENC: %d   most recent ")
-                  _T("update file: %d"),
-                  last_update, most_recent_update_file);
-              wxLogMessage(msg);
             }
           }
 
@@ -2695,30 +2280,17 @@ int s57chart::FindOrCreateSenc(const wxString &name, bool b_progress) {
           OModTime000.ResetTime();  // to midnight
           if (SENCCreateDate.IsValid()) {
             if (OModTime000.IsLaterThan(SENCCreateDate)) {
-              wxLogMessage(
-                  _T("    Rebuilding SENC due to Senc vs cell file time ")
-                  _T("check."));
               bbuild_new_senc = true;
             }
           } else {
             bbuild_new_senc = true;
-            wxLogMessage(
-                _T("    Rebuilding SENC due to SENC create time invalid."));
           }
-
-          //                     int Osize000l = FileName000.GetSize().GetLo();
-          //                     int Osize000h = FileName000.GetSize().GetHi();
-          //                     wxString t;
-          //                     t.Printf(_T("%d%d"), Osize000h, Osize000l);
-          //                     if( !t.IsSameAs( ssize000) )
-          //                         bbuild_new_senc = true;
         }
 
         if (force_make_senc) bbuild_new_senc = true;
       }
     } else if (!::wxFileExists(m_SENCFileName))  // SENC file does not exist
     {
-      wxLogMessage(_T("    Rebuilding SENC due to missing SENC file."));
       bbuild_new_senc = true;
     }
   }
@@ -2738,10 +2310,6 @@ int s57chart::FindOrCreateSenc(const wxString &name, bool b_progress) {
 InitReturn s57chart::PostInit(ChartInitFlag flags, ColorScheme cs) {
   //    SENC file is ready, so build the RAZ structure
   if (0 != BuildRAZFromSENCFile(m_SENCFileName)) {
-    wxString msg(_T("   Cannot load SENC file "));
-    msg.Append(m_SENCFileName);
-    wxLogMessage(msg);
-
     return INIT_FAIL_RETRY;
   }
 
@@ -2917,8 +2485,6 @@ bool s57chart::BuildThumbnail(const wxString &bmpname) {
   //      Make the target directory if needed
   if (true != ThumbFileName.DirExists(ThumbFileName.GetPath())) {
     if (!ThumbFileName.Mkdir(ThumbFileName.GetPath())) {
-      wxLogMessage(_T("   Cannot create BMP file directory for ") +
-                   ThumbFileName.GetFullPath());
       return false;
     }
   }
@@ -3069,10 +2635,6 @@ WX_DEFINE_ARRAY_PTR(float *, MyFloatPtrArray);
 bool s57chart::CreateHeaderDataFromENC(void) {
 	//printf("s57chart:CreateHeaderDataFromENC 1\n");
   if (!InitENCMinimal(m_TempFilePath)) {
-    wxString msg(_T("   Cannot initialize ENC file "));
-    msg.Append(m_TempFilePath);
-    wxLogMessage(msg);
-
     return false;
   }
 
@@ -3173,13 +2735,6 @@ bool s57chart::CreateHeaderDataFromENC(void) {
     }
   }
 
-  else  // strange case, found no CATCOV=1 M_COVR objects
-  {
-    wxString msg(_T("   ENC contains no useable M_COVR, CATCOV=1 features:  "));
-    msg.Append(m_TempFilePath);
-    wxLogMessage(msg);
-  }
-
   //      And for the NoCovr regions
   m_nNoCOVREntries = noCovrCntArray.size();
 
@@ -3201,13 +2756,6 @@ bool s57chart::CreateHeaderDataFromENC(void) {
   delete pNoCovrPtrArray;
 
   if (0 == m_nCOVREntries) {  // fallback
-    wxString msg(_T("   ENC contains no M_COVR features:  "));
-    msg.Append(m_TempFilePath);
-    wxLogMessage(msg);
-
-    msg = _T("   Calculating Chart Extents as fallback.");
-    wxLogMessage(msg);
-
     OGREnvelope Env;
 
     //    Get the reader
@@ -3240,10 +2788,6 @@ bool s57chart::CreateHeaderDataFromENC(void) {
       *pfe++ = LonMin;
 
     } else {
-      wxString msg(_T("   Cannot calculate Extents for ENC:  "));
-      msg.Append(m_TempFilePath);
-      wxLogMessage(msg);
-
       return false;  // chart is completely unusable
     }
   }
@@ -3271,12 +2815,7 @@ bool s57chart::CreateHeaderDataFromoSENC(void) {
   bool ret_val = true;
 
   wxFFileInputStream fpx(m_SENCFileName);
-  if (!fpx.IsOk()) {
-    if (!::wxFileExists(m_SENCFileName)) {
-      wxString msg(_T("   Cannot open SENC file "));
-      msg.Append(m_SENCFileName);
-      wxLogMessage(msg);
-    }
+  if (!fpx.IsOk()) {    
     return false;
   }
 
@@ -3512,10 +3051,6 @@ void s57chart::GetChartNameFromTXT(const wxString &FullPath, wxString &Name) {
             str = text_file.GetNextLine();
           }
         }
-      } else {
-        wxString msg(_T("   Error Reading ENC .TXT file: "));
-        msg.Append(file.GetFullPath());
-        wxLogMessage(msg);
       }
 
       text_file.Close();
@@ -3625,10 +3160,6 @@ int s57chart::GetUpdateFileArray(const wxFileName file000,
         wxString umedtn;
         DDFModule *poModule = new DDFModule();
         if (!poModule->Open(FileToAdd.mb_str())) {
-          wxString msg(
-              _T("   s57chart::BuildS57File  Unable to open update file "));
-          msg.Append(FileToAdd);
-          wxLogMessage(msg);
         } else {
           poModule->Rewind();
 
@@ -3648,12 +3179,6 @@ int s57chart::GetUpdateFileArray(const wxFileName file000,
               if (strlen(u)) sumdate = wxString(u, wxConvUTF8);
             }
           } else {
-            wxString msg(
-                _T("   s57chart::BuildS57File  DDFRecord 0 does not contain ")
-                _T("DSID:ISDT in update file "));
-            msg.Append(FileToAdd);
-            wxLogMessage(msg);
-
             sumdate = _T("20000101");  // backstop, very early, so wont be used
           }
 
@@ -3673,12 +3198,6 @@ int s57chart::GetUpdateFileArray(const wxFileName file000,
               if (strlen(u)) umedtn = wxString(u, wxConvUTF8);
             }
           } else {
-            wxString msg(
-                _T("   s57chart::BuildS57File  DDFRecord 0 does not contain ")
-                _T("DSID:EDTN in update file "));
-            msg.Append(FileToAdd);
-            wxLogMessage(msg);
-
             umedtn = _T("1");  // backstop
           }
         }
@@ -3769,13 +3288,6 @@ int s57chart::ValidateAndCountUpdates(const wxFileName file000,
         {
           //      Copy the valid file to the SENC directory
           bool cpok = wxCopyFile(ufile.GetFullPath(), cp_ufile);
-          if (!cpok) {
-            wxString msg(_T("   Cannot copy temporary working ENC file "));
-            msg.Append(ufile.GetFullPath());
-            msg.Append(_T(" to "));
-            msg.Append(cp_ufile);
-            wxLogMessage(msg);
-          }
         }
 
         else {
@@ -3788,27 +3300,11 @@ int s57chart::ValidateAndCountUpdates(const wxFileName file000,
             chain_broken_mssage_shown = true;
           }
 
-          wxString msg(
-              _T("WARNING---ENC Update chain incomplete. Substituting NULL ")
-              _T("update file: "));
-          msg += ufile.GetFullName();
-          wxLogMessage(msg);
-          wxLogMessage(_T("   Subsequent ENC updates may produce errors."));
-          wxLogMessage(
-              _T("   This ENC exchange set should be updated and SENCs ")
-              _T("rebuilt."));
-
           bool bstat;
           DDFModule *dupdate = new DDFModule;
           dupdate->Initialize('3', 'L', 'E', '1', '0', "!!!", 3, 4, 4);
           bstat = !(dupdate->Create(cp_ufile.mb_str()) == 0);
           delete dupdate;
-
-          if (!bstat) {
-            wxString msg(_T("   Error creating dummy update file: "));
-            msg.Append(cp_ufile);
-            wxLogMessage(msg);
-          }
         }
 
         m_tmpup_array->Add(cp_ufile);
@@ -3870,9 +3366,6 @@ bool s57chart::GetBaseFileAttr(const wxString &file000) {
   wxString FullPath000 = file000;
   DDFModule *poModule = new DDFModule();
   if (!poModule->Open(FullPath000.mb_str())) {
-    wxString msg(_T("   s57chart::BuildS57File  Unable to open "));
-    msg.Append(FullPath000);
-    wxLogMessage(msg);
     delete poModule;
     return false;
   }
@@ -3889,11 +3382,6 @@ bool s57chart::GetBaseFileAttr(const wxString &file000) {
   //    Fetch the Geo Feature Count, or something like it....
   m_nGeoRecords = pr->GetIntSubfield("DSSI", 0, "NOGR", 0);
   if (!m_nGeoRecords) {
-    wxString msg(
-        _T("   s57chart::BuildS57File  DDFRecord 0 does not contain ")
-        _T("DSSI:NOGR "));
-    wxLogMessage(msg);
-
     m_nGeoRecords = 1;  // backstop
   }
 
@@ -3904,13 +3392,7 @@ bool s57chart::GetBaseFileAttr(const wxString &file000) {
   if (u)
     date000 = wxString(u, wxConvUTF8);
   else {
-    wxString msg(
-        _T("   s57chart::BuildS57File  DDFRecord 0 does not contain ")
-        _T("DSID:ISDT "));
-    wxLogMessage(msg);
-
-    date000 =
-        _T("20000101");  // backstop, very early, so any new files will update?
+    date000 = _T("20000101");  // backstop, very early, so any new files will update?
   }
   m_date000.ParseFormat(date000, _T("%Y%m%d"));
   if (!m_date000.IsValid()) m_date000.ParseFormat(_T("20000101"), _T("%Y%m%d"));
@@ -3922,11 +3404,6 @@ bool s57chart::GetBaseFileAttr(const wxString &file000) {
   if (u)
     m_edtn000 = wxString(u, wxConvUTF8);
   else {
-    wxString msg(
-        _T("   s57chart::BuildS57File  DDFRecord 0 does not contain ")
-        _T("DSID:EDTN "));
-    wxLogMessage(msg);
-
     m_edtn000 = _T("1");  // backstop
   }
 
@@ -3941,9 +3418,6 @@ bool s57chart::GetBaseFileAttr(const wxString &file000) {
     }
   }
   if (!m_native_scale) {
-    wxString msg(_T("   s57chart::BuildS57File  ENC not contain DSPM:CSCL "));
-    wxLogMessage(msg);
-
     m_native_scale = 1000;  // backstop
   }
 
@@ -4014,8 +3488,6 @@ int s57chart::BuildRAZFromSENCFile(const wxString &FullPath) {
   int srv = sencfile.ingest200(FullPath, &Objects, &VEs, &VCs);
 
   if (srv != SENC_NO_ERROR) {
-    wxLogMessage(sencfile.getLastError());
-    // TODO  Clean up here, or massive leaks result
     return 1;
   }
 
@@ -4923,10 +4395,6 @@ wxString s57chart::GetAttributeDecode(wxString &att, int ival) {
   file.Append(_T("/s57attributes.csv"));
 
   if (!wxFileName::FileExists(file)) {
-    wxString msg(_T("   Could not open "));
-    msg.Append(file);
-    wxLogMessage(msg);
-
     return ret_val;
   }
 
@@ -4942,10 +4410,6 @@ wxString s57chart::GetAttributeDecode(wxString &att, int ival) {
   ei_file.Append(_T("/s57expectedinput.csv"));
 
   if (!wxFileName::FileExists(ei_file)) {
-    wxString msg(_T("   Could not open "));
-    msg.Append(ei_file);
-    wxLogMessage(msg);
-
     return ret_val;
   }
 
@@ -5986,7 +5450,6 @@ wxString s57chart::CreateObjDescriptions(ListOfObjRazRules *rule_list) {
 //------------------------------------------------------------------------
 bool s57chart::InitENCMinimal(const wxString &FullPath) {
   if (NULL == g_poRegistrar) {
-    wxLogMessage(_T("   Error: No ClassRegistrar in InitENCMinimal."));
     return false;
   }
 
@@ -6095,8 +5558,6 @@ void OpenCPN_OGRErrorHandler(CPLErr eErrClass, int nError,
     sprintf(buf, "   ERROR %d: %s\n", nError, pszErrorMsg);
 
   if (g_bGDAL_Debug || (CE_Debug != eErrClass)) {  // log every warning or error
-    wxString msg(buf, wxConvUTF8);
-    wxLogMessage(msg);
   }
 
   //      Do not simply return on CE_Fatal errors, as we don't want to abort()

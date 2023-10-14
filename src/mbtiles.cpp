@@ -1,39 +1,3 @@
-/******************************************************************************
- *
- * Project:  OpenCPN
- * Purpose:  MBTiles chart type support
- * Author:   David Register
- *
- ***************************************************************************
- *   Copyright (C) 2018 by David S. Register                               *
- *                                                                         *
- *   This program is free software; you can redistribute it and/or modify  *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation; either version 2 of the License, or     *
- *   (at your option) any later version.                                   *
- *                                                                         *
- *   This program is distributed in the hope that it will be useful,       *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
- *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program; if not, write to the                         *
- *   Free Software Foundation, Inc.,                                       *
- *   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301,  USA.             *
- ***************************************************************************
- *
- */
-
-// ============================================================================
-// declarations
-// ============================================================================
-
-// ----------------------------------------------------------------------------
-// headers
-// ----------------------------------------------------------------------------
-
-// For compilers that support precompilation, includes "wx.h".
 #include <wx/wxprec.h>
 
 #ifndef WX_PRECOMP
@@ -59,7 +23,6 @@
 
 #include "mbtiles.h"
 #include "chcanv.h"
-#include "glChartCanvas.h"
 #include "ocpn_frame.h"
 #include "shaders.h"
 
@@ -434,8 +397,7 @@ void ChartMBTiles::InitFromTiles(const wxString &name) {
     if (std::isnan(m_LonMin)) m_LonMin = minLon;
     if (std::isnan(m_LonMax)) m_LonMax = maxLon;
   } catch (std::exception &e) {
-    const char *t = e.what();
-    wxLogMessage("mbtiles exception: %s", e.what());
+    const char *t = e.what();    
   }
 }
 
@@ -501,8 +463,7 @@ InitReturn ChartMBTiles::Init(const wxString &name, ChartInitFlag init_flags) {
       }
     }
   } catch (std::exception &e) {
-    const char *t = e.what();
-    wxLogMessage("mbtiles exception: %s", e.what());
+    const char *t = e.what();    
     return INIT_FAIL_REMOVE;
   }
 
@@ -897,8 +858,7 @@ bool ChartMBTiles::getTileTexture(mbTileDescriptor *tile) {
       }
 
     } catch (std::exception &e) {
-      const char *t = e.what();
-      wxLogMessage("mbtiles exception: %s", e.what());
+      const char *t = e.what();      
     }
   }
 
@@ -1068,10 +1028,7 @@ bool ChartMBTiles::RenderRegionViewOnGL(const wxGLContext &glc,
   if ((m_LonMax - m_LonMin) > 180) {  // big chart
     LLRegion validRegion = m_minZoomRegion;
     validRegion.Intersect(screenLLRegion);
-    glChartCanvas::SetClipRegion(vp, validRegion);
   }
-  else
-    glChartCanvas::SetClipRegion(vp, m_minZoomRegion);
 
   /* setup opengl parameters */
   glEnable(GL_TEXTURE_2D);
@@ -1248,8 +1205,6 @@ bool ChartMBTiles::RenderRegionViewOnGL(const wxGLContext &glc,
   glDisable(GL_TEXTURE_2D);
 
   m_zoomScaleFactor = 2.0 * OSM_zoomMPP[maxrenZoom] * VPoint.view_scale_ppm;
-
-  glChartCanvas::DisableClipRegion();
 
   return true;
 }

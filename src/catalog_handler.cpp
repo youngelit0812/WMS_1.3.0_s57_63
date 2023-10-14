@@ -298,8 +298,7 @@ catalog_status CatalogHandler::LoadChannels(const std::string& json) {
   wxJSONValue node;
   wxJSONReader parser;
   parser.Parse(json.c_str(), &node);
-  if (!node.IsArray()) {
-    wxLogMessage("Cannot parse json (toplevel)");
+  if (!node.IsArray()) {    
     error_msg = parser.GetErrors().Item(0).ToStdString();
     return ServerStatus::JSON_ERROR;
   }

@@ -801,9 +801,6 @@ int ChartSymbols::LoadRasterFileForColorTable(int tableNo, bool flush,
     return true;
   }
 
-  wxString msg(_T("ChartSymbols...Failed to load raster symbols file "));
-  msg += filename;
-  wxLogMessage(msg);
   return false;
 }
 

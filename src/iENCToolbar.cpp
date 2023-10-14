@@ -119,8 +119,7 @@ void iENCToolbar::LoadToolBitmaps() {
     m_bmUStd = LoadSVG(svgDir + _T("iENC_UserStd.svg"), w, h);
     m_bmRPlus = LoadSVG(svgDir + _T("iENC_RPlus.svg"), w, h);
     m_bmRMinus = LoadSVG(svgDir + _T("iENC_RMinus.svg"), w, h);
-  } else {
-    wxLogMessage(_T("Cannot find iENC icons at: ") + svgDir);
+  }
 
     m_bmMinimum = wxBitmap(96, 32);
     m_bmStandard = wxBitmap(96, 32);

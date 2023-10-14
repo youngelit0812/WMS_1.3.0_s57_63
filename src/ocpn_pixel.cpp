@@ -119,10 +119,7 @@ static void *x_malloc(size_t t) {
 
   //      malloc fails
   if (NULL == pr) {
-    wxLogMessage(_T("x_malloc...malloc fails with request of %d bytes."), t);
-
     // Cat the /proc/meminfo file
-
     char *p;
     char buf[2000];
     int len;
@@ -151,8 +148,6 @@ static void *x_malloc(size_t t) {
   else {
     if (t > malloc_max) {
       malloc_max = t;
-      //                      wxLogMessage(_T("New malloc_max: %d",
-      //                      malloc_max));
     }
 
     return pr;  // good return
@@ -195,8 +190,6 @@ ocpnXImage::ocpnXImage(int width, int height) {
     if (shminfo.shmid < 0) {
       XDestroyImage(m_img);
       m_img = NULL;
-      wxLogMessage(
-          _T("alloc_back_buffer: Shared memory error (shmget), disabling."));
       goto after_check;
     }
 
@@ -205,7 +198,6 @@ ocpnXImage::ocpnXImage(int width, int height) {
     if (shminfo.shmaddr == (char *)-1) {
       XDestroyImage(m_img);
       m_img = NULL;
-      wxLogMessage(_T("shmat failed"));
       goto after_check;
     }
 

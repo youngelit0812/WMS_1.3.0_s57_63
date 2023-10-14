@@ -35,16 +35,10 @@
 #include "OCPNRegion.h"
 #include "gshhs.h"
 
-#ifdef ocpnUSE_GL
-#include "glChartCanvas.h"
-#endif
-
-#include "cm93.h"      // for chart outline draw
 #include "s57chart.h"  // for ArrayOfS57Obj
 #include "s52plib.h"
 #include "poly_math.h"
 #include "linmath.h"
-#include "ais.h"
 
 #ifdef __MSVC__
 #define _CRTDBG_MAP_ALLOC
@@ -289,71 +283,7 @@ void ViewPort::GetLLFromPix(const wxPoint2DDouble &p, double *lat, double *lon) 
 LLRegion ViewPort::GetLLRegion(const OCPNRegion &region) {
   // todo: for these projecetions, improve this calculation by using the
   //       method in SetBoxes here
-#ifndef ocpnUSE_GL
   return LLRegion(GetBBox());
-#else
-
-  if (!glChartCanvas::CanClipViewport(*this)) return LLRegion(GetBBox());
-
-  OCPNRegionIterator it(region);
-  LLRegion r;
-  while (it.HaveRects()) {
-    wxRect rect = it.GetRect();
-
-    int x1 = rect.x, y1 = rect.y, x2 = x1 + rect.width, y2 = y1 + rect.height;
-    int p[8] = {x1, y1, x2, y1, x2, y2, x1, y2};
-    double pll[2896];     //  Max splits is 180, ((180 *  2)  + 2) * 8 = 2896.
-    int j;
-
-    /* if the viewport is rotated, we must split the segments as straight lines
-       in lat/lon coordinates map to curves in projected coordinate space */
-    if (fabs(rotation) >= 0.0001) {
-      j = 0;
-      double lastlat, lastlon;
-      int li = 6;
-      GetLLFromPix(wxPoint(p[li], p[li + 1]), &lastlat, &lastlon);
-      for (int i = 0; i < 8; i += 2) {
-        double lat, lon;
-        GetLLFromPix(wxPoint(p[i], p[i + 1]), &lat, &lon);
-
-        // use 2 degree grid
-        double grid = 2;
-        int lat_splits = floor(fabs(lat - lastlat) / grid);
-        double lond = fabs(lon - lastlon);
-        int lon_splits = floor((lond > 180 ? 360 - lond : lond) / grid);
-        int splits = wxMax(lat_splits, lon_splits) + 1;
-
-        for (int k = 1; k < splits; k++) {
-          float d = (float)k / splits;
-          GetLLFromPix(wxPoint((1 - d) * p[li] + d * p[i],
-                               (1 - d) * p[li + 1] + d * p[i + 1]),
-                       pll + j, pll + j + 1);
-          j += 2;
-        }
-        pll[j++] = lat;
-        pll[j++] = lon;
-        li = i;
-        lastlat = lat, lastlon = lon;
-      }
-    } else {
-      j = 8;
-      for (int i = 0; i < j; i += 2)
-        GetLLFromPix(wxPoint(p[i], p[i + 1]), pll + i, pll + i + 1);
-    }
-
-    // resolve (this works even if rectangle crosses both 0 and 180)
-    for (int i = 0; i < j; i += 2) {
-      if (pll[i + 1] <= clon - 180)
-        pll[i + 1] += 360;
-      else if (pll[i + 1] >= clon + 180)
-        pll[i + 1] -= 360;
-    }
-
-    r.Union(LLRegion(j / 2, pll));
-    it.NextRect();
-  }
-  return r;
-#endif
 }
 
 struct ContourRegion {

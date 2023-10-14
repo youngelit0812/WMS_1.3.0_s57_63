@@ -1,13 +1,10 @@
+
 # WMS 1.3 server install and test guide
 
 ## Supported OS
   Ubuntu 22.04.2 LTS and Windows 7+
 
 ## Steps - Windows
-### Steps - Run with Pre-Built executable file.
-* In "bin" directory, run the "WMSServer.exe" in "command prompt".
-  Wait until the message "Press Enter to stop the server or '!' to restart the server..." is displayed.
-
 ### Steps - Obtain a executable file by compile source codes.
 * At first, unzip the "modules.7z" and "cache.7z" files.
 * Install Visual Studio 2019 and cmake version 3.26.4.
@@ -50,10 +47,45 @@ The "project_path" is path in which the "CMakeLists.txt" file exists.
 
 ## Pre-Run Steps
 * Copy all ENC files into the directory indicated in "config.json" file.
-* Should modify the port number for HTTP and HTTPS in "config.json" file
+* Should modify the port number for HTTP and HTTPS in "config.json" file.
+* The default result image directory is specified at "IMGDirPath" in "config.json" file.
+  If you want to change it, remove the directory and make a new directory. Specify the new directory path into "config.json" file.
 
 ## Close Step
 * To close the server, should press "Enter".
+
+## Configuration
+*Please check the server configuration on "wmsserver.ini" file.*
+
+  **[Settings/GlobalState]**
+  
+    bShowS57ImportantTextOnly=0 	
+    // Important Text Only 0: disable, 1: enable
+    bShowMeta=0 					        
+    // Chart Information Objects
+    bShowNationalText=0 			    
+    // National text on chart
+    bDeClutterText=0 				      
+    // De-Cluttered Text
+    bUseSCAMIN=0 					        
+    // Reuced Detail at Small Scale
+    bUseSUPER_SCAMIN=0 				    
+    // Additional detail reduction at Small Cache
+    nBoundaryStyle=78 				    
+    // Border style 78: Plain, 79: Symbolized
+    nSymbolStyle=76 				      
+    // Graphics Style 76: simplified, 79: Paper Chart
+    bShowS57ImportantTextOnly=0 	
+    // Important Text Only
+    nDisplayCategory=83 			    
+    // Display category 79: all, 83: standard
+    bShowAtonText=1 				      
+    // show TEXT
+
+  **[Canvas/CanvasConfig1]**
+  
+    canvasENCDisplayCategory=83 		    
+    // Display Category 79: all, 83: standard 
 
 ## Test
 * Open the Web Browser.

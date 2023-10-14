@@ -1,36 +1,3 @@
-/******************************************************************************
- *
- * Project:  OpenCPN
- * Purpose:  GSHHS Chart Object (Global Self-consistent, Hierarchical,
- *High-resolution Shoreline) Author:   Jesper Weissglas for the OpenCPN port.
- *
- *           Derived from http://www.zygrib.org/ and
- *http://sourceforge.net/projects/qtvlm/ which has the original copyright:
- *   zUGrib: meteorologic GRIB file data viewer
- *   Copyright (C) 2008 - Jacques Zaninetti - http://www.zygrib.org
- *
- ***************************************************************************
- *   Copyright (C) 2012 by David S. Register                               *
- *                                                                         *
- *   This program is free software; you can redistribute it and/or modify  *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation; either version 2 of the License, or     *
- *   (at your option) any later version.                                   *
- *                                                                         *
- *   This program is distributed in the hope that it will be useful,       *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
- *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program; if not, write to the                         *
- *   Free Software Foundation, Inc.,                                       *
- *   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301,  USA.         *
- ***************************************************************************
- *
- *
- */
-
 #include <wx/wxprec.h>
 
 #ifndef WX_PRECOMP
@@ -41,10 +8,6 @@
 
 #include "dychart.h"
 #include "ocpndc.h"
-//
-#ifdef ocpnUSE_GL
-#include "glChartCanvas.h"
-#endif
 
 #include "gshhs.h"
 #include "chartbase.h"  // for projections
@@ -155,14 +118,7 @@ void GSHHSChart::RenderViewOnDC(ocpnDC &dc, ViewPort &vp) {
   if (!reader) {
     reader = new GshhsReader();
     if (reader->GetPolyVersion() < 210 || reader->GetPolyVersion() > 240) {
-      wxLogMessage(
-          _T("GSHHS World chart files have wrong version. Found %d, expected ")
-          _T("210-220."),
-          reader->GetPolyVersion());
     } else {
-      wxLogMessage(
-          _T("Background world map loaded from GSHHS datafiles found in: ") +
-          gWorldMapLocation);
     }
   }
 
@@ -202,31 +158,28 @@ void GshhsPolyCell::ReadPoly(contour_list &poly) {
   contour tmp_contour;
   int32_t num_vertices, num_contours;
   poly.clear();
-  if (fread(&num_contours, sizeof num_contours, 1, fpoly) != 1) goto fail;
+  if (fread(&num_contours, sizeof num_contours, 1, fpoly) != 1) return;
 
   for (int c = 0; c < num_contours; c++) {
     int32_t value;
-    if (fread(&value, sizeof value, 1, fpoly) !=
-            1 || /* discarding hole value */
-        fread(&value, sizeof value, 1, fpoly) != 1)
-      goto fail;
+	if (fread(&value, sizeof value, 1, fpoly) !=
+		1 || /* discarding hole value */
+		fread(&value, sizeof value, 1, fpoly) != 1)
+		return;
 
     num_vertices = value;
 
     tmp_contour.clear();
     for (int v = 0; v < num_vertices; v++) {
-      if (fread(&X, sizeof X, 1, fpoly) != 1 ||
-          fread(&Y, sizeof Y, 1, fpoly) != 1)
-        goto fail;
+		if (fread(&X, sizeof X, 1, fpoly) != 1 ||
+			fread(&Y, sizeof Y, 1, fpoly) != 1)
+			return;
 
       tmp_contour.push_back(wxRealPoint(X * GSHHS_SCL, Y * GSHHS_SCL));
     }
     poly.push_back(tmp_contour);
   }
   return;
-
-fail:
-  wxLogMessage(_T("gshhs ReadPoly failed"));
 }
 
 void GshhsPolyCell::ReadPolygonFile() {
@@ -235,10 +188,9 @@ void GshhsPolyCell::ReadPolygonFile() {
   int pos_data;
   int tab_data;
 
-  tab_data = (x0cell / header->pasx) * (180 / header->pasy) +
-             (y0cell + 90) / header->pasy;
+  tab_data = (x0cell / header->pasx) * (180 / header->pasy) + (y0cell + 90) / header->pasy;
   fseek(fpoly, sizeof(PolygonFileHeader) + tab_data * sizeof(int), SEEK_SET);
-  if (fread(&pos_data, sizeof(int), 1, fpoly) != 1) goto fail;
+  if (fread(&pos_data, sizeof(int), 1, fpoly) != 1) return;
 
   fseek(fpoly, pos_data, SEEK_SET);
 
@@ -247,10 +199,6 @@ void GshhsPolyCell::ReadPolygonFile() {
   ReadPoly(poly3);
   ReadPoly(poly4);
   ReadPoly(poly5);
-  return;
-
-fail:
-  wxLogMessage(_T("gshhs ReadPolygon failed"));
 }
 
 wxPoint2DDouble GetDoublePixFromLL(ViewPort &vp, double lat, double lon) {
@@ -370,7 +318,6 @@ void __CALL_CONVENTION gshhsvertexCallback(GLvoid *arg) {
 void __CALL_CONVENTION gshhserrorCallback(GLenum errorCode) {
   const GLubyte *estring;
   estring = gluErrorString(errorCode);
-  // wxLogMessage( _T("OpenGL Tessellation Error: %s"), estring );
 }
 
 void __CALL_CONVENTION gshhsbeginCallback(GLenum type) {
@@ -426,9 +373,6 @@ void GshhsPolyCell::DrawPolygonFilledGL(ocpnDC &pnt, contour_list *p, float_2Dpt
           g_vertexes.push_back(vertex);
 
           wxPoint2DDouble q;
-          if (glChartCanvas::HasNormalizedViewPort(vp))
-            q = GetDoublePixFromLL(vp, ccp.y, ccp.x);
-          else  // tesselation directly from lat/lon
             q.m_x = ccp.y, q.m_y = ccp.x;
 
           if (vp.m_projection_type != PROJECTION_POLAR) {
@@ -519,23 +463,6 @@ void GshhsPolyCell::DrawPolygonFilledGL(ocpnDC &pnt, contour_list *p, float_2Dpt
                      2.0 / (float)vp.pix_height, 1.0);
   mat4x4_translate_in_place(mvp, -vp.pix_width / 2, vp.pix_height / 2, 0);
 
-  if (glChartCanvas::HasNormalizedViewPort(vp)) {
-#if 0
-    GLint pos = glGetAttribLocation(color_tri_shader_program, "position");
-    glVertexAttribPointer(pos, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), *pv);
-    glEnableVertexAttribArray(pos);
-
-    // FIXME        glUniformMatrix4fv( matloc, 1, GL_FALSE, (const
-    // GLfloat*)vp.vp_transform);
-    mat4x4 m;
-    mat4x4_identity(m);
-    GLint tmatloc = glGetUniformLocation(color_tri_shader_program, "TransformMatrix");
-    glUniformMatrix4fv(tmatloc, 1, GL_FALSE, (const GLfloat*)m);
-
-    glUseProgram(color_tri_shader_program);
-    glDrawArrays(GL_TRIANGLES, 0, *pvc);
-#endif
-  } else {
     float *pvt = new float[2 * (*pvc)];
     for (int i = 0; i < *pvc; i++) {
       float_2Dpt *pc = *pv + i;
@@ -561,9 +488,7 @@ void GshhsPolyCell::DrawPolygonFilledGL(ocpnDC &pnt, contour_list *p, float_2Dpt
     delete[] pvt;
     glDeleteBuffers(1, &vbo);
     shader->UnBind();
-  }
-
-
+  
 #else
 #endif
 }
@@ -883,11 +808,9 @@ bool GshhsPolyReader::crossing1(wxLineF trajectWorld) {
   return false;
 }
 
-void GshhsPolyReader::readPolygonFileHeader(FILE *polyfile,
-                                            PolygonFileHeader *header) {
+void GshhsPolyReader::readPolygonFileHeader(FILE *polyfile, PolygonFileHeader *header) {
   fseek(polyfile, 0, SEEK_SET);
-  if (fread(header, sizeof(PolygonFileHeader), 1, polyfile) != 1)
-    wxLogMessage(_T("gshhs ReadPolygonFileHeader failed"));
+  size_t result = fread(header, sizeof(PolygonFileHeader), 1, polyfile);
 }
 
 //-------------------------------------------------------------------------
@@ -908,30 +831,6 @@ void GshhsPolyReader::drawGshhsPolyMapPlain(ocpnDC &pnt, ViewPort &vp, wxColor c
   GshhsPolyCell *cel;
 
   ViewPort nvp = vp;
-#ifdef ocpnUSE_GL
-  if (!pnt.GetDC()) {  // opengl
-    // clear cached data when the projection changes
-    if (vp.m_projection_type != last_rendered_vp.m_projection_type ||
-        (last_rendered_vp.m_projection_type == PROJECTION_POLAR &&
-         last_rendered_vp.clat * vp.clat <= 0)) {
-      last_rendered_vp = vp;
-      for (int clon = 0; clon < 360; clon++)
-        for (int clat = 0; clat < 180; clat++)
-          if (allCells[clon][clat]) allCells[clon][clat]->ClearPolyV();
-    }
-#if !defined(USE_ANDROID_GLES2) && !defined(ocpnUSE_GLSL)
-    glEnableClientState(GL_VERTEX_ARRAY);
-
-    // use a viewport that allows the vertexes to be reused over many frames
-    // TODO fix for multicanvas
-    if (glChartCanvas::HasNormalizedViewPort(vp)) {
-      glPushMatrix();
-      glChartCanvas::MultMatrixViewPort(vp);
-      nvp = glChartCanvas::NormalizedViewPort(vp);
-    }
-#endif
-  }
-#endif
   for (clon = clonmin; clon < clonmax; clon++) {
     clonx = clon;
     while (clonx < 0) clonx += 360;
@@ -972,15 +871,6 @@ void GshhsPolyReader::drawGshhsPolyMapPlain(ocpnDC &pnt, ViewPort &vp, wxColor c
       }
     }
   }
-
-#ifdef ocpnUSE_GL
-#if !defined(USE_ANDROID_GLES2) && !defined(ocpnUSE_GLSL)
-  if (!pnt.GetDC()) {  // opengl
-    if (glChartCanvas::HasNormalizedViewPort(vp)) glPopMatrix();
-    glDisableClientState(GL_VERTEX_ARRAY);
-  }
-#endif
-#endif
 }
 
 //-------------------------------------------------------------------------
@@ -1126,19 +1016,6 @@ GshhsReader::GshhsReader() {
       maxQualityAvailable = i;
     }
   }
-
-  if (maxQualityAvailable < 0) {
-    wxString msg(
-        _T("Unable to initialize background world map. No GSHHS datafiles ")
-        _T("found in "));
-    msg += gWorldMapLocation;
-    wxLogMessage(msg);
-  }
-
-  //    int q = selectBestQuality( vp );
-  //    if( ! qualityAvailable[q] ) {
-  //    int q = maxQualityAvailable;
-  //    }
 
   int q = 0;
 
@@ -1300,8 +1177,6 @@ void GshhsReader::LoadQuality(int newQuality)  // 5 levels: 0=low ... 4=full
         }
     }
 #endif
-  wxLogMessage(_T("Loading World Chart Q=%d in %ld ms."), quality,
-               perftimer.Time());
 }
 
 //-----------------------------------------------------------------------
@@ -1483,8 +1358,6 @@ void gshhsCrossesLandInit() {
   while (!reader->qualityAvailable[bestQuality] && bestQuality > 0)
     bestQuality--;
   reader->LoadQuality(bestQuality);
-  wxLogMessage("GSHHG: Loaded quality %d for land crossing detection.",
-               bestQuality);
 }
 
 void gshhsCrossesLandReset() {

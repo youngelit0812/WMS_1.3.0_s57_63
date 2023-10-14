@@ -98,6 +98,7 @@ if (MSVC)
   file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/Release/ENCs)
   file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/Release/env)
   file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/Release/tools)
+  file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/Release/ENC_IMGs)  
   file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/Debug)  
   file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/Debug/gshhs)
   file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/Debug/tcdata)
@@ -107,6 +108,7 @@ if (MSVC)
   file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/Debug/ENCs)
   file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/Debug/env)
   file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/Debug/tools)
+  file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/Debug/ENC_IMGs)  
 
   execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_SOURCE_DIR}/Append_libs/Release
@@ -137,7 +139,7 @@ if (MSVC)
         ${CMAKE_BINARY_DIR}/Release/tools)
 
   file(COPY ${CMAKE_SOURCE_DIR}/Append_data/navobj.xml DESTINATION ${CMAKE_BINARY_DIR}/Release)
-  file(COPY ${CMAKE_SOURCE_DIR}/Append_data/wmsserver.ini DESTINATION ${CMAKE_BINARY_DIR}/Release)
+  file(COPY ${CMAKE_SOURCE_DIR}/Append_data/wmsserver.conf DESTINATION ${CMAKE_BINARY_DIR}/Release)
   file(COPY ${CMAKE_SOURCE_DIR}/Append_data/MMSINAME.CSV DESTINATION ${CMAKE_BINARY_DIR}/Release)
   file(COPY ${CMAKE_SOURCE_DIR}/Append_data/crashrpt_lang.ini DESTINATION ${CMAKE_BINARY_DIR}/Release)
 
@@ -170,11 +172,12 @@ if (MSVC)
         ${CMAKE_BINARY_DIR}/Debug/tools)
   
   file(COPY ${CMAKE_SOURCE_DIR}/Append_data/navobj.xml DESTINATION ${CMAKE_BINARY_DIR}/Debug)
-  file(COPY ${CMAKE_SOURCE_DIR}/Append_data/wmsserver.ini DESTINATION ${CMAKE_BINARY_DIR}/Debug)
+  file(COPY ${CMAKE_SOURCE_DIR}/Append_data/wmsserver.conf DESTINATION ${CMAKE_BINARY_DIR}/Debug)
   file(COPY ${CMAKE_SOURCE_DIR}/Append_data/MMSINAME.CSV DESTINATION ${CMAKE_BINARY_DIR}/Debug)
   file(COPY ${CMAKE_SOURCE_DIR}/Append_data/crashrpt_lang.ini DESTINATION ${CMAKE_BINARY_DIR}/Debug)
 endif()
 
+file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/ENC_IMGs)  
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/env)  
 
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory
@@ -215,7 +218,6 @@ file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/SENC)
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/ENCs)
 
 file(COPY ${CMAKE_SOURCE_DIR}/Append_data/navobj.xml DESTINATION ${CMAKE_BINARY_DIR})
-file(COPY ${CMAKE_SOURCE_DIR}/Append_data/wmsserver.ini DESTINATION ${CMAKE_BINARY_DIR})
 file(COPY ${CMAKE_SOURCE_DIR}/Append_data/wmsserver.conf DESTINATION ${CMAKE_BINARY_DIR})
 file(COPY ${CMAKE_SOURCE_DIR}/Append_data/MMSINAME.CSV DESTINATION ${CMAKE_BINARY_DIR})
 file(COPY ${CMAKE_SOURCE_DIR}/Append_data/crashrpt_lang.ini DESTINATION ${CMAKE_BINARY_DIR})
@@ -782,9 +784,6 @@ if(NOT CPPSERVER_MODULE)
 
     target_sources(WMSServer
       PUBLIC   
-      ${PROJECT_SOURCE_DIR}/src/ais.cpp
-      ${PROJECT_SOURCE_DIR}/src/ais_bitstring.cpp
-      ${PROJECT_SOURCE_DIR}/src/ais_target_data.cpp
       ${PROJECT_SOURCE_DIR}/src/api_shim.cpp
       ${PROJECT_SOURCE_DIR}/src/base_platform.cpp
       ${PROJECT_SOURCE_DIR}/src/bbox.cpp
@@ -869,10 +868,6 @@ if(NOT CPPSERVER_MODULE)
       ${PROJECT_SOURCE_DIR}/libs/glu/libtess/sweep.c
       ${PROJECT_SOURCE_DIR}/libs/glu/libtess/tess.c
       ${PROJECT_SOURCE_DIR}/libs/glu/libtess/tessmono.c
-      ${PROJECT_SOURCE_DIR}/include/ais.h
-      ${PROJECT_SOURCE_DIR}/include/ais_bitstring.h
-      ${PROJECT_SOURCE_DIR}/include/ais_info_gui.h
-      ${PROJECT_SOURCE_DIR}/include/ais_target_data.h      
       ${PROJECT_SOURCE_DIR}/include/base_platform.h
       ${PROJECT_SOURCE_DIR}/include/bbox.h
       ${PROJECT_SOURCE_DIR}/include/CanvasConfig.h
@@ -1072,10 +1067,6 @@ if(NOT CPPSERVER_MODULE)
   else()
     set(
       HDRS
-      include/ais.h
-      include/ais_bitstring.h
-      include/ais_info_gui.h
-      include/ais_target_data.h   
       include/base_platform.h
       include/bbox.h
       include/CanvasConfig.h
@@ -1163,14 +1154,10 @@ if(NOT CPPSERVER_MODULE)
       ${CMAKE_SOURCE_DIR}/src/ocpn_plugin.cpp
       ${CMAKE_SOURCE_DIR}/src/ocpn_utils.cpp
       ${CMAKE_SOURCE_DIR}/src/own_ship.cpp
-      ${CMAKE_SOURCE_DIR}/src/plugin_paths.cpp
     )
 
     set(
-      SRCS
-      src/ais.cpp
-      src/ais_bitstring.cpp
-      src/ais_target_data.cpp
+      SRCS      
       src/api_shim.cpp
       src/bbox.cpp
       src/base_platform.cpp
@@ -1458,22 +1445,7 @@ if(NOT CPPSERVER_MODULE)
         set(OPENGL_LIBRARIES "GL_static" "EGL" "X11" "drm")
       endif ()
     endif ()
-        ###############
-    # if (OPENGL_FOUND)
-    # 	target_sources(
-    # 		WMSServer
-    # 		PRIVATE
-    # 		include/glChartCanvas.h
-    # 		include/glTextureDescriptor.h
-    # 		include/glTexCache.h
-    # 		include/glTextureManager.h
-    # 		src/glTextureDescriptor.cpp
-    # 		src/glTexCache.cpp
-    # 		src/glChartCanvas.cpp
-    # 		src/glTextureManager.cpp
-    # 	)
-    # endif ()
-        ##############    
+        
     set(OPENGL_LIBRARIES "GLU_static" ${OPENGL_LIBRARIES})
     if (OCPN_VERBOSE)
       message(STATUS "    Revised GL Lib (with local): " ${OPENGL_LIBRARIES})

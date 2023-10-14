@@ -192,9 +192,6 @@ bool Style::NativeToolIconExists(const wxString& name) {
 wxBitmap Style::GetIconScaled(const wxString& name, double scaleFactor,
                               bool bforceReload) {
   if (iconIndex.find(name) == iconIndex.end()) {
-    wxString msg(_T("The requested icon was not found in the style: "));
-    msg += name;
-    wxLogMessage(msg);
     return wxBitmap(GetToolSize().x, GetToolSize().y);  // Prevents crashing.
   }
 
@@ -211,9 +208,6 @@ wxBitmap Style::GetIconScaled(const wxString& name, double scaleFactor,
 wxBitmap Style::GetIcon(const wxString& name, int width, int height,
                         bool bforceReload) {
   if (iconIndex.find(name) == iconIndex.end()) {
-    wxString msg(_T("The requested icon was not found in the style: "));
-    msg += name;
-    wxLogMessage(msg);
     return wxBitmap(GetToolSize().x, GetToolSize().y);  // Prevents crashing.
   }
 
@@ -235,7 +229,6 @@ wxBitmap Style::GetIcon(const wxString& name, int width, int height,
   if (wxFileExists(fullFilePath))
     bm = LoadSVG(fullFilePath, retSize.x, retSize.y);
   else {
-///        wxLogMessage( _T("Can't find SVG icon: ") + fullFilePath );
 #endif  // ocpnUSE_SVG
     wxRect location(icon->iconLoc, icon->size);
     bm = graphics->GetSubBitmap(location);
@@ -258,8 +251,6 @@ wxBitmap Style::GetToolIcon(const wxString& toolname, int iconType,
   if (toolIndex.find(toolname) == toolIndex.end()) {
     //  This will produce a flood of log messages for some PlugIns, notably
     //  WMM_PI, and GRADAR_PI
-    //        wxString msg( _T("The requested tool was not found in the style:
-    //        ") ); msg += toolname; wxLogMessage( msg );
     return wxBitmap(GetToolSize().x, GetToolSize().y, 1);
   }
 
@@ -309,7 +300,6 @@ wxBitmap Style::GetToolIcon(const wxString& toolname, int iconType,
       if (wxFileExists(fullFilePath))
         bm = LoadSVG(fullFilePath, retSize.x, retSize.y);
       else {
-        /// wxLogMessage( _T("Can't find SVG: ") + fullFilePath );
 #endif  // ocpnUSE_SVG
         bm = graphics->GetSubBitmap(location);
 
@@ -441,7 +431,6 @@ wxBitmap Style::GetToolIcon(const wxString& toolname, int iconType,
       if (wxFileExists(fullFilePath))
         bm = LoadSVG(fullFilePath, retSize.x, retSize.y);
       else {
-        /// wxLogMessage( _T("Can't find SVG: ") + fullFilePath );
 #endif  // ocpnUSE_SVG
         bm = graphics->GetSubBitmap(location);
 
@@ -466,10 +455,6 @@ wxBitmap Style::GetToolIcon(const wxString& toolname, int iconType,
       return tool->disabled;
     }
   }
-  wxString msg(
-      _T("A requested icon type for this tool was not found in the style: "));
-  msg += toolname;
-  wxLogMessage(msg);
   return wxBitmap(GetToolSize().x, GetToolSize().y);  // Prevents crashing.
 }
 
@@ -744,11 +729,6 @@ StyleManager::StyleManager(void) {
   Init(g_Platform->GetHomeDir() + _T(".wmsserver") +
        wxFileName::GetPathSeparator());
   SetStyle(_T(""));
-#ifdef ocpnUSE_SVG
-  wxLogMessage(_T("Using SVG Icons"));
-#else
-  wxLogMessage(_T("Using PNG Icons"));
-#endif
 }
 
 StyleManager::StyleManager(const wxString& configDir) {
@@ -769,9 +749,6 @@ void StyleManager::Init(const wxString& fromPath) {
   TiXmlDocument doc;
 
   if (!wxDir::Exists(fromPath)) {
-    wxString msg = _T("No styles found at: ");
-    msg << fromPath;
-    wxLogMessage(msg);
     return;
   }
 
@@ -786,9 +763,6 @@ void StyleManager::Init(const wxString& fromPath) {
   bool more = dir.GetFirst(&filename, _T("style*.xml"), wxDIR_FILES);
 
   if (!more) {
-    wxString msg = _T("No styles found at: ");
-    msg << fromPath;
-    wxLogMessage(msg);
     return;
   }
 
@@ -803,22 +777,13 @@ void StyleManager::Init(const wxString& fromPath) {
     wxString fullFilePath = fromPath + filename;
 
     if (!doc.LoadFile((const char*)fullFilePath.mb_str())) {
-      wxString msg(_T("Attempt to load styles from this file failed: "));
-      msg += fullFilePath;
-      wxLogMessage(msg);
       continue;
     }
-
-    wxString msg(_T("Styles loading from "));
-    msg += fullFilePath;
-    wxLogMessage(msg);
 
     TiXmlHandle hRoot(doc.RootElement());
 
     wxString root = wxString(doc.RootElement()->Value(), wxConvUTF8);
-    if (root != _T("styles" )) {
-      wxLogMessage(
-          _T("    StyleManager: Expected XML Root <styles> not found."));
+    if (root != _T("styles" )) {     
       continue;
     }
 
@@ -1138,9 +1103,6 @@ void StyleManager::SetStyle(wxString name) {
                               style->graphicsFile;
 
       if (!wxFileName::FileExists(fullFilePath)) {
-        wxString msg(_T("Styles Graphics File not found: "));
-        msg += fullFilePath;
-        wxLogMessage(msg);
         ok = false;
         if (selectFirst) continue;
         break;
@@ -1149,9 +1111,6 @@ void StyleManager::SetStyle(wxString name) {
       wxImage img;  // Only image does PNG LoadFile properly on GTK.
 
       if (!img.LoadFile(fullFilePath, wxBITMAP_TYPE_PNG)) {
-        wxString msg(_T("Styles Graphics File failed to load: "));
-        msg += fullFilePath;
-        wxLogMessage(msg);
         ok = false;
         break;
       }
@@ -1163,9 +1122,6 @@ void StyleManager::SetStyle(wxString name) {
   }
 
   if (!ok || !currentStyle->graphics) {
-    wxString msg(_T("The requested style was not found: "));
-    msg += name;
-    wxLogMessage(msg);
     return;
   }
 

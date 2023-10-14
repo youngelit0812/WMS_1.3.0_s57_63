@@ -175,9 +175,6 @@ bool RESTServer::StartServer(std::string certificate_location) {
 }
 
 void RESTServer::StopServer() {
-  wxLogMessage(
-      wxString::Format("Stopping REST service"));
-
   Unbind(wxEVT_RESTFUL_SERVER, &RESTServer::HandleServerMessage,
        this);
 
@@ -187,19 +184,10 @@ void RESTServer::StopServer() {
 
     if (m_bsec_thread_active)  // Try to be sure thread object is still alive
     {
-      wxLogMessage("Stopping Secondary Thread");
-
       m_Thread_run_flag = 0;
 
       int tsec = 10;
       while ((m_Thread_run_flag >= 0) && (tsec--)) wxSleep(1);
-
-      wxString msg;
-      if (m_Thread_run_flag < 0)
-        msg.Printf("Stopped in %d sec.", 10 - tsec);
-      else
-        msg.Printf("Not Stopped after 10 sec.");
-      wxLogMessage(msg);
     }
 
     m_pSecondary_Thread = NULL;
@@ -272,8 +260,7 @@ void RESTServer::HandleServerMessage(RESTServerEvent& event) {
     m_tempUploadFilePath = wxFileName::CreateTempFileName("ocpn_tul").ToStdString();
 
     m_ul_stream.open(m_tempUploadFilePath.c_str(), std::ios::out | std::ios::trunc);
-    if (!m_ul_stream.is_open()) {
-      wxLogMessage("REST_server: Cannot open %s for write", m_tempUploadFilePath);
+    if (!m_ul_stream.is_open()) {      
       m_tempUploadFilePath.clear();   // reset for next time.
       return;
     }
@@ -753,9 +740,7 @@ RESTServerThread::RESTServerThread(RESTServer* Launcher) {
   server_ip = s_https_addr;
   // If Portable use another port
   if (g_bportable) {
-    server_ip = s_https_addr_portable;
-   wxString sip(server_ip);
-   wxLogMessage("Portable REST server IP: Port " + sip);
+    server_ip = s_https_addr_portable;   
   }
 
   Create();

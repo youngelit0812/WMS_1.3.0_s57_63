@@ -19,10 +19,6 @@ static int s57_initialize(const wxString& csv_dir, FILE* flog) {
     g_poRegistrar = new S57ClassRegistrar();
 
     if (!g_poRegistrar->LoadInfo(csv_dir.mb_str(), FALSE)) {
-      wxString msg(_T("   Error: Could not load S57 ClassInfo from "));
-      msg.Append(csv_dir);
-      wxLogMessage(msg);
-
       delete g_poRegistrar;
       g_poRegistrar = NULL;
     }
@@ -55,10 +51,6 @@ bool s57RegistrarMgr::s57_attr_init(const wxString& csv_dir) {
   wxString targetFile = csv_t + _T("s57attributes.csv");
 
   if (!tFile.Open(targetFile)) {
-    wxString msg(_T("   Error: Could not load S57 Attribute Info from "));
-    msg.Append(csv_dir);
-    wxLogMessage(msg);
-
     return false;
   }
 
@@ -95,10 +87,6 @@ bool s57RegistrarMgr::s57_feature_init(const wxString& csv_dir) {
   wxString targetFile = csv_t + _T("s57objectclasses.csv");
 
   if (!tFile.Open(targetFile)) {
-    wxString msg(_T("   Error: Could not load S57 Feature Info from "));
-    msg.Append(csv_dir);
-    wxLogMessage(msg);
-
     return false;
   }
 
@@ -113,14 +101,6 @@ bool s57RegistrarMgr::s57_feature_init(const wxString& csv_dir) {
 
     wxString ident = tk.GetNextToken();
     long nID = -1;
-    //         if( ident.ToLong( &nID )){
-    //             wxString description = tk.GetNextToken();
-    //             wxString acronym = tk.GetNextToken();
-    //
-    //             m_featureHash1[acronym] = nID;
-    //             m_featureHash2[nID] = acronym.c_str();
-    //
-    //         }
     if (ident.ToLong(&nID)) {
       wxString description = tk.GetNextToken();
       //            wxString d2;

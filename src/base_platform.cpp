@@ -215,8 +215,7 @@ wxString& BasePlatform::GetSharedDataDir() {
 wxString GetPluginDataDir(const char* plugin_name) {
   static const wxString sep = wxFileName::GetPathSeparator();
 
-  wxString datadirs = g_BasePlatform->GetPluginDataPath();
-  wxLogMessage(_T("PlugInManager: Using data dirs from: ") + datadirs);
+  wxString datadirs = g_BasePlatform->GetPluginDataPath();  
   wxStringTokenizer dirs(datadirs, ";");
   while (dirs.HasMoreTokens()) {
     wxString dir = dirs.GetNextToken();
@@ -228,14 +227,13 @@ wxString GetPluginDataDir(const char* plugin_name) {
     while (more) {
       if (next == plugin_name) {
         next = next.Prepend(tryDirName.GetFullPath() + sep);
-        wxLogMessage(_T("PlugInManager: using data dir: %s"), next);
         return next;
       }
       more = tryDir.GetNext(&next);
     }
     tryDir.Close();
   }
-  wxLogMessage(_T("Warning: no data directory found, using \"\""));
+  printf("Warning: no data directory found, using \"\"");
   return "";
 }
 
@@ -276,11 +274,9 @@ wxString& BasePlatform::GetPrivateDataDir() {
 
 wxString BasePlatform::GetWinPluginBaseDir() {
   if (g_winPluginDir != "") {
-    wxLogMessage("winPluginDir: Using value from ini file.");
     wxFileName fn(g_winPluginDir);
     if (!fn.DirExists()) {
-      wxLogWarning("Plugin dir %s does not exist",
-                   fn.GetFullPath().mb_str().data());
+      printf("Plugin dir %s does not exist\n", (const char *)(fn.GetFullPath().mb_str(wxConvUTF8)));
     }
     fn.Normalize();
     return fn.GetFullPath();
@@ -290,20 +286,17 @@ wxString BasePlatform::GetWinPluginBaseDir() {
   if (g_bportable) {
     winPluginDir = (GetHomeDir() + _T("plugins"));
     if (ocpn::exists(winPluginDir.ToStdString())) {
-      wxLogMessage("Using portable plugin dir: %s", winPluginDir);
       return winPluginDir;
     }
   }
   // Standard case: c:\Users\%USERPROFILE%\AppData\Local
   bool ok = wxGetEnv(_T("LOCALAPPDATA"), &winPluginDir);
   if (!ok) {
-    wxLogMessage("winPluginDir: Cannot lookup LOCALAPPDATA");
     // Without %LOCALAPPDATA%: Use default location if it exists.
     std::string path(wxGetHomeDir().ToStdString());
     path += "\\AppData\\Local";
     if (ocpn::exists(path)) {
       winPluginDir = wxString(path.c_str());
-      wxLogMessage("winPluginDir: using %s", winPluginDir.mb_str().data());
       ok = true;
     }
   }
@@ -313,13 +306,11 @@ wxString BasePlatform::GetWinPluginBaseDir() {
   }
   if (!ok) {
     // Without %APPDATA%: Use default location if it exists.
-    wxLogMessage("winPluginDir: Cannot lookup APPDATA");
     std::string path(wxGetHomeDir().ToStdString());
     path += "\\AppData\\Roaming";
     if (ocpn::exists(path)) {
       winPluginDir = wxString(path.c_str());
       ok = true;
-      wxLogMessage("winPluginDir: using %s", winPluginDir.mb_str().data());
     }
   }
   if (!ok) {
@@ -329,7 +320,6 @@ wxString BasePlatform::GetWinPluginBaseDir() {
   wxFileName path(winPluginDir);
   path.Normalize();
   winPluginDir = path.GetFullPath() + "\\opencpn\\plugins";
-  wxLogMessage("Using private plugin dir: %s", winPluginDir);
   return winPluginDir;
 }
 
@@ -470,7 +460,7 @@ wxString& BasePlatform::GetConfigFileName() {
     wxStandardPaths& std_path = GetStdPaths();
 
 #ifdef __WXMSW__
-    m_config_file_name = "wmsserver.ini";
+    m_config_file_name = "wmsserver.conf";
     m_config_file_name.Prepend(GetHomeDir());
 
 #elif defined __WXOSX__
@@ -479,7 +469,7 @@ wxString& BasePlatform::GetConfigFileName() {
     appendOSDirSlash(&m_config_file_name);
     m_config_file_name.Append("wmsserver");
     appendOSDirSlash(&m_config_file_name);
-    m_config_file_name.Append("wmsserver.ini");
+    m_config_file_name.Append("wmsserver.conf");
 #elif defined FLATPAK
     m_config_file_name = GetPrivateDataDir();
     m_config_file_name.Append("/wmsserver.conf");
@@ -492,13 +482,7 @@ wxString& BasePlatform::GetConfigFileName() {
 
     if (g_bportable) {
       m_config_file_name = GetHomeDir();
-#ifdef __WXMSW__
-      m_config_file_name += "wmsserver.ini";
-#elif defined __WXOSX__
-      m_config_file_name += "wmsserver.ini";
-#else
       m_config_file_name += "wmsserver.conf";
-#endif
     }
   }
   return m_config_file_name;
@@ -609,7 +593,6 @@ wxString BasePlatform::GetPluginDataPath() {
   if (m_pluginDataPath.EndsWith(wxFileName::GetPathSeparator())) {
     m_pluginDataPath.RemoveLast();
   }
-  wxLogMessage("Using plugin data path: %s", m_pluginDataPath.mb_str().data());
   return m_pluginDataPath;
 }
 

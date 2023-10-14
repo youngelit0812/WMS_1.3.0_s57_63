@@ -43,9 +43,6 @@
 #include "thumbwin.h"
 #include "CanvasConfig.h"
 #include "ocpn_frame.h"  //FIXME (dave) LoadS57
-#ifdef __OCPN__ANDROID__
- #include "androidUTIL.h"
-#endif
 
 #include <stdio.h>
 #include <math.h>
@@ -224,13 +221,8 @@ bool ChartDB::LoadBinary(const wxString &filename, ArrayOfCDI &dir_array_check) 
   // Check chartDirs against dir_array_check
 }
 
-void ChartDB::DeleteCacheEntry(CacheEntry *pce, bool bDelTexture,
-                               const wxString &msg) {
+void ChartDB::DeleteCacheEntry(CacheEntry *pce, bool bDelTexture, const wxString &msg) {
   ChartBase *ch = (ChartBase *)pce->pChart;
-
-  if (msg != wxEmptyString) {
-    wxLogMessage(_T("%s%s"), msg.c_str(), ch->GetFullPath().c_str());
-  }
 
   // If this chart should happen to be in the thumbnail window....
   if (pthumbwin) {
@@ -248,9 +240,6 @@ void ChartDB::DeleteCacheEntry(int i, bool bDelTexture, const wxString &msg) {
 }
 
 void ChartDB::PurgeCache() {
-  //    Empty the cache
-  // wxLogMessage(_T("Chart cache purge"));
-
   if (wxMUTEX_NO_ERROR == m_cache_mutex.Lock()) {
     unsigned int nCache = pChartCache->GetCount();
     for (unsigned int i = 0; i < nCache; i++) {
@@ -263,9 +252,6 @@ void ChartDB::PurgeCache() {
 }
 
 void ChartDB::PurgeCachePlugins() {
-  //    Empty the cache
-  wxLogMessage(_T("Chart cache PlugIn purge"));
-
   if (wxMUTEX_NO_ERROR == m_cache_mutex.Lock()) {
     unsigned int nCache = pChartCache->GetCount();
     unsigned int i = 0;
@@ -375,7 +361,6 @@ ChartBase *ChartDB::GetChart(const wxChar *theFilePath,
   if (!fn.FileExists()) {
     //    Might be a directory
     if (!wxDir::Exists(theFilePath)) {
-      wxLogMessage(wxT("   ...file does not exist: %s"), theFilePath);
       return NULL;
     }
   }
@@ -935,7 +920,6 @@ CacheEntry *ChartDB::FindOldestDeleteCandidate(bool blog) {
 
   unsigned int nCache = pChartCache->GetCount();
   if (nCache > 1) {
-    if (blog) wxLogMessage(_T("Searching chart cache for oldest entry"));
     int LRUTime = m_ticks;
     int iOldest = 0;
     for (unsigned int i = 0; i < nCache; i++) {
@@ -953,13 +937,8 @@ CacheEntry *ChartDB::FindOldestDeleteCandidate(bool blog) {
     ChartBase *pDeleteCandidate = (ChartBase *)(pce->pChart);
 
     if (!pce->n_lock && !isSingleChart(pDeleteCandidate)) {
-      if (blog)
-        wxLogMessage(_T("Oldest unlocked cache index is %d, delta t is %d"),
-                     iOldest, dt);
-
       pret = pce;
-    } else
-      wxLogMessage(_T("All chart in cache locked, size: %d"), nCache);
+    }
   }
 
   return pret;
@@ -999,9 +978,7 @@ ChartBase *ChartDB::OpenChartUsingCache(int dbindex, ChartInitFlag init_flag) {
 
     if (bInCache) {
       wxString msg;
-      msg.Printf(_T("OpenChartUsingCache, IN cache: cache size: %d\n"),
-                 (int)pChartCache->GetCount());
-      //          wxLogMessage(msg);
+      msg.Printf(_T("OpenChartUsingCache, IN cache: cache size: %d\n"), (int)pChartCache->GetCount());
       if (FULL_INIT == init_flag)  // asking for full init?
       {
         if (Ch->IsReadyToRender()) {
@@ -1040,16 +1017,7 @@ ChartBase *ChartDB::OpenChartUsingCache(int dbindex, ChartInitFlag init_flag) {
           int mem_used;
           GetMemoryStatus(0, &mem_used);
 
-          wxString msg;
-          msg.Printf(
-              _T("OpenChartUsingCache, NOT in cache:   cache size: %d\n"),
-              (int)pChartCache->GetCount());
-          wxLogMessage(msg);
-          wxString msgLocal;
-          msgLocal.Printf(_T("   OpenChartUsingCache:  type %d  "), chart_type);
-          wxLogMessage(msgLocal + ChartFullPath);
-
-          if ((mem_used > g_memCacheLimit * 8 / 10) &&
+		  if ((mem_used > g_memCacheLimit * 8 / 10) &&
               (pChartCache->GetCount() > 2)) {
             wxString msgRemove(_T("Removing oldest chart from cache: "));
             while (1) {
@@ -1090,8 +1058,6 @@ ChartBase *ChartDB::OpenChartUsingCache(int dbindex, ChartInitFlag init_flag) {
 
   if (!bInCache)  // not in cache
   {
-    wxLogMessage(_T("Creating new chart"));
-
     if (chart_type == CHART_TYPE_S57) {
       LoadS57();
       Ch = new s57chart();
@@ -1109,7 +1075,6 @@ ChartBase *ChartDB::OpenChartUsingCache(int dbindex, ChartInitFlag init_flag) {
       Chs57->SetFullExtent(ext);
     } else {
       Ch = NULL;
-      wxLogMessage(_T("Unknown chart type"));
     }
 
     if (Ch) {
@@ -1121,15 +1086,9 @@ ChartBase *ChartDB::OpenChartUsingCache(int dbindex, ChartInitFlag init_flag) {
 
       //    Vector charts need a PLIB for useful display....
       if ((chart_family != CHART_FAMILY_VECTOR) || ((chart_family == CHART_FAMILY_VECTOR) && plib)) {
-        wxLogMessage(
-            wxString::Format(_T("Initializing Chart %s"), msg_fn.c_str()));
-
         ir = Ch->Init(ChartFullPath, init_flag);  // using the passed flag
         Ch->SetColorScheme(/*pParent->*/ GetColorScheme());
       } else {
-        wxLogMessage(wxString::Format(
-            _T("   No PLIB, Skipping vector chart  %s"), msg_fn.c_str()));
-
         ir = INIT_FAIL_REMOVE;
       }
 
@@ -1156,32 +1115,16 @@ ChartBase *ChartDB::OpenChartUsingCache(int dbindex, ChartInitFlag init_flag) {
         }
       } else if (INIT_FAIL_REMOVE == ir)  // some problem in chart Init()
       {
-        wxLogMessage(wxString::Format(_T("Problem initializing Chart %s"),
-                                      msg_fn.c_str()));
-
         delete Ch;
         Ch = NULL;
 
         //          Mark this chart in the database, so that it will not be seen
         //          during this run, but will stay in the database
         DisableChart(ChartFullPath);
-      } else if ((INIT_FAIL_RETRY == ir) ||
-                 (INIT_FAIL_NOERROR ==
-                  ir))  // recoverable problem in chart Init()
+      } else if ((INIT_FAIL_RETRY == ir) || (INIT_FAIL_NOERROR == ir))  // recoverable problem in chart Init()
       {
-        wxLogMessage(wxString::Format(
-            _T("Recoverable problem initializing Chart %s"), msg_fn.c_str()));
         delete Ch;
         Ch = NULL;
-      }
-
-      if (INIT_OK != ir) {
-        if (1 /*INIT_FAIL_NOERROR != ir*/) {
-          wxLogMessage(
-              wxString::Format(_T("   OpenChartFromStack... Error opening ")
-                               _T("chart %s ... return code %d"),
-                               msg_fn.c_str(), ir));
-        }
       }
     }
 

@@ -31,15 +31,10 @@
 #include "options.h"
 #include "AboutFrameImpl.h"
 #include "about.h"
-#include "plugin_paths.h"
 #include "ocpn_frame.h"
 #include "FontMgr.h"
 #include <string>
 #include <vector>
-
-#ifdef ocpnUSE_GL
-#include "glChartCanvas.h"
-#endif
 
 // Include CrashRpt Header
 #ifdef OCPN_USE_CRASHREPORT
@@ -163,9 +158,6 @@ extern wxString g_toolbarConfig;
 extern bool g_bPreserveScaleOnX;
 extern bool g_running;
 
-#ifdef ocpnUSE_GL
-extern ocpnGLOptions g_GLOptions;
-#endif
 extern int g_default_font_size;
 extern wxString g_default_font_facename;
 
@@ -203,9 +195,6 @@ extern wxString g_androidDownloadDirectory;
 extern wxString g_gpx_path;
 extern BasePlatform *g_BasePlatform;
 extern bool g_bdisable_opengl;
-
-
-OCPN_GLCaps *GL_Caps;
 
 static const char *const DEFAULT_XDG_DATA_DIRS =
     "~/.local/share:/usr/local/share:/usr/share";
@@ -415,7 +404,7 @@ void OCPNPlatform::Initialize_1(void) {
     }
     appendOSDirSlash(&home_data_crash);
 
-    wxString config_crash = _T("wmsserver.ini");
+    wxString config_crash = _T("wmsserver.conf");
     config_crash.Prepend(home_data_crash);
     crAddFile2(config_crash.c_str(), NULL, NULL,
                CR_AF_MISSING_FILE_OK | CR_AF_ALLOW_DELETE);
@@ -531,33 +520,7 @@ void OCPNPlatform::Initialize_2(void) {
 }
 
 void OCPNPlatform::Initialize_3(void) {
-	bool bcapable = IsGLCapable();
-
-	
-	if (!bcapable)
-		g_bopengl = false;
-	else {
-		g_bopengl = true;
-		g_bdisable_opengl = false;
-		pConfig->UpdateSettings();
-	}
-
-	// Try to automatically switch to guaranteed usable GL mode on an OCPN upgrade
-	// or fresh install
-	if ((g_bFirstRun || g_bUpgradeInProcess) && bcapable) {
-		g_bopengl = true;
-
-		// Set up visually nice options
-		g_GLOptions.m_bUseAcceleratedPanning = true;
-		g_GLOptions.m_bTextureCompression = true;
-		g_GLOptions.m_bTextureCompressionCaching = true;
-
-		g_GLOptions.m_iTextureDimension = 512;
-		g_GLOptions.m_iTextureMemorySize = 64;
-
-		g_GLOptions.m_GLPolygonSmoothing = true;
-		g_GLOptions.m_GLLineSmoothing = true;
-	}
+	g_bopengl = false;	
 
 	// Force a few items for Android, to ensure that UI is useable if config got
 	// scrambled	
@@ -590,154 +553,6 @@ void OCPNPlatform::OnExit_2(void) {
 #endif
 }
 
-
-bool OCPNPlatform::BuildGLCaps(void *pbuf) {
-  // Investigate OpenGL capabilities
-  gFrame->Show();
-  glTestCanvas *tcanvas = new glTestCanvas(gFrame);
-  tcanvas->Show();
-  wxYield();
-  wxGLContext *pctx = new wxGLContext(tcanvas);
-  tcanvas->SetCurrent(*pctx);
-
-  OCPN_GLCaps *pcaps = (OCPN_GLCaps *)pbuf;
-
-  char *str = (char *)glGetString(GL_RENDERER);
-  if (str == NULL) {    //No GL at all...
-    wxLogMessage("GL_RENDERER not found.");
-    delete tcanvas;
-    delete pctx;
-    return false;
-  }
-  pcaps->Renderer = std::string(str);
-
-  char *stv = (char *)glGetString(GL_VERSION);
-  if (stv == NULL) {    //No GL Version...
-    wxLogMessage("GL_VERSION not found");
-    delete tcanvas;
-    delete pctx;
-    return false;
-  }
-  pcaps->Version = std::string(stv);
-
-  char *stsv = (char *)glGetString(GL_SHADING_LANGUAGE_VERSION);
-  if (stsv == NULL) {    //No GLSL...
-    wxLogMessage("GL_SHADING_LANGUAGE_VERSION not found");
-    delete tcanvas;
-    delete pctx;
-    return false;
-  }
-  pcaps->GLSL_Version = std::string(stsv);
-
-  pcaps->dGLSL_Version = 0;
-  pcaps->dGLSL_Version = ::atof(pcaps->GLSL_Version.c_str());
-
-  if (pcaps->dGLSL_Version < 1.2){
-    wxString msg;
-    msg.Printf(_T("GLCaps Probe: OpenGL-> GLSL Version reported:  "));
-    msg += wxString(pcaps->GLSL_Version.c_str());
-    msg += "\n OpenGL disabled due to insufficient OpenGL capabilities";
-    wxLogMessage(msg);
-    pcaps->bCanDoGLSL = false;
-    return false;
-  }
-
-  pcaps->bCanDoGLSL = true;
-
-  if (QueryExtension("GL_ARB_texture_non_power_of_two"))
-    pcaps->TextureRectangleFormat = GL_TEXTURE_2D;
-  else if (QueryExtension("GL_OES_texture_npot"))
-    pcaps->TextureRectangleFormat = GL_TEXTURE_2D;
-  else if (QueryExtension("GL_ARB_texture_rectangle"))
-    pcaps->TextureRectangleFormat = GL_TEXTURE_RECTANGLE_ARB;
-
-  pcaps->bOldIntel = false;
-
-  // Can we use VBO?
-  pcaps->bCanDoVBO = true;
-
-#if defined(__WXMSW__) || defined(__WXOSX__)
-  if (pcaps->bOldIntel) pcaps->bCanDoVBO = false;
-#endif
-
-#ifdef __OCPN__ANDROID__
-  pcaps->bCanDoVBO = false;
-#endif
-
-  // Can we use FBO?
-  pcaps->bCanDoFBO = true;
-
-#ifndef __OCPN__ANDROID__
-  //  We need NPOT to support FBO rendering
-  if (!pcaps->TextureRectangleFormat) pcaps->bCanDoFBO = false;
-
-  //      We require certain extensions to support FBO rendering
-  if (!QueryExtension("GL_EXT_framebuffer_object")) pcaps->bCanDoFBO = false;
-#endif
-
-  delete tcanvas;
-  delete pctx;
-
-  return true;
-}
-
-
-bool OCPNPlatform::IsGLCapable() {
-#if defined(CLI)
-  return false;
-#else
-
-  if(g_bdisable_opengl)
-    return false;
-
-  // Protect against fault in OpenGL caps test
-  // If this method crashes due to bad GL drivers,
-  // next startup will disable OpenGL
-  g_bdisable_opengl = true;
-
-  // Update and flush the config file
-  pConfig->UpdateSettings();
-
-  wxLogMessage("Starting OpenGL test...");
-  wxLog::FlushActive();
-
-  OCPN_GLCaps GL_Caps;
-  bool bcaps = BuildGLCaps(&GL_Caps);
-
-  wxLogMessage("OpenGL test complete.");
-  if (!bcaps){
-    wxLogMessage("BuildGLCaps fails.");
-    wxLog::FlushActive();
-    return false;
-  }
-
-  // and so we decide....
-
-  // Require a modern GLSL implementation
-  if (!GL_Caps.bCanDoGLSL) {
-    return false;
-  }
-
-  // We insist on FBO support, since otherwise DC mode is always faster on
-  // canvas panning..
-  if (!GL_Caps.bCanDoFBO)  {
-    return false;
-  }
-
-  // OpenGL is OK for OCPN
-  wxLogMessage("OpenGL determined CAPABLE.");
-  wxLog::FlushActive();
-
-  g_bdisable_opengl = false;
-  g_bopengl = true;
-
-  // Update and flush the config file
-  pConfig->UpdateSettings();
-
-  return true;
-#endif
-}
-
 void OCPNPlatform::SetLocaleSearchPrefixes(void) {
 #if wxUSE_XLOCALE
 // Add a new prefixes for search order.
@@ -747,23 +562,12 @@ void OCPNPlatform::SetLocaleSearchPrefixes(void) {
   wxString locale_location = GetSharedDataDir();
   locale_location += _T("share\\locale");
   wxLocale::AddCatalogLookupPathPrefix(locale_location);
-  wxString imsg = _T("Adding catalog lookup path:  ");
-  imsg += locale_location;
-  wxLogMessage(imsg);
 
 
   // Managed plugin location
   wxFileName usrShare(GetWinPluginBaseDir() + wxFileName::GetPathSeparator());
   usrShare.RemoveLastDir();
   locale_location = usrShare.GetFullPath() + ("share\\locale");
-  wxLocale::AddCatalogLookupPathPrefix(locale_location);
-  imsg = _T("Adding catalog lookup path:  ");
-  imsg += locale_location;
-  wxLogMessage(imsg);
-
-#elif defined(__OCPN__ANDROID__)
-
-  wxString locale_location = GetSharedDataDir() + _T("locale");
   wxLocale::AddCatalogLookupPathPrefix(locale_location);
 
 #elif defined(__UNIX__) && !defined(__WINE__)
@@ -781,27 +585,12 @@ void OCPNPlatform::SetLocaleSearchPrefixes(void) {
   location.SetName(_T("locale"));
   locale_location = location.GetFullPath();
   wxLocale::AddCatalogLookupPathPrefix(locale_location);
-
-  // And then for managed plugins
-  std::string dir = PluginPaths::getInstance()->UserDatadir();
-  wxString managed_locale_location(dir + "/locale");
-  wxLocale::AddCatalogLookupPathPrefix(managed_locale_location);
-#endif
-
-#ifdef __WXOSX__
-  std::string macDir =
-      PluginPaths::getInstance()->Homedir() +
-      "/Library/Application Support/OpenCPN/Contents/Resources";
-  wxString Mac_managed_locale_location(macDir);
-  wxLocale::AddCatalogLookupPathPrefix(Mac_managed_locale_location);
 #endif
 
 #endif
 }
 
 wxString OCPNPlatform::GetDefaultSystemLocale() {
-  wxLogMessage(_T("Getting DefaultSystemLocale..."));
-
   wxString retval = _T("en_US");
 
 #if wxUSE_XLOCALE
@@ -820,22 +609,12 @@ wxString OCPNPlatform::GetDefaultSystemLocale() {
     wxString lstring = wxString(lngcp);
 
     languageInfoW = wxLocale::FindLanguageInfo(lngcp);
-    if (languageInfoW)
-      wxLogMessage(_T("Found LanguageInfo for: ") + lstring);
-    else
-      wxLogMessage(_T("Could not find LanguageInfo for: ") + lstring);
   } else {
-    wxLogMessage(_T("Could not get LocaleInfo, using wxLANGUAGE_DEFAULT"));
     languageInfoW = wxLocale::GetLanguageInfo(wxLANGUAGE_DEFAULT);
   }
 
   if (languageInfoW) retval = languageInfoW->CanonicalName;
 #endif
-
-#if defined(__OCPN__ANDROID__)
-  retval = androidGetAndroidSystemLocale();
-#endif
-
 #endif
 
   return retval;
@@ -852,8 +631,6 @@ wxString OCPNPlatform::GetAdjustedAppLocale() {
   if (g_bFirstRun || wxIsEmpty(adjLocale)) {
     wxRegKey RegKey(wxString(_T("HKEY_LOCAL_MACHINE\\SOFTWARE\\OpenCPN")));
     if (RegKey.Exists()) {
-      wxLogMessage(
-          _T("Retrieving initial language selection from Windows Registry"));
       RegKey.QueryValue(wxString(_T("InstallerLanguage")), adjLocale);
     }
   }
@@ -864,12 +641,6 @@ wxString OCPNPlatform::GetAdjustedAppLocale() {
       adjLocale = GetDefaultSystemLocale();
   }
 #endif
-#if defined(__OCPN__ANDROID__)
-  if (g_localeOverride.Length())
-    adjLocale = g_localeOverride;
-  else
-    adjLocale = GetDefaultSystemLocale();
-#endif
 
   return adjLocale;
 }
@@ -878,11 +649,6 @@ wxString OCPNPlatform::ChangeLocale(wxString &newLocaleID,
                                     wxLocale *presentLocale,
                                     wxLocale **newLocale) {
   wxString return_val;
-
-  wxString imsg = _T("ChangeLocale: Language load for:  ");
-  imsg += newLocaleID;
-  wxLogMessage(imsg);
-
   //  Old locale is done.
   delete (wxLocale *)presentLocale;
 
@@ -891,7 +657,6 @@ wxString OCPNPlatform::ChangeLocale(wxString &newLocaleID,
     std::string path(getenv("HOME"));
     path += "/.var/app/org.opencpn.OpenCPN/data/locale";
     locale->AddCatalogLookupPathPrefix(path);
-    wxLogMessage("Using flatpak locales at %s", path.c_str());
   }
   wxString loc_lang_canonical;
 
@@ -904,10 +669,6 @@ wxString OCPNPlatform::ChangeLocale(wxString &newLocaleID,
     // translations of the wxWidgets strings is not present. So try again,
     // without attempting to load defaults wxstd.mo.
     if (!locale->IsOk()) {
-      wxString sImsg = _T("ChangeLocale:  could not initialize:  ");
-      sImsg += newLocaleID;
-      wxLogMessage(sImsg);
-
       delete locale;
       locale = new wxLocale;
       locale->Init(pli->Language, 0);
@@ -915,15 +676,9 @@ wxString OCPNPlatform::ChangeLocale(wxString &newLocaleID,
     loc_lang_canonical = pli->CanonicalName;
 
     b_initok = locale->IsOk();
-#ifdef __OCPN__ANDROID__
-    b_initok = true;
-#endif
   }
 
   if (!b_initok) {
-    wxString sImsg = _T("ChangeLocale: Fall back to en_US");
-    wxLogMessage(sImsg);
-
     delete locale;
     locale = new wxLocale;
     locale->Init(wxLANGUAGE_ENGLISH_US, 0);
@@ -931,10 +686,6 @@ wxString OCPNPlatform::ChangeLocale(wxString &newLocaleID,
   }
 
   if (b_initok) {
-    wxString sImsg = _T("ChangeLocale: Locale Init OK for:  ");
-    sImsg += loc_lang_canonical;
-    wxLogMessage(sImsg);
-
     //  wxWidgets assigneds precedence to message catalogs in reverse order of
     //  loading. That is, the last catalog containing a certain translatable
     //  item takes precedence.
@@ -945,20 +696,10 @@ wxString OCPNPlatform::ChangeLocale(wxString &newLocaleID,
     //  precedent.
 
     for (unsigned int i = 0; i < g_locale_catalog_array.GetCount(); i++) {
-      if(!locale->AddCatalog(g_locale_catalog_array[i])){
-        wxString emsg = _T("ERROR Loading translation catalog for:  ");
-        emsg += g_locale_catalog_array[i];
-        wxLogMessage(emsg);
-      }
-      else {
-        wxString sInMsg = _T("Loaded translation catalog for:  ");
-        sInMsg += g_locale_catalog_array[i];
-        wxLogMessage(sInMsg);
-      }
+		locale->AddCatalog(g_locale_catalog_array[i]);        
     }
 
     // Get core opencpn catalog translation (.mo) file
-    wxLogMessage(_T("Loading catalog for opencpn core."));
     locale->AddCatalog(_T("opencpn"));
 
     return_val = locale->GetCanonicalName();
@@ -1161,21 +902,6 @@ int OCPNPlatform::platformApplyPrivateSettingsString(wxString settings,
   return ret_val;
 }
 
-void OCPNPlatform::applyExpertMode(bool mode) {
-#ifdef __OCPN__ANDROID__
-  g_bexpert = mode;  // toolbar only shows plugin icons if expert mode is false
-  g_bBasicMenus = !mode;  //  simplified context menus in basic mode
-#endif
-}
-
-wxString OCPNPlatform::GetSupplementalLicenseString() {
-  wxString lic;
-#ifdef __OCPN__ANDROID__
-  lic = androidGetSupplementalLicense();
-#endif
-  return lic;
-}
-
 //--------------------------------------------------------------------------
 //      Per-Platform file/directory support
 //--------------------------------------------------------------------------
@@ -1191,16 +917,6 @@ int OCPNPlatform::DoFileSelectorDialog(wxWindow *parent, wxString *file_spec,
   wxString file;
   int result = wxID_CANCEL;
 
-#ifdef __OCPN__ANDROID__
-  //  Verify that initDir is traversable, fix it if not...
-  wxString idir = initDir;
-  if (initDir.StartsWith(
-          _T("/data/data")))  // not good, provokes a crash usually...
-    idir = GetWritableDocumentsDir();
-
-  result = androidFileChooser(&file, idir, Title, suggestedName, wildcard);
-  if (file_spec) *file_spec = file;
-#else
   long flag = wxFD_DEFAULT_STYLE;
   if (suggestedName.Length()) {  // new file
     flag = wxFD_SAVE;
@@ -1210,27 +926,12 @@ int OCPNPlatform::DoFileSelectorDialog(wxWindow *parent, wxString *file_spec,
   if (wxNOT_FOUND != mask.Find(_T("gpx")))
     mask.Prepend(_T("GPX files (*.gpx)|"));
 
-  wxFileDialog *psaveDialog =
-      new wxFileDialog(parent, Title, initDir, suggestedName, mask, flag);
-
-  //    Try to reduce the dialog size, and scale fonts down, if necessary.
-  //     if(g_bresponsive && parent)
-  //         psaveDialog = g_Platform->AdjustFileDialogFont(parent,
-  //         psaveDialog);
-
 #ifdef __WXOSX__
   if (parent) parent->HideWithEffect(wxSHOW_EFFECT_BLEND);
 #endif
 
-  result = psaveDialog->ShowModal();
-
 #ifdef __WXOSX__
   if (parent) parent->ShowWithEffect(wxSHOW_EFFECT_BLEND);
-#endif
-
-  if (file_spec) *file_spec = psaveDialog->GetPath();
-  delete psaveDialog;
-
 #endif
 
   return result;
@@ -1243,23 +944,6 @@ MyConfig *OCPNPlatform::GetConfigObject() {
 
   return result;
 }
-
-//--------------------------------------------------------------------------
-//      Internal GPS Support
-//--------------------------------------------------------------------------
-
-bool OCPNPlatform::hasInternalGPS(wxString profile) {
-#ifdef __OCPN__ANDROID__
-  bool t = androidDeviceHasGPS();
-  //    qDebug() << "androidDeviceHasGPS" << t;
-  return t;
-#else
-
-  return false;
-
-#endif
-}
-
 //--------------------------------------------------------------------------
 //      Platform Display Support
 //--------------------------------------------------------------------------
@@ -1357,11 +1041,6 @@ double OCPNPlatform::GetDisplaySizeMM() {
 #ifdef __WXOSX__
   ret = GetMacMonitorSize();
 #endif
-  
-  wxString msg;
-  msg.Printf(_T("Detected display size (horizontal): %d mm"), (int)ret);
-  //     wxLogMessage(msg);
-
   return ret;
 }
 

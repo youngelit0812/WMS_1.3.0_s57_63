@@ -29,15 +29,9 @@
 #include <string.h>
 #include <math.h>
 
-#if defined(__OCPN__ANDROID__)
- //#include <GLES2/gl2.h>
- #include <qopengl.h>
- #include <GL/gl_private.h>  // this is a cut-down version of gl.h
- #include <GLES2/gl2.h>
-#elif defined(__MSVC__)
+#if defined(__MSVC__)
  #include "glew.h"
  #include <GL/glu.h>
- //typedef void (__stdcall * _GLUfuncptr)(void);
 #elif defined(__WXOSX__)
  #include <OpenGL/gl.h>
  #include <OpenGL/glu.h>

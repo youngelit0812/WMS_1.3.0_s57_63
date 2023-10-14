@@ -29,16 +29,12 @@
 #include "tcmgr.h"
 #include "ocpn_pixel.h"
 #include "ocpndc.h"
-#include "multiplexer.h"
 #include "timers.h"
 #include "tide_time.h"
-#include "glTextureDescriptor.h"
 #include "ChInfoWin.h"
 #include "Quilt.h"
 #include "SystemCmdSound.h"
 #include "FontMgr.h"
-
-#include "SendToGpsDlg.h"
 
 #include "OCPNRegion.h"
 #include "gshhs.h"
@@ -50,16 +46,9 @@
 #include "idents.h"
 #include "line_clip.h"
 
-#ifdef ocpnUSE_GL
-#include "glChartCanvas.h"
-#endif
-
-#include "cm93.h"      // for chart outline draw
 #include "s57chart.h"  // for ArrayOfS57Obj
 #include "s52plib.h"
 #include "s52utils.h"
-
-#include "ais.h"
 
 #ifdef __MSVC__
 #define _CRTDBG_MAP_ALLOC
@@ -220,7 +209,6 @@ extern int g_ChartScaleFactor;
 #endif
 
 extern bool g_bShowFPS;
-extern double g_gl_ms_per_frame;
 extern bool g_benable_rotate;
 extern bool g_bRollover;
 
@@ -386,8 +374,6 @@ ChartCanvas::ChartCanvas(wxFrame *frame, int canvasIndex)
 
   VPoint.Invalidate();
 
-  m_glcc = NULL;
-
   m_toolbar_scalefactor = 1.0;
   m_toolbarOrientation = wxTB_HORIZONTAL;
   m_focus_indicator_pix = 1;
@@ -422,8 +408,6 @@ ChartCanvas::ChartCanvas(wxFrame *frame, int canvasIndex)
   m_leftdown = false;
 #endif /* HAVE_WX_GESTURE_EVENTS */
 
-  SetupGlCanvas();
-  
   singleClickEventIsValid = false;
 
   //    Build the cursors
@@ -717,16 +701,6 @@ ChartCanvas::~ChartCanvas() {
   delete m_pos_image_user_yellow_dusk;
   delete m_pos_image_user_yellow_night;
 
-#ifdef ocpnUSE_GL
-  if (!g_bdisable_opengl) {
-    delete m_glcc;
-
-#if wxCHECK_VERSION(2, 9, 0)
-    if (IsPrimaryCanvas() && g_bopengl) delete g_pGLcontext;
-#endif
-  }
-#endif
-
   // Delete the MUI bar, but make sure there is no pointer to it during destroy.
   // wx tries to deliver events to this canvas during destroy.
   delete m_pQuilt;
@@ -813,40 +787,6 @@ void ChartCanvas::RebuildCursors() {
 void ChartCanvas::CanvasApplyLocale() {
   CreateDepthUnitEmbossMaps(m_cs);
   CreateOZEmbossMapData(m_cs);
-}
-
-void ChartCanvas::SetupGlCanvas() {
-#ifndef __OCPN__ANDROID__
-#ifdef ocpnUSE_GL
-  if (!g_bdisable_opengl) {
-    if (g_bopengl) {
-      wxLogMessage(_T("Creating glChartCanvas"));
-      m_glcc = new glChartCanvas(this);
-
-      // We use one context for all GL windows, so that textures etc will be
-      // automatically shared
-      if (IsPrimaryCanvas()) {
-        // qDebug() << "Creating Primary Context";
-
-        //             wxGLContextAttrs ctxAttr;
-        //             ctxAttr.PlatformDefaults().CoreProfile().OGLVersion(3,
-        //             2).EndList(); wxGLContext *pctx = new wxGLContext(m_glcc,
-        //             NULL, &ctxAttr);
-        wxGLContext *pctx = new wxGLContext(m_glcc);
-        m_glcc->SetContext(pctx);
-        g_pGLcontext = pctx;  // Save a copy of the common context
-      } else {
-#ifdef __WXOSX__
-        m_glcc->SetContext(new wxGLContext(m_glcc, g_pGLcontext));
-#else
-        m_glcc->SetContext(g_pGLcontext);  // If not primary canvas, use the
-                                           // saved common context
-#endif
-      }
-    }
-  }
-#endif
-#endif
 }
 
 #ifdef HAVE_WX_GESTURE_EVENTS
@@ -971,7 +911,6 @@ void ChartCanvas::ShowTides(bool bShow) {
 
     parent_frame->SetMenubarItemState(ID_MENU_SHOW_TIDES, bShow);
   } else {
-    wxLogMessage(_T("Chart1::Event...TCMgr Not Available"));
     SetbShowTide(false);
     parent_frame->SetMenubarItemState(ID_MENU_SHOW_TIDES, false);
   }
@@ -985,7 +924,6 @@ void ChartCanvas::ShowCurrents(bool bShow) {
 
     parent_frame->SetMenubarItemState(ID_MENU_SHOW_CURRENTS, bShow);
   } else {
-    wxLogMessage(_T("Chart1::Event...TCMgr Not Available"));
     SetbShowCurrent(false);
     parent_frame->SetMenubarItemState(ID_MENU_SHOW_CURRENTS, false);
   }
@@ -1582,12 +1520,6 @@ update_finish:
   //  But don't duplicate a Refresh() done by SetViewPoint()
   if (bNewChart && !bNewView) Refresh(false);
 
-#ifdef ocpnUSE_GL
-  // If a new chart, need to invalidate gl viewport for refresh
-  // so the fbo gets flushed
-  if (m_glcc && g_bopengl && bNewChart) GetglCanvas()->Invalidate();
-#endif
-
   return bNewChart | bNewView;
 }
 
@@ -1866,17 +1798,8 @@ void ChartCanvas::SetDisplaySizeMM(double size) {
 
   if (ps52plib) ps52plib->SetPPMM(m_pix_per_mm);
 
-  wxString msg;
-  msg.Printf(
-      _T("Metrics:  m_display_size_mm: %g     g_Platform->getDisplaySize():  ")
-      _T("%d:%d   "),
-      m_display_size_mm, sd.x, sd.y);
-  wxLogMessage(msg);
-
   int ssx, ssy;
   ::wxDisplaySize(&ssx, &ssy);
-  msg.Printf(_T("wxDisplaySize(): %d %d"), ssx, ssy);
-  wxLogMessage(msg);
 
   m_focus_indicator_pix = /*std::round*/ wxRound(1 * GetPixPerMM());
 }
@@ -1912,10 +1835,6 @@ void ChartCanvas::OnEvtCompressProgress( OCPN_CompressProgressEvent & event )
 }
 #endif
 void ChartCanvas::InvalidateGL() {
-  if (!m_glcc) return;
-#ifdef ocpnUSE_GL
-  if (g_bopengl) m_glcc->Invalidate();
-#endif  
 }
 
 int ChartCanvas::GetCanvasChartNativeScale() {
@@ -1984,9 +1903,6 @@ int ChartCanvas::FindClosestCanvasChartdbIndex(int scale) {
 
 void ChartCanvas::EnablePaint(bool b_enable) {
   m_b_paint_enable = b_enable;
-#ifdef ocpnUSE_GL
-  if (m_glcc) m_glcc->EnablePaint(b_enable);
-#endif
 }
 
 bool ChartCanvas::IsQuiltDelta() { return m_pQuilt->IsQuiltDelta(VPoint); }
@@ -2369,13 +2285,6 @@ void ChartCanvas::SetColorScheme(ColorScheme cs) {
   m_Piano->SetColorScheme(cs);
 
   if (pWorldBackgroundChart) pWorldBackgroundChart->SetColorScheme(cs);
-#ifdef ocpnUSE_GL
-  if (g_bopengl && m_glcc) {
-    m_glcc->SetColorScheme(cs);
-    g_glTextureManager->ClearAllRasterTextures();
-    // m_glcc->FlushFBO();
-  }
-#endif
   SetbTCUpdate(true);  // force re-render of tide/current locators
   m_brepaint_piano = true;
 
@@ -3034,18 +2943,8 @@ void ChartCanvas::ReloadVP(bool b_adjust) {
 }
 
 void ChartCanvas::LoadVP(ViewPort &vp, bool b_adjust) {
-#ifdef ocpnUSE_GL
-  if (g_bopengl && m_glcc) {
-    m_glcc->Invalidate();
-    if (m_glcc->GetSize() != GetSize()) {
-      m_glcc->SetSize(GetSize());
-    }
-  } else
-#endif
-  {
     m_cache_vp.Invalidate(); //bValid : false
     m_bm_cache_vp.Invalidate(); //bValid : false
-  }
 
   VPoint.Invalidate();
 
@@ -3571,19 +3470,7 @@ bool ChartCanvas::SetViewPoint(double lat, double lon, double scale_ppm,
           _T("%s %4.0f (---)"), _("Scale"),
           true_scale_display);  // Generally, no chart, so no chart scale factor
     }
-
-#ifdef ocpnUSE_GL
-    if (g_bopengl && g_bShowFPS) {
-      wxString fps_str;
-      double fps = 0.;
-      if (g_gl_ms_per_frame > 0) {
-        fps = 1000. / g_gl_ms_per_frame;
-        fps_str.Printf(_T("  %3d fps"), (int)fps);
-      }
-      text += fps_str;
-    }
-#endif
-
+	
     m_scaleValue = true_scale_display;
     m_scaleText = text;    
   }
@@ -4269,12 +4156,6 @@ void ChartCanvas::OnSize(wxSizeEvent &event) {
   //  Rescale again, to capture all the changes for new canvas size
   SetVPScale(GetVPScale());
 
-#ifdef ocpnUSE_GL
-  if (/*g_bopengl &&*/ m_glcc) {
-    //FIXME (dave)  This can go away?
-    m_glcc->OnSize(event);
-  }
-#endif
   //printf("s57chart : onSize : ReloadVP\n");
   FormatPianoKeys();
   //  Invalidate the whole window
@@ -4395,10 +4276,6 @@ void ChartCanvas::HideChartInfoWindow(void) {
     m_pCIWin->Hide();
     m_pCIWin->Destroy();
     m_pCIWin = NULL;
-
-#ifdef __OCPN__ANDROID__
-    androidForceFullRepaint();
-#endif
   }
 }
 
@@ -4539,14 +4416,6 @@ void ChartCanvas::RenderAllChartOutlines(ocpnDC &dc, ViewPort &vp) {
 }
 
 void ChartCanvas::RenderChartOutline(ocpnDC &dc, int dbIndex, ViewPort &vp) {
-#ifdef ocpnUSE_GL
-  if (g_bopengl && m_glcc) {
-    /* opengl version specially optimized */
-    m_glcc->RenderChartOutline(dc, dbIndex, vp);
-    return;
-  }
-#endif
-
   if (ChartData->GetDBChartType(dbIndex) == CHART_TYPE_PLUGIN) {
     if (!ChartData->IsChartAvailable(dbIndex)) return;
   }
@@ -4783,20 +4652,6 @@ void ChartCanvas::DrawCanvasData(LLBBox &llbBox, int nWidth, int nHeight, std::v
 	m_b_paint_enable = false;
 	//  If necessary, reconfigure the S52 PLIB
 	UpdateCanvasS52PLIBConfig();
-
-#ifdef ocpnUSE_GL
-	if (!g_bdisable_opengl && m_glcc) m_glcc->Show(g_bopengl);
-
-	if (m_glcc && g_bopengl) {
-		if (!s_in_update) {  // no recursion allowed, seen on lo-spec Mac
-			s_in_update++;
-			m_glcc->Update();
-			s_in_update--;
-		}
-
-		return;
-	}
-#endif
 
 	if ((GetVP().pix_width == 0) || (GetVP().pix_height == 0)) return;
 	
@@ -5218,10 +5073,32 @@ void ChartCanvas::GenerateImageFile(wxMemoryDC* pMemDC, std::string& sIMGFilePat
 	wxImage xImage;
 	if (xbTargetBitmap.IsOk()) {
 		xImage = xbTargetBitmap.ConvertToImage();
+		
+		for (int i = 0; i < xImage.GetWidth(); i++)
+		{
+			for (int j = 0; j < xImage.GetHeight(); j++)
+			{
+				int r = xImage.GetRed(i, j);
+				int g = xImage.GetGreen(i, j);
+				int b = xImage.GetBlue(i, j);
+
+				r = (r - 128) * 1.3 + 128;
+				g = (g - 128) * 1.3 + 128;
+				b = (b - 128) * 1.3 + 128;
+
+				r = wxMin(255, wxMax(0, r));
+				g = wxMin(255, wxMax(0, g));
+				b = wxMin(255, wxMax(0, b));
+
+				xImage.SetRGB(i, j, r, g, b);
+			}
+		}
+
+		xImage.Blur(3);
 
 		wxFileOutputStream xFileOutput(sIMGFilePath);
 		if (xFileOutput.IsOk()) {			
-			xImage.SetOption(wxIMAGE_OPTION_QUALITY, 200);			
+			xImage.SetOption(wxIMAGE_OPTION_QUALITY, 100);			
 			xImage.SaveFile(xFileOutput, wxBITMAP_TYPE_JPEG);			
 		}
 	}
@@ -5358,11 +5235,6 @@ void ChartCanvas::RenderGeorefErrorMap( wxMemoryDC *pmdc, ViewPort *vp)
 
 #endif
 bool ChartCanvas::SetCursor(const wxCursor &c) {
-#ifdef ocpnUSE_GL
-  if (g_bopengl && m_glcc)
-    return m_glcc->SetCursor(c);
-  else
-#endif
     return wxWindow::SetCursor(c);
 }
 
@@ -5378,44 +5250,10 @@ void ChartCanvas::Refresh(bool eraseBackground, const wxRect *rect) {
   //      value to allow this method's Refresh() to complete before potentially
   //      getting another Refresh() in the popup timer handler.  
 
-#ifdef ocpnUSE_GL
-  if (m_glcc && g_bopengl) {
-    //      We need to invalidate the FBO cache to ensure repaint of "grounded"
-    //      overlay objects.
-    if (eraseBackground && m_glcc->UsingFBO()) m_glcc->Invalidate();
-
-    m_glcc->Refresh(eraseBackground,
-                    NULL);  // We always are going to render the entire screen
-                            // anyway, so make
-    // sure that the window managers understand the invalid area
-    // is actually the entire client area.
-
-    //  We need to selectively Refresh some child windows, if they are visible.
-    //  Note that some children are refreshed elsewhere on timer ticks, so don't
-    //  need attention here.
-
-    //      Thumbnail chart
-    if (pthumbwin && pthumbwin->IsShown()) {
-      pthumbwin->Raise();
-      pthumbwin->Refresh(false);
-    }
-
-    //      ChartInfo window
-    if (m_pCIWin && m_pCIWin->IsShown()) {
-      m_pCIWin->Raise();
-      m_pCIWin->Refresh(false);
-    }
-  } else
-#endif
     wxWindow::Refresh(eraseBackground, rect);
 }
 
-void ChartCanvas::Update() {
-  if (m_glcc && g_bopengl) {
-#ifdef ocpnUSE_GL
-    m_glcc->Update();
-#endif
-  } else
+void ChartCanvas::Update() {  
     wxWindow::Update();
 }
 
@@ -5509,15 +5347,12 @@ void ChartCanvas::DrawOverlayObjects(ocpnDC &dc, const wxRegion &ru) {
   GridDraw(dc);
 
   g_overlayCanvas = this;
-  AISDrawAreaNotices(dc, GetVP(), this);
 
   wxDC *pdc = dc.GetDC();
   if (pdc) {
     pdc->DestroyClippingRegion();
     wxDCClipper(*pdc, ru);
   }
-
-  AISDraw(dc, GetVP(), this);
 
   RenderVisibleSectorLights(dc);
 
@@ -5821,8 +5656,6 @@ void ChartCanvas::DrawAllTidesInBBox(ocpnDC &dc, LLBBox &BBox) {
     nominal_icon_size_mm = wxMin(nominal_icon_size_mm, 15);
     float nominal_icon_size_pixels = wxMax(4.0, floor(g_Platform->GetDisplayDPmm() * nominal_icon_size_mm));  // nominal size, but not less than 4 pixel
 #endif
-
-#ifndef __OCPN__ANDROID__
   // another method is simply to declare that the icon shall be x times the size
   // of a raster symbol (e.g.BOYLAT)
   //  This is a bit of a hack that will suffice until until we get fully
@@ -5837,26 +5670,6 @@ void ChartCanvas::DrawAllTidesInBBox(ocpnDC &dc, LLBBox &BBox) {
   height *= g_Platform->GetDisplayDIPMult(this);
   float nominal_icon_size_pixels = 48;  // 3 x 16
   float pix_factor = (2 * height) / nominal_icon_size_pixels;
-
-
-#else
-  //  Yet another method goes like this:
-  //  Set the onscreen size of the symbol
-  //  Compensate for various display resolutions
-  //  Develop empirically, making a symbol about 16 mm tall
-  double symHeight =
-      icon_pixelRefDim /
-      GetPixPerMM();  // from draw instructions, symbol is xx pix high
-  double targetHeight0 = 16.0;
-
-  // But we want to scale the size down for smaller displays
-  double displaySize = m_display_size_mm;
-  displaySize = wxMax(displaySize, 100);
-
-  float targetHeight = wxMin(targetHeight0, displaySize / 15);
-
-  double pix_factor = targetHeight / symHeight;
-#endif
 
   scale_factor *= pix_factor;
 
@@ -6127,7 +5940,6 @@ void ChartCanvas::DrawAllCurrentsInBBox(ocpnDC &dc, LLBBox &BBox) {
     float pix_factor = nominal_icon_size_pixels / icon_pixelRefDim;
 #endif
 
-#ifndef __OCPN__ANDROID__
   // or, x times size of text font
   wxScreenDC sdc;
   int height;
@@ -6135,26 +5947,6 @@ void ChartCanvas::DrawAllCurrentsInBBox(ocpnDC &dc, LLBBox &BBox) {
   height *= g_Platform->GetDisplayDIPMult(this);
   float nominal_icon_size_pixels = 15;
   float pix_factor = (1 * height) / nominal_icon_size_pixels;
-
-#else
-  //  Yet another method goes like this:
-  //  Set the onscreen size of the symbol
-  //  Compensate for various display resolutions
-  //  Develop empirically....
-  float icon_pixelRefDim = 5;
-
-  double symHeight =
-      icon_pixelRefDim /
-      GetPixPerMM();  // from draw instructions, symbol is xx pix high
-  double targetHeight0 = 2.0;
-
-  // But we want to scale the size down for smaller displays
-  double displaySize = m_display_size_mm;
-  displaySize = wxMax(displaySize, 100);
-
-  float targetHeight = wxMin(targetHeight0, displaySize / 50);
-  double pix_factor = targetHeight / symHeight;
-#endif
 
   scale_factor *= pix_factor;
 
@@ -6164,7 +5956,6 @@ void ChartCanvas::DrawAllCurrentsInBBox(ocpnDC &dc, LLBBox &BBox) {
                         1.2;  // soften the scale factor a bit
 
   scale_factor *= user_scale_factor;
-
   scale_factor *= GetContentScaleFactor();
 
   {
@@ -7205,55 +6996,7 @@ WORD *g_pSavedGammaMap;
 #endif
 
 int InitScreenBrightness(void) {
-#ifdef _WIN32
-  if (gFrame->GetPrimaryCanvas()->GetglCanvas() && g_bopengl) {
-    HDC hDC;
-    BOOL bbr;
-
-    if (NULL == hGDI32DLL) {
-      hGDI32DLL = LoadLibrary(TEXT("gdi32.dll"));
-
-      if (NULL != hGDI32DLL) {
-        // Get the entry points of the required functions
-        g_pSetDeviceGammaRamp = (SetDeviceGammaRamp_ptr_type)GetProcAddress(
-            hGDI32DLL, "SetDeviceGammaRamp");
-        g_pGetDeviceGammaRamp = (GetDeviceGammaRamp_ptr_type)GetProcAddress(
-            hGDI32DLL, "GetDeviceGammaRamp");
-
-        //    If the functions are not found, unload the DLL and return false
-        if ((NULL == g_pSetDeviceGammaRamp) ||
-            (NULL == g_pGetDeviceGammaRamp)) {
-          FreeLibrary(hGDI32DLL);
-          hGDI32DLL = NULL;
-          return 0;
-        }
-      }
-    }
-
-    //    Interface is ready, so....
-    //    Get some storage
-    if (!g_pSavedGammaMap) {
-      g_pSavedGammaMap = (WORD *)malloc(3 * 256 * sizeof(WORD));
-
-      hDC = GetDC(NULL);  // Get the full screen DC
-      bbr = g_pGetDeviceGammaRamp(
-          hDC, g_pSavedGammaMap);  // Get the existing ramp table
-      ReleaseDC(NULL, hDC);        // Release the DC
-    }
-
-    //    On Windows hosts, try to adjust the registry to allow full range
-    //    setting of Gamma table This is an undocumented Windows hack.....
-    wxRegKey *pRegKey = new wxRegKey(
-        _T("HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows ")
-        _T("NT\\CurrentVersion\\ICM"));
-    if (!pRegKey->Exists()) pRegKey->Create();
-    pRegKey->SetValue(_T("GdiIcmGammaRange"), 256);
-
-    g_brightness_init = true;
-    return 1;
-  }
-
-  else {
+#ifdef _WIN32  
     if (NULL == g_pcurtain) {
       if (gFrame->CanSetTransparent()) {
         //    Build the curtain window
@@ -7289,18 +7032,13 @@ int InitScreenBrightness(void) {
     }
     g_brightness_init = true;
 
-    return 1;
-  }
+    return 1;  
 #else
   //    Look for "xcalib" application
   wxString cmd(_T ( "xcalib -version" ));
 
   wxArrayString output;
   long r = wxExecute(cmd, output);
-  if (0 != r)
-    wxLogMessage(
-        _T("   External application \"xcalib\" not found. Screen brightness ")
-        _T("not changed."));
 
   g_brightness_init = true;
   return 0;
@@ -7352,72 +7090,6 @@ int SetScreenBrightness(int brightness) {
   //    Under Windows, we use the SetDeviceGammaRamp function which exists in
   //    some (most modern?) versions of gdi32.dll Load the required library dll,
   //    if not already in place
-  if (gFrame->GetPrimaryCanvas()->GetglCanvas() && g_bopengl) {
-    if (g_pcurtain) {
-      g_pcurtain->Close();
-      g_pcurtain->Destroy();
-      g_pcurtain = NULL;
-    }
-
-    InitScreenBrightness();
-
-    if (NULL == hGDI32DLL) {
-      // Unicode stuff.....
-      wchar_t wdll_name[80];
-      MultiByteToWideChar(0, 0, "gdi32.dll", -1, wdll_name, 80);
-      LPCWSTR cstr = wdll_name;
-
-      hGDI32DLL = LoadLibrary(cstr);
-
-      if (NULL != hGDI32DLL) {
-        // Get the entry points of the required functions
-        g_pSetDeviceGammaRamp = (SetDeviceGammaRamp_ptr_type)GetProcAddress(
-            hGDI32DLL, "SetDeviceGammaRamp");
-        g_pGetDeviceGammaRamp = (GetDeviceGammaRamp_ptr_type)GetProcAddress(
-            hGDI32DLL, "GetDeviceGammaRamp");
-
-        //    If the functions are not found, unload the DLL and return false
-        if ((NULL == g_pSetDeviceGammaRamp) ||
-            (NULL == g_pGetDeviceGammaRamp)) {
-          FreeLibrary(hGDI32DLL);
-          hGDI32DLL = NULL;
-          return 0;
-        }
-      }
-    }
-
-    HDC hDC = GetDC(NULL);  // Get the full screen DC
-
-    /*
-     int cmcap = GetDeviceCaps(hDC, COLORMGMTCAPS);
-     if (cmcap != CM_GAMMA_RAMP)
-     {
-     wxLogMessage(_T("    Video hardware does not support brightness control by
-     gamma ramp adjustment.")); return false;
-     }
-     */
-
-    int increment = brightness * 256 / 100;
-
-    // Build the Gamma Ramp table
-    WORD GammaTable[3][256];
-
-    int table_val = 0;
-    for (int i = 0; i < 256; i++) {
-      GammaTable[0][i] = r_gamma_mult * (WORD)table_val;
-      GammaTable[1][i] = g_gamma_mult * (WORD)table_val;
-      GammaTable[2][i] = b_gamma_mult * (WORD)table_val;
-
-      table_val += increment;
-
-      if (table_val > 65535) table_val = 65535;
-    }
-
-    g_pSetDeviceGammaRamp(hDC, GammaTable);  // Set the ramp table
-    ReleaseDC(NULL, hDC);                    // Release the DC
-
-    return 1;
-  } else {
     if (g_pSavedGammaMap) {
       HDC hDC = GetDC(NULL);  // Get the full screen DC
       g_pSetDeviceGammaRamp(hDC,
@@ -7443,8 +7115,6 @@ int SetScreenBrightness(int brightness) {
     }
 
     return 1;
-  }
-
 #endif
 
 #ifdef BRIGHT_XCALIB

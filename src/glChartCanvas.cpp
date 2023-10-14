@@ -32,14 +32,12 @@
 #include <wx/window.h>
 
 #include "ocpn_frame.h"
-#include "ais.h"
 #include "chartbase.h"
 #include "chartdb.h"
 #include "chartimg.h"
 #include "chart_ctx_factory.h"
 #include "chcanv.h"
 #include "ChInfoWin.h"
-#include "cm93.h"  // for chart outline draw
 #include "compass.h"
 #include "config.h"
 #include "emboss_data.h"
@@ -55,7 +53,6 @@
 #include "OCPNPlatform.h"
 #include "own_ship.h"
 #include "piano.h"
-#include "pluginmanager.h"
 #include "Quilt.h"
 #include "RolloverWin.h"
 #include "s52plib.h"
@@ -110,7 +107,6 @@ class OCPNStopWatch {
 
 #include "lz4.h"
 
-#include "cm93.h"  // for chart outline draw
 #include "s57chart.h"  // for ArrayOfS57Obj
 #include "s52plib.h"
 
@@ -363,7 +359,6 @@ void glChartCanvas::Init() {
   m_tideTex = 0;
   m_currentTex = 0;
 
-  m_gldc.SetGLCanvas(this);
   m_gldc.SetDPIFactor(g_BasePlatform->GetDisplayDIPMult(GetParent()));
 
   m_displayScale = 1.0;
@@ -1716,10 +1711,7 @@ void glChartCanvas::DrawFloatingOverlayObjects(ocpnDC &dc) {
 
   // all functions called with m_pParentCanvas-> are still slow because they go
   // through ocpndc
-  AISDrawAreaNotices(dc, m_pParentCanvas->GetVP(), m_pParentCanvas);
 
-  AISDraw(dc, m_pParentCanvas->GetVP(), m_pParentCanvas);
-  
   m_pParentCanvas->RenderVisibleSectorLights(dc);
 
   s57_DrawExtendedLightSectorsGL(dc, m_pParentCanvas->VPoint, m_pParentCanvas->extendedSectorLegs);  
@@ -2653,8 +2645,7 @@ void glChartCanvas::RenderGLAlertMessage() {
 
     h += 2;
     w += 4;
-    int yp =
-        m_pParentCanvas->VPoint.pix_height - GetChartbarHeight() - h - (h / 4);
+    int yp = m_pParentCanvas->VPoint.pix_height - h - (h / 4);
 
     wxRect sbr = m_pParentCanvas->GetScaleBarRect();
     int xp = sbr.x + sbr.width + 5;

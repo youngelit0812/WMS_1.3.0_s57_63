@@ -32,9 +32,7 @@ extern bool g_bopengl;
 //      macro use to one module, and scrub carefully. Anyway, makes a
 //      significant difference with Windows MSVC compiler builds.
 
-#ifndef __OCPN__ANDROID__
 #define GetChartTableEntry(i) GetChartTable()[i]
-#endif
 
 //  Calculating the chart coverage region with extremely complicated shape is
 //  very expensive, put a limit on the complefity of "not covered" areas to
@@ -475,17 +473,12 @@ LLRegion Quilt::GetChartQuiltRegion(const ChartTableEntry &cte, ViewPort &vp) {
     for (int ip = 0; ip < nAuxPlyEntries; ip++) {
       int nAuxPly = cte.GetAuxCntTableEntry(ip);
       if (nAuxPly > AUX_PLY_PERF_LIMIT) {
-        // wxLogMessage("PLY calculation skipped for %s, nAuxPly: %d",
-        // cte.GetpFullPath(), nAuxPly);
         aux_ply_skipped = true;
         break;
       }
       float *pfp = cte.GetpAuxPlyTableEntry(ip);
       LLRegion t_region(nAuxPly, pfp);
       t_region.Intersect(screen_region);
-      //            OCPNRegion t_region = vp.GetVPRegionIntersect(
-      //            screen_region, nAuxPly, pfp,
-      //                                cte.GetScale() );
       if (!t_region.Empty()) chart_region.Union(t_region);
     }
   }
@@ -499,9 +492,6 @@ LLRegion Quilt::GetChartQuiltRegion(const ChartTableEntry &cte, ViewPort &vp) {
     {
       LLRegion t_region(n_ply_entries, pfp);
       t_region.Intersect(screen_region);
-      //            const OCPNRegion t_region = vp.GetVPRegionIntersect(
-      //            screen_region, n_ply_entries, pfp,
-      //                                cte.GetScale() );
       if (!t_region.Empty()) chart_region.Union(t_region);
 
     } else
@@ -514,8 +504,6 @@ LLRegion Quilt::GetChartQuiltRegion(const ChartTableEntry &cte, ViewPort &vp) {
     for (int ip = 0; ip < nNoCovrPlyEntries; ip++) {
       int nNoCovrPly = cte.GetNoCovrCntTableEntry(ip);
       if (nNoCovrPly > NOCOVR_PLY_PERF_LIMIT) {
-        // wxLogMessage("NOCOVR calculation skipped for %s, nNoCovrPly: %d",
-        // cte.GetpFullPath(), nNoCovrPly);
         continue;
       }
       float *pfp = cte.GetpNoCovrPlyTableEntry(ip);
@@ -2360,10 +2348,8 @@ bool Quilt::Compose(const ViewPort &vp_in) {
 
     if (pqp->b_Valid) {
       if (!ChartData->IsChartInCache(pqp->dbIndex)) {
-        wxLogMessage(_T("   Quilt Compose cache miss..."));
         ChartData->OpenChartFromDB(pqp->dbIndex, FULL_INIT);
         if (!ChartData->IsChartInCache(pqp->dbIndex)) {
-          wxLogMessage(_T("    Oops, removing from quilt..."));
           pqp->b_Valid = false;
         }
       }

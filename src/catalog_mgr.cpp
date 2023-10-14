@@ -507,8 +507,7 @@ public:
         ev.SetInt(static_cast<int>(catalog_status::OK_MSG));
       } else {
         ev.SetString("Update error (cannot writé to file)");
-        ev.SetInt(static_cast<int>(catalog_status::OS_ERROR));
-        wxLogMessage("Update error: Cannot write to %s", path.c_str());
+        ev.SetInt(static_cast<int>(catalog_status::OS_ERROR));        
       }
       m_grid->CellDone(ev, 6);
       m_buttons->ActivateOk();
@@ -577,8 +576,7 @@ public:
     }
 
     /* Update status values in grid. */
-    void CellDone(const wxCommandEvent& event, size_t index) {
-      // wxLogMessage("CellDone: event %d", event.GetInt());
+    void CellDone(const wxCommandEvent& event, size_t index) {      
       auto cell = GetSizer()->GetItem(index)->GetWindow();
       auto code = static_cast<catalog_status>(event.GetInt());
       if (code == catalog_status::OK) {

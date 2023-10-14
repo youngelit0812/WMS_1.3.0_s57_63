@@ -72,7 +72,6 @@ class S57ObjectDesc;
 class Quilt;
 class PixelCache;
 class ChInfoWin;
-class glChartCanvas;
 class CanvasMenuHandler;
 class ChartStack;
 class Piano;
@@ -109,13 +108,9 @@ enum { NORTH_UP_MODE, COURSE_UP_MODE, HEAD_UP_MODE };
 // ChartCanvas
 //----------------------------------------------------------------------------
 class ChartCanvas : public wxWindow {
-  friend class glChartCanvas;
-
 public:
   ChartCanvas(wxFrame *frame, int canvasIndex);
   ~ChartCanvas();
-
-  void SetupGlCanvas();
 
   //    Methods
   void PaintCleanup();  
@@ -338,11 +333,7 @@ public:
   void DrawBlinkObjects(void);
 
   void InvalidateGL();
-
-#ifdef ocpnUSE_GL
-  glChartCanvas *GetglCanvas() { return m_glcc; }
-#endif
-
+  
   void JaggyCircle(ocpnDC &dc, wxPen pen, int x, int y, int radius);
 
   bool CheckEdgePan(int x, int y, bool bdragging, int margin, int delta);
@@ -456,7 +447,7 @@ public:
   void DrawCanvasData(LLBBox &llbBox, int, int, std::vector<int>&, std::string&, bool);
   void ResizeChCanvasWH(int, int);
 
-private:
+
   int AdjustQuiltRefChart();
 
   bool UpdateS52State();
@@ -692,10 +683,6 @@ private:
 
   bool m_bzooming, m_bzooming_to_cursor;
   IDX_entry *m_pIDXCandidate;
-
-  //#ifdef ocpnUSE_GL
-  glChartCanvas *m_glcc;
-  //#endif
 
   // Smooth movement member variables
   wxPoint m_pan_drag;

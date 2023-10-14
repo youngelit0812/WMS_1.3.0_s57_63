@@ -243,9 +243,8 @@ LUPHashIndex *LUPArrayContainer::GetArrayIndexHelper(const char *objectName) {
 //-----------------------------------------------------------------------------
 //      s52plib implementation
 //-----------------------------------------------------------------------------
-s52plib::s52plib(const wxString &PLib, OCPNPlatform *pPlatform, bool bResponsive, bool b_forceLegacy) {
+s52plib::s52plib(const wxString &PLib, OCPNPlatform *pPlatform, bool b_forceLegacy) {
   m_pPlatform = pPlatform;
-  m_bResponsive = bResponsive;
 
   m_plib_file = PLib;
 
@@ -396,30 +395,6 @@ void s52plib::InitializeNatsurHash() {
                                                   {56, "Bo"},
                                                   {51, "Wd"}  });
   m_natsur_hash = surmap;
-}
-
-wxFont* s52plib::GetS52PLIBOCPNScaledFont(wxString item, int default_size) {
-  wxFont* dFont = FontMgr::Get().GetFont(item, default_size);
-  int req_size = dFont->GetPointSize();
-
-  if (m_bResponsive) {
-    //      Adjust font size to be no smaller than xx mm actual size
-    double scaled_font_size = dFont->GetPointSize();
-
-    double points_per_mm = m_pPlatform->getFontPointsperPixel() * m_pPlatform->GetDisplayDPmm();
-    double min_scaled_font_size = 3 * points_per_mm;  // smaller than 3 mm is unreadable
-    int nscaled_font_size = wxMax(wxRound(scaled_font_size), min_scaled_font_size);
-
-    if (req_size >= nscaled_font_size) return dFont;
-    else {
-      wxFont* qFont = FontMgr::Get().FindOrCreateFont(
-          nscaled_font_size, dFont->GetFamily(), dFont->GetStyle(),
-          dFont->GetWeight());
-      return qFont;
-    }    
-  }
-
-  return dFont;
 }
 
 void s52plib::SetVPointCompat(int pix_width,int pix_height,
@@ -2437,7 +2412,7 @@ int s52plib::RenderT_All(ObjRazRules *rzRules, Rules *rules, bool bTX) {
       default_size += 2;  // default to 2pt larger than system UI font
 #endif
 
-      wxFont *templateFont = GetS52PLIBOCPNScaledFont(_("ChartTexts"), default_size);
+      wxFont *templateFont = GetOCPNScaledFont(_("ChartTexts"), default_size);
 
         // NOAA ENC fles requests font size up to 20 points, which looks very
         // disproportioned. Let's scale those sizes down to more reasonable
@@ -2794,8 +2769,7 @@ wxImage s52plib::RuleXBMToImage(Rule *prule) {
 //      Symbol is instantiated as a bitmap the first time it is needed
 //      and re-built on color scheme change
 //
-bool s52plib::RenderRasterSymbol(ObjRazRules *rzRules, Rule *prule, wxPoint &r,
-                                 float rot_angle) {
+bool s52plib::RenderRasterSymbol(ObjRazRules *rzRules, Rule *prule, wxPoint &r, float rot_angle) {
 
   double scale_factor = 1.0;
 
@@ -2815,9 +2789,7 @@ bool s52plib::RenderRasterSymbol(ObjRazRules *rzRules, Rule *prule, wxPoint &r,
     //  Set the onscreen size of the symbol
     //  Compensate for various display resolutions
     //  Develop empirically, making a buoy about 4 mm tall
-    double boyHeight =
-        21. /
-        GetPPMM();  // from raster symbol definitions, boylat is xx pix high
+    double boyHeight = 21. / GetPPMM();  // from raster symbol definitions, boylat is xx pix high
 
     double targetHeight0 = 4.0;
 
@@ -6408,11 +6380,6 @@ int s52plib::DoRenderObject(wxDC *pdcin, ObjRazRules *rzRules, bool bCSShowFlag,
           if (strncmp(rzRules->obj->FeatureName, "SOUNDG", 6))
             rzRules->obj->bCS_Added = 1;  // mark the object
         }
-        // printf("s52plib : Render try to RUL_CND_SY 2\n");
-
-        // if (strncmp(rzRules->obj->FeatureName, "SOUNDG", 6) == 0) {
-        //   printf("s52plib: F-SOUND.\n");
-        // }
 
         Rules *rules_last = rules;
         rules = rzRules->obj->CSrules;
@@ -6438,7 +6405,6 @@ int s52plib::DoRenderObject(wxDC *pdcin, ObjRazRules *rzRules, bool bCSShowFlag,
               RenderLC(rzRules, rules);
               break;
             case RUL_MUL_SG:
-              // printf("s52plib: RenderMPS-S\n");
               RenderMPS(rzRules, rules);
               break;  // MultiPoint Sounding
             case RUL_ARC_2C:
@@ -8110,10 +8076,7 @@ int s52plib::RenderToGLAC_GLSL(ObjRazRules *rzRules, Rules *rules) {
           // bind VBO in order to use
           glBindBuffer(GL_ARRAY_BUFFER, vboId);
           GLenum err = glGetError();
-          if (err) {
-            wxString msg;
-            msg.Printf(_T("VBO Error A: %d"), err);
-            wxLogMessage(msg);
+          if (err) {            
             return 0;
           }
 
@@ -8121,20 +8084,14 @@ int s52plib::RenderToGLAC_GLSL(ObjRazRules *rzRules, Rules *rules) {
           glBufferData(GL_ARRAY_BUFFER, ppg_vbo->single_buffer_size,
                        ppg_vbo->single_buffer, GL_STATIC_DRAW);
           err = glGetError();
-          if (err) {
-            wxString msg;
-            msg.Printf(_T("VBO Error B: %d"), err);
-            wxLogMessage(msg);
+          if (err) {            
             return 0;
           }
 
         } else {
           glBindBuffer(GL_ARRAY_BUFFER, rzRules->obj->auxParm0);
           GLenum err = glGetError();
-          if (err) {
-            wxString msg;
-            msg.Printf(_T("VBO Error C: %d"), err);
-            wxLogMessage(msg);
+          if (err) {            
             return 0;
           }
         }

@@ -69,9 +69,6 @@ public:
   OCPNPlatform();
   virtual ~OCPNPlatform();
 
-  //      Internal Device Support
-  static bool hasInternalGPS(wxString profile = _T(""));  // GPS
-
   static bool hasInternalBT(wxString profile = _T(""));  // Bluetooth
   bool startBluetoothScan();
   wxArrayString getBluetoothScanResults();
@@ -93,8 +90,6 @@ public:
 
   void SetDefaultOptions(void);
   void SetUpgradeOptions(wxString vString, wxString vStringConfig);
-
-  void applyExpertMode(bool mode);
 
   //--------------------------------------------------------------------------
   //      Platform Display Support
@@ -128,12 +123,9 @@ public:
   //--------------------------------------------------------------------------
 
     MyConfig *GetConfigObject();
-  wxString GetSupplementalLicenseString();
-
   int DoFileSelectorDialog(wxWindow *parent, wxString *file_spec,
                            wxString Title, wxString initDir,
                            wxString suggestedName, wxString wildcard);  
-
 
   //--------------------------------------------------------------------------
   //      Per-Platform Utility support
@@ -155,13 +147,6 @@ public:
   wxString ChangeLocale(wxString &newLocaleID, wxLocale *presentLocale,
                         wxLocale **newLocale);
 #endif
-
-  //--------------------------------------------------------------------------
-  //      Per-Platform OpenGL support
-  //--------------------------------------------------------------------------
-  bool BuildGLCaps(void *pbuf);
-  bool IsGLCapable();
-
 private:
   wxString m_SData_Dir;
 

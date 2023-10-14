@@ -116,7 +116,7 @@ long Downloader::get_filesize() {
     r = curl_easy_getinfo(curl, CURLINFO_CONTENT_LENGTH_DOWNLOAD, &filesize);
   }
   curl_easy_cleanup(curl);
-  wxLogMessage("filesize %s: %d bytes\n", url.c_str(), (int)filesize);
+  
   if (r != CURLE_OK) {
     errorcode = r;
     error_msg = std::string(curl_errbuf);

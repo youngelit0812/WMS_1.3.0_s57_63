@@ -38,11 +38,6 @@
 #include <wx/filename.h>
 #include <wx/dir.h>
 
-#ifdef __OCPN__ANDROID__
-#include "androidUTIL.h"
-#include "qdebug.h"
-#endif
-
 #include "pugixml.hpp"
 #include "base_platform.h"
 
@@ -51,18 +46,11 @@ wxBitmap LoadSVG(const wxString filename, const unsigned int width,
                  bool use_cache) {
 #ifdef ocpnUSE_SVG
 #ifndef ocpnUSE_wxBitmapBundle
-#ifdef __OCPN__ANDROID__
-  return loadAndroidSVG(filename, width, height);
-#else
   wxSVGDocument svgDoc;
   if (svgDoc.Load(filename))
     return wxBitmap(svgDoc.Render(width, height, NULL, true, true));
   else
     return wxBitmap(width, height);
-#endif
-#else
-#ifdef __OCPN__ANDROID__
-  return loadAndroidSVG(filename, width, height);
 #else
   wxSize s(width, height);
   if (wxFileExists(filename)) {
@@ -87,7 +75,6 @@ wxBitmap LoadSVG(const wxString filename, const unsigned int width,
   } else {
     return wxNullBitmap;  // Or wxBitmap(width, height);?
   }
-#endif
 #endif
 #else
   return wxBitmap(width, height);

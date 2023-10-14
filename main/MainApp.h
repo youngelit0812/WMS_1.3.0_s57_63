@@ -11,13 +11,15 @@
 
 #include <wx/snglinst.h>
 
+std::string getCurrentDateTimeMicrosecond();
+
 class MainApp : public wxApp {
 public:
 	MainApp();
 	~MainApp() {};
 
 	bool OnInit(std::string&, bool);
-	int OnExit();
+	int OnExit(std::string&);
 	void OnInitCmdLine(wxCmdLineParser& parser);
 	bool OnCmdLineParsed(wxCmdLineParser& parser);
 	int GetLayerIndex(std::string&);

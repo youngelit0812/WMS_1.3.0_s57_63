@@ -199,9 +199,6 @@ bool DecompressXZFile(const wxString &input_path, const wxString &output_path) {
 #else  // OCPN_USE_LZMA
 
 bool DecompressXZFile(const wxString &input_path, const wxString &output_path) {
-  wxLogMessage(_T("Failed to decompress: ") + input_path);
-  wxLogMessage(_T("OpenCPN compiled without liblzma support"));
-
   return false;
 }
 

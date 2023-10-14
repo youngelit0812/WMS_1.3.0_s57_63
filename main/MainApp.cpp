@@ -17,6 +17,9 @@
 #include <algorithm>
 #include <limits.h>
 #include <memory>
+#include <chrono>
+#include <ctime>
+#include <iomanip>
 
 #ifdef __WXMSW__
 #include <math.h>
@@ -76,9 +79,6 @@
 #include "comm_vars.h"
 #include "FontMgr.h"
 
-#include "ais_decoder.h"
-#include "AISTargetAlertDialog.h"
-#include "AISTargetQueryDialog.h"
 #include "MainApp.h"
 
 #ifndef __WXMSW__
@@ -187,9 +187,6 @@ double initial_scale_ppm, initial_rotation;
 
 ColorScheme global_color_scheme = GLOBAL_COLOR_SCHEME_DAY;
 
-AISTargetAlertDialog* g_pais_alert_dialog_active;
-AISTargetQueryDialog* g_pais_query_dialog_active;
-
 bool g_bShowCurrent;
 double g_ChartNotRenderScaleFactor;
 int g_LayerIdx;
@@ -278,8 +275,6 @@ wxString g_VisibleLayers;
 wxString g_InvisibleLayers;
 wxString g_VisiNameinLayers;
 wxString g_InVisiNameinLayers;
-
-AisDecoder* g_pAIS;
 
 bool g_bcompression_wait;
 bool g_FlushNavobjChanges;
@@ -673,6 +668,21 @@ wxString newPrivateFileName(wxString home_locn, const char* name,
 	return filePathAndName;
 }
 
+std::string getCurrentDateTimeMicrosecond() {	
+	auto now = std::chrono::system_clock::now();
+	auto now_time = std::chrono::system_clock::to_time_t(now);
+
+	std::stringstream ss;
+	ss << std::put_time(std::localtime(&now_time), "%Y%m%d_%H%M%S");
+
+	auto duration = now.time_since_epoch();
+	auto microseconds = std::chrono::duration_cast<std::chrono::microseconds>(duration).count() % 1000000;
+
+	ss << "_" << std::setfill('0') << std::setw(6) << microseconds;
+
+	return ss.str() + ".";
+}
+
 void AddChartCacheFromDB(ChartDB* pChartDB) {
 	wxArrayPtrVoid* pChartCacheFromDB = pChartDB->GetChartCache();
 
@@ -1005,9 +1015,7 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart) {
 	pConfig->LoadMyConfig(sENCDirPath);
 
 	if (b_initial_load) g_Platform->SetDefaultOptions();
-
-	g_Platform->applyExpertMode(g_bUIexpert);
-
+	
 	g_StyleManager = new ocpnStyle::StyleManager();
 	g_StyleManager->SetStyle(_T("MUI_flat"));
 	if (!g_StyleManager->IsOK()) {
@@ -1065,15 +1073,11 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart) {
 	}
 #endif
 #endif
-
-#else
-	g_bdisable_opengl = true;
 #endif
-
 	g_bdisable_opengl = true;
 	if (g_bdisable_opengl) g_bopengl = false;
 
-#if defined(__UNIX__) && !defined(__OCPN__ANDROID__) && !defined(__WXOSX__)
+#if defined(__UNIX__) && !defined(__WXOSX__)
 	if (g_bSoftwareGL) setenv("LIBGL_ALWAYS_SOFTWARE", "1", 1);
 #endif
 
@@ -1259,17 +1263,6 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart) {
 	//      All set to go.....
 
 	// Process command line option to rebuild cache
-#ifdef ocpnUSE_GL
-	extern ocpnGLOptions g_GLOptions;
-
-	if (g_rebuild_gl_cache && g_bopengl && g_GLOptions.m_bTextureCompression &&
-		g_GLOptions.m_bTextureCompressionCaching) {
-		gFrame->ReloadAllVP();  //  Get a nice chart background loaded
-
-		if (g_glTextureManager) g_glTextureManager->BuildCompressedCache();
-	}
-#endif
-
 	if ((gps_watchdog_timeout_ticks > 60) || (gps_watchdog_timeout_ticks <= 0))
 		gps_watchdog_timeout_ticks = (GPS_TIMEOUT_SECONDS * 1000) / TIMER_GFRAME_1;
 
@@ -1291,22 +1284,7 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart) {
 
 	gFrame->GetPrimaryCanvas()->Enable();
 	gFrame->GetPrimaryCanvas()->SetFocus();
-
-#ifdef ocpnUSE_GL
-	if (!g_bdisable_opengl) {
-		glChartCanvas* pgl =
-			(glChartCanvas*)gFrame->GetPrimaryCanvas()->GetglCanvas();
-		if (pgl &&
-			(pgl->GetRendererString().Find(_T("UniChrome")) != wxNOT_FOUND)) {
-			gFrame->m_defer_size = gFrame->GetSize();
-			gFrame->SetSize(gFrame->m_defer_size.x - 10, gFrame->m_defer_size.y);
-			g_pauimgr->Update();
-			gFrame->m_bdefer_resize = true;
-		}
-	}
-#endif
-
-	//  
+	   	//  
 	gFrame->Raise();
 	gFrame->GetPrimaryCanvas()->Enable();
 	gFrame->GetPrimaryCanvas()->SetFocus();
@@ -1317,7 +1295,7 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart) {
 	wxMilliSleep(500);
 
 	g_bHasHwClock = true;  // by default most computers do have a hwClock
-#if defined(__UNIX__) && !defined(__OCPN__ANDROID__)
+#if defined(__UNIX__)
 	struct stat buffer;
 	g_bHasHwClock =
 		((stat("/dev/rtc", &buffer) == 0) || (stat("/dev/rtc0", &buffer) == 0) ||
@@ -1335,7 +1313,7 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart) {
 	return true;
 }
 
-int MainApp::OnExit() {
+int MainApp::OnExit(std::string& sIMGDirPath) {
 	if (ps52plib) delete ps52plib;
 
 	if (g_pGroupArray) {
@@ -1347,7 +1325,7 @@ int MainApp::OnExit() {
 		delete g_pGroupArray;
 	}
 
-	if (!g_Platform->InitializeLogFile()) return false;
+	g_Platform->CloseLogFile();
 
 	if (pInit_Chart_Dir) delete pInit_Chart_Dir;
 
@@ -1372,6 +1350,20 @@ int MainApp::OnExit() {
 	if (m_checker) delete m_checker;
 
 	g_Platform->OnExit_2();
+
+	wxDir xDirectory(sIMGDirPath);
+	if (xDirectory.IsOpened()) {
+		wxString xsFilename;
+		bool hasFiles = xDirectory.GetFirst(&xsFilename);
+
+		while (hasFiles) {
+			wxString xsFilePath = xDirectory.GetName() + wxFileName::GetPathSeparator() + xsFilename;
+			wxRemoveFile(xsFilePath);
+			hasFiles = xDirectory.GetNext(&xsFilename);
+		}
+
+		xDirectory.Close();
+	}
 
 	return true;
 }
@@ -1402,7 +1394,7 @@ int MainApp::GetLayerIndex(std::string& sLayerCaption) {
 
 bool MainApp::UpdateFrameCanvas(std::string& sBBox, int nWidth, int nHeight, std::string& sLayers, std::string& sIMGFilePath, bool bPNGFlag)
 {
-	if (!gFrame || sBBox.empty() || sLayers.empty() || nWidth < 1 || nWidth > 1800 || nHeight < 1 || nHeight > 900) return false;
+	if (!gFrame || sBBox.empty() || sLayers.empty() || nWidth < 1 || nWidth > 5000 || nHeight < 1 || nHeight > 5000) return false;
 
 	std::vector<std::string> bbox_parts;
 	std::string delimiter = ",";

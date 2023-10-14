@@ -88,7 +88,7 @@ void HTTPSSession::onReceivedRequestInternal(const HTTPRequest& request)
 					return;
 				}
 
-				if ((sImageFormat.find(PNG_FILE_EXTENSION) == std::string::npos && sImageFormat.find(JPEG_FILE_EXTENSION) == std::string::npos) || pConfig->sIMGFilePath.empty()) {
+				if ((sImageFormat.find(PNG_FILE_EXTENSION) == std::string::npos && sImageFormat.find(JPEG_FILE_EXTENSION) == std::string::npos) || pConfig->sIMGDirPath.empty()) {
 					SendResponseAsync(response().MakeGetMapResponse("", false));
 					return;
 				}
@@ -96,7 +96,8 @@ void HTTPSSession::onReceivedRequestInternal(const HTTPRequest& request)
 				bool bPNGImageFlag = true;
 				if (sImageFormat.find(JPEG_FILE_EXTENSION) != std::string::npos) bPNGImageFlag = false;
 
-				std::string sIMGFilePath = bPNGImageFlag ? pConfig->sIMGFilePath + PNG_FILE_EXTENSION : pConfig->sIMGFilePath + JPEG_FILE_EXTENSION;
+				std::string sIMGFilePathPrefix = pConfig->sIMGDirPath + getCurrentDateTimeMicrosecond();				
+				std::string sIMGFilePath = bPNGImageFlag ? sIMGFilePathPrefix + PNG_FILE_EXTENSION : sIMGFilePathPrefix + JPEG_FILE_EXTENSION;
 				if (pMainApp->UpdateFrameCanvas(umParameters.at("bbox"), std::stoi(umParameters.at("width")), std::stoi(umParameters.at("height")), umParameters.at("layers"), sIMGFilePath, bPNGImageFlag)) {
 					SendResponseAsync(response().MakeGetMapResponse(sIMGFilePath, bPNGImageFlag));
 				}

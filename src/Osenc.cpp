@@ -65,8 +65,6 @@ void OpenCPN_OGR_OSENC_ErrorHandler(CPLErr eErrClass, int nError,
     sprintf(buf, "   ERROR %d: %s\n", nError, pszErrorMsg);
 
   if (g_bGDAL_Debug || (CE_Debug != eErrClass)) {  // log every warning or error
-    wxString msg(buf, wxConvUTF8);
-    wxLogMessage(msg);
   }
 
   //      Do not simply return on CE_Fatal errors, as we don't want to abort()
@@ -1026,11 +1024,6 @@ int Osenc::ingestCell(OGRS57DataSource *poS57DS, const wxString &FullPath000,
       LastUpdateDate;  // tentative, adjusted later on failure of update
 
   if (m_bVerbose && (available_updates > m_UPDN)) {
-    wxString msg1;
-    msg1.Printf(
-        _T("Preparing to apply ENC updates, target final update is %3d."),
-        available_updates);
-    wxLogMessage(msg1);
   }
 
   wxString sobj;
@@ -1135,13 +1128,6 @@ int Osenc::ingestCell(OGRS57DataSource *poS57DS, const wxString &FullPath000,
       }
 
       // Inform the user
-      wxString msg(
-          _T("WARNING---ENC Update failed.  Last valid update file is:"));
-      msg += last_successful_update_file.mb_str();
-      wxLogMessage(msg);
-      wxLogMessage(
-          _T("   This ENC exchange set should be updated and SENCs rebuilt."));
-
       if (!m_NoErrDialog) {
 		  printf("S57 Cell Update failed.\nENC features may be incomplete or inaccurate.\n\nCheck the logfile for details.\n");        
       }
@@ -1246,13 +1232,6 @@ int Osenc::ValidateAndCountUpdates(const wxFileName file000,
         {
           //      Copy the valid file to the SENC directory
           bool cpok = wxCopyFile(ufile.GetFullPath(), cp_ufile);
-          if (!cpok) {
-            wxString msg(_T("   Cannot copy temporary working ENC file "));
-            msg.Append(ufile.GetFullPath());
-            msg.Append(_T(" to "));
-            msg.Append(cp_ufile);
-            wxLogMessage(msg);
-          }
         }
 
         else {
@@ -1279,27 +1258,11 @@ int Osenc::ValidateAndCountUpdates(const wxFileName file000,
           //                                                = true;
           //                             }
 
-          wxString msg(
-              _T("WARNING---ENC Update chain incomplete. Substituting NULL ")
-              _T("update file: "));
-          msg += ufile.GetFullName();
-          wxLogMessage(msg);
-          wxLogMessage(_T("   Subsequent ENC updates may produce errors."));
-          wxLogMessage(
-              _T("   This ENC exchange set should be updated and SENCs ")
-              _T("rebuilt."));
-
           bool bstat;
           DDFModule dupdate;
           dupdate.Initialize('3', 'L', 'E', '1', '0', "!!!", 3, 4, 4);
           bstat = !(dupdate.Create(cp_ufile.mb_str()) == 0);
           dupdate.Close();
-
-          if (!bstat) {
-            wxString msg(_T("   Error creating dummy update file: "));
-            msg.Append(cp_ufile);
-            wxLogMessage(msg);
-          }
         }
 
         m_tmpup_array.Add(cp_ufile);
@@ -2210,9 +2173,6 @@ bool Osenc::CreateAreaFeatureGeometryRecord200(S57Reader *poReader,
   error_code = ppg->ErrorCode;
 
   if (error_code) {
-    wxLogMessage(
-        _T("   Warning: S57 SENC Geometry Error %d, Some Features ignored."),
-        ppg->ErrorCode);
     delete ppg;
 
     return false;
@@ -3173,9 +3133,6 @@ bool Osenc::CreateSENCRecord200(OGRFeature *pFeature, Osenc_outstream *stream,
 #endif
       //      All others
       default:
-        msg = _T("   Warning: Unimplemented ogr geotype record ");
-        wxLogMessage(msg);
-
         break;
     }  // switch
   }
@@ -3408,13 +3365,6 @@ bool Osenc::CreateCOVRTables(S57Reader *poReader,
     }
   }
 
-  else  // strange case, found no CATCOV=1 M_COVR objects
-  {
-    wxString msg(_T("   ENC contains no useable M_COVR, CATCOV=1 features:  "));
-    msg.Append(m_FullPath000);
-    wxLogMessage(msg);
-  }
-
   //      And for the NoCovr regions
   m_nNoCOVREntries = noCovrCntArray.size();
 
@@ -3444,13 +3394,6 @@ bool Osenc::CreateCOVRTables(S57Reader *poReader,
   delete pNoCovrPtrArray;
 
   if (0 == m_nCOVREntries) {  // fallback
-    wxString msg(_T("   ENC contains no M_COVR features:  "));
-    msg.Append(m_FullPath000);
-    wxLogMessage(msg);
-
-    msg = _T("   Calculating Chart Extents as fallback.");
-    wxLogMessage(msg);
-
     OGREnvelope Env;
 
     if (poReader->GetExtent(&Env, true) == OGRERR_NONE) {
@@ -3478,12 +3421,7 @@ bool Osenc::CreateCOVRTables(S57Reader *poReader,
 
       *pfe++ = LatMin;
       *pfe++ = LonMin;
-
     } else {
-      wxString msg(_T("   Cannot calculate Extents for ENC:  "));
-      msg.Append(m_FullPath000);
-      wxLogMessage(msg);
-
       return false;  // chart is completely unusable
     }
   }

@@ -152,8 +152,7 @@ public:
 
     LoadIcon("packageBox.svg", m_bitmap, 2 * minsize / 3);
     wxPaintDC dc(this);
-    if (!m_bitmap.IsOk()) {
-      wxLogMessage("AddPluginPanel: bitmap is not OK!");
+    if (!m_bitmap.IsOk()) {      
       return;
     }
     dc.DrawBitmap(m_bitmap, offset, offset, true);
@@ -176,24 +175,8 @@ protected:
 
     if (!ok) {
       auto style = g_StyleManager->GetCurrentStyle();
-      bitmap = wxBitmap(style->GetIcon(_T("default_pi"), size, size));
-      wxLogMessage("Icon: %s not found.", path.GetFullPath());
+      bitmap = wxBitmap(style->GetIcon(_T("default_pi"), size, size));      
     }
-
-    /*
-                wxFileName path(g_Platform->GetSharedDataDir(), plugin_name);
-                path.AppendDir("uidata");
-                bool ok = false;
-                path.SetExt("png");
-                if (path.IsFileReadable()) {
-                    LoadPNGIcon(path.GetFullPath(), size, bitmap);
-                    ok = bitmap.IsOk();
-                }
-                if (!ok) {
-                    auto style = g_StyleManager->GetCurrentStyle();
-                    bitmap = wxBitmap(style->GetIcon( _T("default_pi")));
-                }
-    */
   }
 };
 
@@ -219,8 +202,7 @@ public:
     Bind(wxEVT_COMMAND_BUTTON_CLICKED, &InstallButton::OnClick, this);
   }
 
-  void OnClick(wxCommandEvent& event) {
-    wxLogMessage("Selected update: %s", m_metadata.name.c_str());
+  void OnClick(wxCommandEvent& event) {    
     auto top_parent = GetParent()->GetParent()->GetParent();
     auto dialog = dynamic_cast<UpdateDialog*>(top_parent);
     wxASSERT(dialog != 0);

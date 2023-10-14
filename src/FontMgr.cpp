@@ -322,12 +322,7 @@ void FontMgr::LoadFontNative(wxString *pConfigString, wxString *pNativeDesc) {
   //    Create and add the font to the list
   if (!node) {
     wxFont *nf0 = new wxFont();
-
-#ifdef __OCPN__ANDROID__
-    wxFont *nf = new wxFont(nativefont);
-#else
     wxFont *nf = nf0->New(nativefont);
-#endif
 
     double font_size = nf->GetPointSize();
     wxString s = nf->GetNativeFontInfoDesc();

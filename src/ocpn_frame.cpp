@@ -45,13 +45,11 @@
 #include "dychart.h"
 #include "FontMgr.h"
 #include "georef.h"
-#include "glChartCanvas.h"
 #include "gui_lib.h"
 #include "idents.h"
 #include "Layer.h"
 #include "load_errors_dlg.h"
 #include "MarkInfo.h"
-#include "multiplexer.h"
 #include "N2KParser.h"
 #include "navutil_base.h"
 #include "navutil.h"
@@ -390,8 +388,6 @@ void ParseAllENC(wxWindow * parent) {
 
 	if (count == 0) return;
 
-	printf("ParseAllENC() count = %d\n", count);
-
 	//  Build another array of sorted compression targets.
 	//  We need to do this, as the chart table will not be invariant
 	//  after the compression threads start, so our index array will be invalid.
@@ -454,24 +450,12 @@ void ParseAllENC(wxWindow * parent) {
 			newChart->DisableBackgroundSENC();
 
 			newChart->FindOrCreateSenc(filename, false);  // no progress dialog required
-#ifdef __linux__
-			newChart->PostInit(FULL_INIT, global_color_scheme);
-#endif
-			delete newChart;
-#ifdef __linux__
-			// ..For each canvas, force an S52PLIB reconfig...
-			for (unsigned int i = 0; i < g_canvasArray.GetCount(); i++) {
-				ChartCanvas* cc = g_canvasArray.Item(i);
-				if (cc) cc->ClearS52PLIBStateHash();  // Force a S52 PLIB re-configure
-			}
 
-			gFrame->ReloadAllVP();
-#endif			
+			delete newChart;
 		}
 
-#if defined(__WXMSW__) || defined(__WXOSX__)
 		::wxSafeYield();
-#endif
+		gFrame->Hide();
 	}
 
 #if 0
@@ -604,7 +588,6 @@ static bool isTransparentToolbarInOpenGLOK(void) {
 wxDEFINE_EVENT(BELLS_PLAYED_EVTYPE, wxCommandEvent);
 
 BEGIN_EVENT_TABLE(MyFrame, wxFrame)
-EVT_CLOSE(MyFrame::OnCloseWindow)
 EVT_MENU(wxID_EXIT, MyFrame::OnExit)
 EVT_SIZE(MyFrame::OnSize)
 EVT_MAXIMIZE(MyFrame::OnMaximize)
@@ -784,7 +767,6 @@ void MyFrame::OnBellsFinished(wxCommandEvent &event) {
   wxString soundfile = _T("sounds");
   appendOSDirSlash(&soundfile);
   soundfile.Prepend(g_Platform->GetSharedDataDir());
-  wxLogMessage(_T("Using bells sound file: ") + soundfile);
 
   m_BellsToPlay -= bells;
 }
@@ -973,13 +955,7 @@ void MyFrame::CreateCanvasLayout(bool b_useStoredSize) {
       } else {
         cc = g_canvasArray[0];
       }
-
-      // Verify that glCanvas is ready, if necessary
-      if (g_bopengl) {
-        if (!cc->GetglCanvas()) cc->SetupGlCanvas();
-        cc->GetglCanvas()->Show();
-      }
-
+	  
       g_canvasConfigArray.Item(0)->canvas = cc;
 
       cc->SetDisplaySizeMM(g_display_size_mm);
@@ -1165,206 +1141,6 @@ void MyFrame::FastClose() {
 // Intercept menu commands
 void MyFrame::OnExit(wxCommandEvent &event) {
   quitflag++;  // signal to the timer loop
-}
-
-void MyFrame::OnCloseWindow(wxCloseEvent &event) {
-  //    It is possible that double clicks on application exit box could cause
-  //    re-entrance here Not good, and don't need it anyway, so simply return.
-  if (b_inCloseWindow) {
-    //            wxLogMessage(_T("opencpn::MyFrame re-entering
-    //            OnCloseWindow"));
-    return;
-  }
-
-  // The Options dialog, and other deferred init items, are not fully
-  // initialized. Best to just cancel the close request. This is probably only
-  // reachable on slow hardware, or on Android life-cycle events...
-#ifndef __OCPN__ANDROID__
-  if (!g_bDeferredInitDone) return;
-#endif
-
-#ifndef __WXOSX__
-  if (g_options) {
-    delete g_options;
-    g_options = NULL;
-    g_pOptions = NULL;
-  }
-#endif
-
-  //  If the multithread chart compressor engine is running, cancel the close
-  //  command
-  if (b_inCompressAllCharts) {
-    return;
-  }
-
-  if (bDBUpdateInProgress) return;
-
-  b_inCloseWindow = true;
-
-  ::wxSetCursor(wxCURSOR_WAIT);
-  
-  // Make sure the saved perspective minimum canvas sizes are essentially
-  // undefined
-  for(unsigned int i=0 ; i < g_canvasArray.GetCount() ; i++){
-      ChartCanvas *cc = g_canvasArray.Item(i);
-      if(cc)
-          g_pauimgr->GetPane( cc ).MinSize(10,10);
-  }
-
-  pConfig->SetPath(_T ( "/AUI" ));
-  pConfig->Write(_T ( "AUIPerspective" ), g_pauimgr->SavePerspective());
-
-  g_bquiting = true;
-
-#ifdef ocpnUSE_GL
-  // cancel compression jobs
-  if (g_bopengl) {
-    if (g_glTextureManager) {
-      g_glTextureManager->PurgeJobList();
-
-      if (g_glTextureManager->GetRunningJobCount()) g_bcompression_wait = true;
-    }
-  }
-#endif
-
-  SetCursor(wxCURSOR_WAIT);
-
-  RefreshAllCanvas(true);
-
-  //  This yield is not necessary, since the Update() proceeds syncronously...
-  // wxYield();
-
-  //   Save the saved Screen Brightness
-  RestoreScreenBrightness();
-
-  // Persist the toolbar locations
-
-  g_bframemax = IsMaximized();
-
-  FrameTimer1.Stop();
-  FrameCOGTimer.Stop();
-
-  /*
-  Automatically drop an anchorage waypoint, if enabled
-  On following conditions:
-  1.  In "Cruising" mode, meaning that speed has at some point exceeded 3.0 kts.
-  2.  Current speed is less than 0.5 kts.
-  3.  Opencpn has been up at least 30 minutes
-  4.  And, of course, opencpn is going down now.
-  5.  And if there is no anchor watch set on "anchor..." icon mark           //
-  pjotrc 2010.02.15
-  */
-  if (g_bAutoAnchorMark) {
-    bool watching_anchor = false;  // pjotrc 2010.02.15
-    wxDateTime now = wxDateTime::Now();
-    wxTimeSpan uptime = now.Subtract(g_start_time);
-  }
-
-  // Provisionally save all settings before deactivating plugins
-  pConfig->UpdateSettings();
-  
-  wxLogMessage(_T("opencpn::MyFrame exiting cleanly."));
-
-  quitflag++;
-
-  pConfig->UpdateNavObj();
-
-  // Remove any leftover Routes and Waypoints from config file as they were
-  // saved to navobj before
-  pConfig->DeleteGroup(_T ( "/Routes" ));
-  pConfig->DeleteGroup(_T ( "/Marks" ));
-  pConfig->Flush();
-
-  delete g_printData;
-  delete g_pageSetupData;
-#ifndef __WXQT__
-  SetStatusBar(NULL);
-#endif
-
-  //  Clear the cache, and thus close all charts to avoid memory leaks
-  if (ChartData) ChartData->PurgeCache();
-
-  // pthumbwin is a canvas child
-  // pthumbwin = NULL;
-
-  // Finally ready to destroy the canvases
-  g_focusCanvas = NULL;
-
-  // ..For each canvas...
-  for (unsigned int i = 0; i < g_canvasArray.GetCount(); i++) {
-    ChartCanvas *cc = g_canvasArray.Item(i);
-    if (cc) cc->Destroy();
-  }
-
-  g_canvasArray.Clear();
-
-  g_pauimgr->UnInit();
-  delete g_pauimgr;
-  g_pauimgr = NULL;
-
-  //    Unload the PlugIns
-  //      Note that we are waiting until after the canvas is destroyed,
-  //      since some PlugIns may have created children of canvas.
-  //      Such a PlugIn must stay intact for the canvas dtor to call
-  //      DestoryChildren()
-
-  if (ChartData) ChartData->PurgeCachePlugins();
-
-  delete pConfig;  // All done
-  pConfig = NULL;
-  InitBaseConfig(0);
-  
-  if (pLayerList) {
-    LayerList::iterator it;
-    while (pLayerList->GetCount()) {
-      Layer *lay = pLayerList->GetFirst()->GetData();
-      delete lay;  // automatically removes the layer from list, see Layer dtor
-    }
-  }
-
-  g_bTempShowMenuBar = false;
-
-#define THREAD_WAIT_SECONDS 5
-#ifdef ocpnUSE_GL
-  // The last thing we do is finish the compression threads.
-  // This way the main window is already invisible and to the user
-  // it appears to have finished rather than hanging for several seconds
-  // while the compression threads exit
-  if (g_bopengl && g_glTextureManager &&
-      g_glTextureManager->GetRunningJobCount()) {
-    g_glTextureManager->ClearAllRasterTextures();
-
-    wxLogMessage(_T("Starting compressor pool drain"));
-    wxDateTime now = wxDateTime::Now();
-    time_t stall = now.GetTicks();
-    time_t end = stall + THREAD_WAIT_SECONDS;
-
-    int n_comploop = 0;
-    while (stall < end) {
-      wxDateTime later = wxDateTime::Now();
-      stall = later.GetTicks();
-
-      wxString msg;
-      msg.Printf(_T("Time: %d  Job Count: %d"), n_comploop,
-                 g_glTextureManager->GetRunningJobCount());
-      wxLogMessage(msg);
-      if (!g_glTextureManager->GetRunningJobCount()) break;
-      wxYield();
-      wxSleep(1);
-    }
-
-    wxString fmsg;
-    fmsg.Printf(_T("Finished compressor pool drain..Time: %d  Job Count: %d"),
-                n_comploop, g_glTextureManager->GetRunningJobCount());
-    wxLogMessage(fmsg);
-  }
-  delete g_glTextureManager;
-#endif
-
-  this->Destroy();
-  gFrame = NULL;
-
-  wxLogMessage(_T("gFrame destroyed."));
 }
 
 void MyFrame::OnMove(wxMoveEvent &event) {
@@ -2051,9 +1827,7 @@ void MyFrame::ApplyGlobalSettings(bool bnewtoolbar) {
 wxString _menuText(wxString name, wxString shortcut) {
   wxString menutext;
   menutext << name;
-#ifndef __OCPN__ANDROID__
   menutext << _T("\t") << shortcut;
-#endif
   return menutext;
 }
 
@@ -2804,16 +2578,6 @@ bool MyFrame::ProcessOptionsDialog(int rr, ArrayOfCDI *pNewDirArray) {
     b_need_refresh = true;
   }
 
-#ifdef ocpnUSE_GL
-  if (rr & REBUILD_RASTER_CACHE) {
-    if (g_glTextureManager) {
-      GetPrimaryCanvas()->Disable();
-      g_glTextureManager->BuildCompressedCache();
-      GetPrimaryCanvas()->Enable();
-    }
-  }
-#endif
-
   if ((g_config_display_size_mm > 0)  && g_config_display_size_manual){
     g_display_size_mm = g_config_display_size_mm;
   } else {
@@ -3028,10 +2792,6 @@ void MyFrame::UpdateDB_Canvas() {
 	layerdir.Append(_T("layers"));
 
 	if (wxDir::Exists(layerdir)) {
-		wxString laymsg;
-		laymsg.Printf(wxT("Getting .gpx layer files from: %s"),
-			layerdir.c_str());
-		wxLogMessage(laymsg);
 		pConfig->LoadLayers(layerdir);
 	}
 
@@ -3046,7 +2806,6 @@ void MyFrame::UpdateDB_Canvas() {
 	}
 
 	printf("OnInitTimer...Finalize Canvases \n");
-
 	for (unsigned int i = 0; i < g_canvasArray.GetCount(); i++) {
 		ChartCanvas* cc = g_canvasArray.Item(i);
 		if (cc) {
@@ -3219,7 +2978,6 @@ void MyFrame::OnFrameTimer1(wxTimerEvent &event) {
 
   //      Listen for quitflag to be set, requesting application close
   if (quitflag) {
-    wxLogMessage(_T("Got quitflag from SIGNAL"));
     FrameTimer1.Stop();
     Close();
     return;
@@ -3253,7 +3011,6 @@ void MyFrame::OnFrameTimer1(wxTimerEvent &event) {
       if (bGPSValid) {        
       } else {        
       }
-      wxLogMessage(navmsg);
       g_loglast_time = lognow;
 
       int bells = (hourLOC % 4) * 2;  // 2 bells each hour
@@ -3341,14 +3098,7 @@ void MyFrame::OnFrameTimer1(wxTimerEvent &event) {
   for (unsigned int i = 0; i < g_canvasArray.GetCount(); i++) {
     ChartCanvas *cc = g_canvasArray.Item(i);
     if (cc) {
-      if (g_bopengl) {
-#ifdef ocpnUSE_GL
-        if (cc->GetglCanvas()) {
-          if (m_fixtime - cc->GetglCanvas()->m_last_render_time > 0)
-            bnew_view = true;
-        }
-#endif
-      } else {
+      if (!g_bopengl) {
         //  Invalidate the ChartCanvas window appropriately
         //    In non-follow mode, invalidate the rectangles containing the AIS
         //    targets and the ownship, etc... In follow mode, if there has
@@ -3382,26 +3132,6 @@ void MyFrame::OnFrameTimer1(wxTimerEvent &event) {
       m_bdefer_resize = false;
     }
   }
-
-#ifdef __OCPN__ANDROID__
-
-  // Update the navobj file on a fixed schedule (5 minutes)
-  // This will do nothing if the navobj.changes file is empty and clean
-  if (((g_tick % g_FlushNavobjChangesTimeout) == 0) || g_FlushNavobjChanges) {
-    if (pConfig && pConfig->IsChangesFileDirty()) {
-      androidShowBusyIcon();
-      wxStopWatch update_sw;
-      pConfig->UpdateNavObj(true);
-      wxString msg = wxString::Format(
-          _T("OpenCPN periodic navobj update took %ld ms."), update_sw.Time());
-      wxLogMessage(msg);
-      qDebug() << msg.mb_str();
-      g_FlushNavobjChanges = false;
-      androidHideBusyIcon();
-    }
-  }
-
-#endif
 
   // Reset pending next AppMsgBus notification
   m_b_new_data = false;
@@ -3909,8 +3639,6 @@ void MyFrame::applySettingsString(wxString settings) {
 
   if (rr & TOOLBAR_CHANGED) b_newToolbar = true;
 
-  if (previous_expert != g_bUIexpert) g_Platform->applyExpertMode(g_bUIexpert);
-
   if (b_newToolbar) {
     RequestNewToolbars(true);  // Force rebuild, to pick up bGUIexpert and scale settings.
 
@@ -3932,33 +3660,19 @@ void MyFrame::applySettingsString(wxString settings) {
 
 #ifdef wxHAS_POWER_EVENTS
 void MyFrame::OnSuspending(wxPowerEvent &event) {
-  //   wxDateTime now = wxDateTime::Now();
-  //   printf("OnSuspending...%d\n", now.GetTicks());
-
-  wxLogMessage(_T("System suspend starting..."));
 }
 
 void MyFrame::OnSuspended(wxPowerEvent &WXUNUSED(event)) {
-  //    wxDateTime now = wxDateTime::Now();
-  //    printf("OnSuspended...%d\n", now.GetTicks());
-  wxLogMessage(_T("System is going to suspend."));
 }
 
 void MyFrame::OnSuspendCancel(wxPowerEvent &WXUNUSED(event)) {
-  //    wxDateTime now = wxDateTime::Now();
-  //    printf("OnSuspendCancel...%d\n", now.GetTicks());
-  wxLogMessage(_T("System suspend was cancelled."));
 }
 
 int g_last_resume_ticks;
 void MyFrame::OnResume(wxPowerEvent &WXUNUSED(event)) {
   wxDateTime now = wxDateTime::Now();
-  //    printf("OnResume...%d\n", now.GetTicks());
-  wxLogMessage(_T("System resumed from suspend."));
 
   if ((now.GetTicks() - g_last_resume_ticks) > 5) {
-    wxLogMessage(_T("Restarting streams."));
-    //       printf("   Restarting streams\n");
     g_last_resume_ticks = now.GetTicks();
 //FIXME (dave)
 #if 0
@@ -5099,7 +4813,7 @@ void LoadS57() {
     b_force_legacy = true;
   }
 
-  ps52plib = new s52plib(plib_data, g_Platform, g_bresponsive, b_force_legacy);
+  ps52plib = new s52plib(plib_data, g_Platform, b_force_legacy);
 
   //  If the library load failed, try looking for the s57 data elsewhere
 
@@ -5129,8 +4843,7 @@ void LoadS57() {
     appendOSDirSlash(&plib_data);
     plib_data.Append(_T("S52RAZDS.RLE"));
 
-    wxLogMessage(_T("Looking for s57data in ") + look_data_dir);
-    ps52plib = new s52plib(plib_data, g_Platform, g_bresponsive);
+    ps52plib = new s52plib(plib_data, g_Platform);
 
     if (ps52plib->m_bOK) {
       g_csv_locn = look_data_dir;
@@ -5153,16 +4866,13 @@ void LoadS57() {
     appendOSDirSlash(&plib_data);
     plib_data.Append(_T("S52RAZDS.RLE"));
 
-    wxLogMessage(_T("Looking for s57data in ") + look_data_dir);
-    ps52plib = new s52plib(plib_data, g_Platform, g_bresponsive);
+    ps52plib = new s52plib(plib_data, g_Platform);
 
     if (ps52plib->m_bOK) g_csv_locn = look_data_dir;
   }
 
   if (ps52plib->m_bOK) {
-    wxLogMessage(_T("Using s57data in ") + g_csv_locn);
-    m_pRegistrarMan =
-        new s57RegistrarMgr(g_csv_locn, g_Platform->GetLogFilePtr());
+    m_pRegistrarMan = new s57RegistrarMgr(g_csv_locn, g_Platform->GetLogFilePtr());
 
     //    Preset some object class visibilites for "User Standard" disply
     //    category
@@ -5195,22 +4905,6 @@ void LoadS57() {
     // preset S52 PLIB scale factors
     ps52plib->SetScaleFactorExp(g_Platform->GetChartScaleFactorExp(g_ChartScaleFactor));
     ps52plib-> SetScaleFactorZoomMod(g_chart_zoom_modifier_vector);
-
-#ifdef ocpnUSE_GL
-
-    // Setup PLIB OpenGL options, if enabled
-    extern bool g_b_EnableVBO;
-    extern GLenum g_texture_rectangle_format;    
-
-    if (g_bopengl){      
-      ps52plib->SetGLOptions(
-          glChartCanvas::s_b_useStencil, glChartCanvas::s_b_useStencilAP,
-          glChartCanvas::s_b_useScissorTest, glChartCanvas::s_b_useFBO,
-          g_b_EnableVBO, g_texture_rectangle_format, 1, 1);
-
-    }
-#endif
-
   } else {
     printf("   S52PLIB Initialization failed, disabling Vector charts.\n");
     

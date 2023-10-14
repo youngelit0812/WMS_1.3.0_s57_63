@@ -97,10 +97,6 @@ void ChInfoWin::FitToChars(int char_width, int char_height) {
   adjust = 2;
 #endif
 
-#ifdef __OCPN__ANDROID__
-  adjust = 4;
-#endif
-
   size.x = GetCharWidth() * char_width;
   size.y = GetCharHeight() * (char_height + adjust);
   size.x = wxMin(size.x, g_Platform->getDisplaySize().x - 10);

@@ -37,8 +37,6 @@
 #include <wx/string.h>
 #endif  // precompiled headers
 
-#include "comm_navmsg.h"
-
 class ConnectionParams;
 class ConnectionsDialog;
 
@@ -118,12 +116,10 @@ public:
   wxString GetIOTypeValueStr() const;
   wxString GetFiltersStr() const;
   wxString GetDSPort() const;
-  std::string GetLastDSPort() const;
-  NavAddr::Bus GetLastCommProtocol();
+  std::string GetLastDSPort() const;  
   wxString GetPortStr() const { return Port; }
   void SetPortStr(wxString str) { Port = str; }
   std::string GetStrippedDSPort();
-  NavAddr::Bus GetCommProtocol();
 
   bool SentencePassesFilter(const wxString& sentence, FilterDirection direction);
 

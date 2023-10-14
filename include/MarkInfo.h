@@ -292,11 +292,8 @@ protected:
   wxToggleButton* m_toggleBtnEdit;
   wxButton* m_buttonAddLink;
 
-#ifdef __OCPN__ANDROID__
-  wxChoice* m_comboBoxTideStation;
-#else
   wxComboBox* m_comboBoxTideStation;
-#endif
+
   wxTextCtrl* m_textDescription;
   wxTextCtrl* m_textLatitude;
   wxTextCtrl* m_textLongitude;

@@ -30,8 +30,6 @@
 #include <wx/tokenzr.h>
 #include <wx/confbase.h>
 
-//#include "ais_decoder.h"
-//#include "ais.h"
 #include "CanvasConfig.h"
 #include "chartbase.h"
 #include "chartdb.h"
@@ -46,29 +44,19 @@
 #include "georef.h"
 #include "idents.h"
 #include "Layer.h"
-//#include "multiplexer.h"
-//#include "nav_object_database.h"
 #include "navutil_base.h"
 #include "navutil.h"
 #include "nmea0183.h"
-//#include "NMEALogWindow.h"
 #include "ocpndc.h"
 #include "ocpn_frame.h"
 #include "OCPNPlatform.h"
 #include "OCPN_Sound.h"
 #include "own_ship.h"
-//#include "route.h"
-//#include "routeman.h"
 #include "s52utils.h"
-//#include "select.h"
 #include "styles.h"
 
 #include "s52plib.h"
 
-
-#ifdef ocpnUSE_GL
-#include "glChartCanvas.h"
-#endif
 //    Statics
 extern OCPNPlatform *g_Platform;
 extern MyFrame *gFrame;
@@ -168,7 +156,6 @@ extern bool g_bHideMoored;
 extern double g_ShowMoored_Kts;
 extern bool g_bAllowShowScaled;
 extern bool g_bShowScaled;
-extern int g_ShowScaled_Num;
 extern bool g_bAIS_CPA_Alert;
 extern bool g_bAIS_CPA_Alert_Audio;
 extern int g_ais_alert_dialog_x, g_ais_alert_dialog_y;
@@ -202,12 +189,6 @@ extern int g_Show_Target_Name_Scale;
 extern int g_WplAction;
 bool g_benableAISNameCache;
 bool g_bUseOnlyConfirmedAISName;
-extern int g_ScaledNumWeightSOG;
-extern int g_ScaledNumWeightCPA;
-extern int g_ScaledNumWeightTCPA;
-extern int g_ScaledNumWeightRange;
-extern int g_ScaledNumWeightSizeOfT;
-extern int g_ScaledSizeMinimal;
 
 extern int g_S57_dialog_sx, g_S57_dialog_sy;
 int g_S57_extradialog_sx, g_S57_extradialog_sy;
@@ -323,7 +304,6 @@ extern int g_lastClientRectw;
 extern int g_lastClientRecth;
 
 extern int g_cog_predictor_width;
-extern int g_ais_cog_predictor_width;
 
 extern wxString g_default_wp_icon;
 extern wxString g_default_routepoint_icon;
@@ -415,10 +395,6 @@ wxString g_catalog_channel;
 int g_trackFilterMax;
 double g_mouse_zoom_sensitivity;
 int g_mouse_zoom_sensitivity_ui;
-
-#ifdef ocpnUSE_GL
-extern ocpnGLOptions g_GLOptions;
-#endif
 
 #if !defined(NAN)
 static const long long lNaN = 0xfff8000000000000;
@@ -520,20 +496,6 @@ int MyConfig::LoadMyConfig(std::string& sENCDirPath) {
   //g_maxWPNameLength = 6;
   g_NMEAAPBPrecision = 3;
 
-#ifdef ocpnUSE_GL
-  g_GLOptions.m_bUseAcceleratedPanning = true;
-  g_GLOptions.m_GLPolygonSmoothing = true;
-  g_GLOptions.m_GLLineSmoothing = true;
-  g_GLOptions.m_iTextureDimension = 512;
-  g_GLOptions.m_iTextureMemorySize = 128;
-  if (!g_bGLexpert) {
-    g_GLOptions.m_iTextureMemorySize =
-        wxMax(128, g_GLOptions.m_iTextureMemorySize);
-    g_GLOptions.m_bTextureCompressionCaching =
-        g_GLOptions.m_bTextureCompression;
-  }
-#endif
-
   g_maintoolbar_orient = wxTB_HORIZONTAL;  
   g_restore_dbindex = -1;
   g_ChartNotRenderScaleFactor = 1.5;
@@ -565,17 +527,8 @@ int MyConfig::LoadMyConfig(std::string& sENCDirPath) {
   g_plus_minus_zoom_factor = 2.0;
   g_mouse_zoom_sensitivity = 1.5;
 
-  g_ShowScaled_Num = 10;
-  g_ScaledNumWeightSOG = 50;
-  g_ScaledNumWeightCPA = 60;
-  g_ScaledNumWeightTCPA = 25;
-  g_ScaledNumWeightRange = 75;
-  g_ScaledNumWeightSizeOfT = 25;
-  g_ScaledSizeMinimal = 50;
   g_Show_Target_Name_Scale = 250000;
-  //g_bWplUsePosition = 0;
   g_WplAction = 0;
-  g_ais_cog_predictor_width = 3;
   g_ais_alert_dialog_sx = 200;
   g_ais_alert_dialog_sy = 200;
   g_ais_alert_dialog_x = 200;
@@ -640,21 +593,10 @@ int MyConfig::LoadMyConfig(std::string& sENCDirPath) {
 
     if (g_bdisable_opengl) g_bopengl = false;
 
-#ifdef ocpnUSE_GL
-    if (!g_bGLexpert) {
-      g_GLOptions.m_iTextureMemorySize =
-          wxMax(128, g_GLOptions.m_iTextureMemorySize);
-      g_GLOptions.m_bTextureCompressionCaching =
-          g_GLOptions.m_bTextureCompression;
-    }
-#endif
-
     g_chart_zoom_modifier_raster = wxMin(g_chart_zoom_modifier_raster, 5);
     g_chart_zoom_modifier_raster = wxMax(g_chart_zoom_modifier_raster, -5);
     g_chart_zoom_modifier_vector = wxMin(g_chart_zoom_modifier_vector, 5);
     g_chart_zoom_modifier_vector = wxMax(g_chart_zoom_modifier_vector, -5);
-    //g_cm93_zoom_factor = wxMin(g_cm93_zoom_factor, CM93_ZOOM_FACTOR_MAX_RANGE);
-    //g_cm93_zoom_factor = wxMax(g_cm93_zoom_factor, (-CM93_ZOOM_FACTOR_MAX_RANGE));
 	
     g_defaultBoatSpeedUserUnit = toUsrSpeed(g_defaultBoatSpeed, -1);
     g_n_ownship_min_mm = wxMax(g_n_ownship_min_mm, 2);
@@ -815,28 +757,9 @@ int MyConfig::LoadMyConfigRaw(bool bAsTemplate) {
   Read(_T( "NMEAAPBPrecision" ), &g_NMEAAPBPrecision);
 
   Read(_T( "TalkerIdText" ), &g_TalkerIdText);
-  //Read(_T( "MaxWaypointNameLength" ), &g_maxWPNameLength);
 
   Read(_T( "ShowTrackPointTime" ), &g_bShowTrackPointTime, true);
   /* opengl options */
-#ifdef ocpnUSE_GL
-  if (!bAsTemplate) {
-    Read(_T ( "OpenGLExpert" ), &g_bGLexpert, false);
-    Read(_T ( "UseAcceleratedPanning" ), &g_GLOptions.m_bUseAcceleratedPanning,
-         true);
-    Read(_T ( "GPUTextureCompression" ), &g_GLOptions.m_bTextureCompression);
-    Read(_T ( "GPUTextureCompressionCaching" ),
-         &g_GLOptions.m_bTextureCompressionCaching);
-    Read(_T ( "PolygonSmoothing" ), &g_GLOptions.m_GLPolygonSmoothing);
-    Read(_T ( "LineSmoothing" ), &g_GLOptions.m_GLLineSmoothing);
-    Read(_T ( "GPUTextureDimension" ), &g_GLOptions.m_iTextureDimension);
-    Read(_T ( "GPUTextureMemSize" ), &g_GLOptions.m_iTextureMemorySize);
-    Read(_T ( "DebugOpenGL" ), &g_bDebugOGL);
-    Read(_T ( "OpenGL" ), &g_bopengl);
-    Read(_T ( "SoftwareGL" ), &g_bSoftwareGL);
-  }
-#endif
-
   Read(_T ( "SmoothPanZoom" ), &g_bsmoothpanzoom);
 
   Read(_T ( "ToolbarX"), &g_maintoolbar_x);
@@ -1062,13 +985,6 @@ int MyConfig::LoadMyConfigRaw(bool bAsTemplate) {
   }
 
   Read(_T ("bShowScaledTargets"), &g_bAllowShowScaled);
-  Read(_T ( "AISScaledNumber" ), &g_ShowScaled_Num);
-  Read(_T ( "AISScaledNumberWeightSOG" ), &g_ScaledNumWeightSOG);
-  Read(_T ( "AISScaledNumberWeightCPA" ), &g_ScaledNumWeightCPA);
-  Read(_T ( "AISScaledNumberWeightTCPA" ), &g_ScaledNumWeightTCPA);
-  Read(_T ( "AISScaledNumberWeightRange" ), &g_ScaledNumWeightRange);
-  Read(_T ( "AISScaledNumberWeightSizeOfTarget" ), &g_ScaledNumWeightSizeOfT);
-  Read(_T ( "AISScaledSizeMinimal" ), &g_ScaledSizeMinimal);
   Read(_T("AISShowScaled"), &g_bShowScaled);
 
   Read(_T ( "bShowAreaNotices" ), &g_bShowAreaNotices);
@@ -1077,10 +993,8 @@ int MyConfig::LoadMyConfigRaw(bool bAsTemplate) {
   Read(_T ( "bShowAISName" ), &g_bShowAISName);
   Read(_T ( "AISRealtimeMinSpeedKnots" ), &g_AIS_RealtPred_Kts, 0.7);
   Read(_T ( "bAISAlertDialog" ), &g_bAIS_CPA_Alert);
-  Read(_T ( "ShowAISTargetNameScale" ), &g_Show_Target_Name_Scale);
-  //Read(_T ( "bWplIsAprsPositionReport" ), &g_bWplUsePosition);
+  Read(_T ( "ShowAISTargetNameScale" ), &g_Show_Target_Name_Scale);  
   Read(_T ( "WplSelAction"), &g_WplAction);
-  Read(_T ( "AISCOGPredictorWidth" ), &g_ais_cog_predictor_width);
 
   Read(_T ( "bAISAlertAudio" ), &g_bAIS_CPA_Alert_Audio);
   Read(_T ( "AISAlertAudioFile" ), &g_sAIS_Alert_Sound_File);
@@ -1141,8 +1055,6 @@ int MyConfig::LoadMyConfigRaw(bool bAsTemplate) {
   Read(_T ( "TCDataDir" ), &g_TCData_Dir);  // Get the Directory name
   Read(_T ( "BasemapDir"), &gWorldMapLocation);
   Read(_T ( "pluginInstallDir"), &g_winPluginDir);
-  wxLogMessage("winPluginDir, read from ini file: %s",
-               g_winPluginDir.mb_str().data());
 
   SetPath(_T ( "/Settings/GlobalState" ));
 
@@ -1176,9 +1088,6 @@ int MyConfig::LoadMyConfigRaw(bool bAsTemplate) {
     }
 
     if (fabs(st_lat) < 90.0) vLat = st_lat;
-
-    s.Printf(_T ( "Setting Viewpoint Lat/Lon %g, %g" ), vLat, vLon);
-    wxLogMessage(s);
   }
 
   double st_view_scale, st_rotation;
@@ -1213,9 +1122,6 @@ int MyConfig::LoadMyConfigRaw(bool bAsTemplate) {
     }
 
     if (fabs(lat) < 90.0) gLat = lat;
-
-    s.Printf(_T ( "Setting Ownship Lat/Lon %g, %g" ), gLat, gLon);
-    wxLogMessage(s);
   }
 
   //    Fonts
@@ -1529,13 +1435,11 @@ static bool ReloadPendingChanges(const wxString& changes_path) {
 
   if (size == 0) return false;
 
-  wxLogMessage(_T("Applying NavObjChanges"));
   return  true;
 }
 
 void MyConfig::LoadNavObjects() {
   //      next thing to do is read tracks, etc from the NavObject XML file,
-  wxLogMessage(_T("Loading navobjects from navobj.xml"));
   CreateRotatingNavObjBackup();
 }
 
@@ -1588,15 +1492,9 @@ bool MyConfig::LoadLayers(wxString &path) {
 
         l->m_bIsVisibleOnChart = bLayerViz;
 
-        wxString laymsg;
-        laymsg.Printf(wxT("New layer %d: %s"), l->m_LayerID,
-                      l->m_LayerName.c_str());
-        wxLogMessage(laymsg);
-
         pLayerList->Insert(l);
 
         //  Load the entire file array as a single layer
-
         for (unsigned int i = 0; i < file_array.GetCount(); i++) {
           wxString file_path = file_array[i];
 
@@ -1653,11 +1551,6 @@ bool MyConfig::UpdateChartDirs(ArrayOfCDI &dir_array) {
 
     Write(str_buf, dirn);
   }
-
-// Avoid nonsense log errors...
-#ifdef __OCPN__ANDROID__
-  wxLogNull logNo;
-#endif
 
   Flush();
   return true;
@@ -2112,7 +2005,6 @@ void UI_ImportGPX(wxWindow *parent, bool islayer, wxString dirpath,
 //-------------------------------------------------------------------------
 void SwitchInlandEcdisMode(bool Switch) {
   if (Switch) {
-    wxLogMessage(_T("Switch InlandEcdis mode On"));
     LoadS57();
     // Overule some sewttings to comply with InlandEcdis
     // g_toolbarConfig = _T ( ".....XXXX.X...XX.XXXXXXXXXXXX" );
@@ -2123,7 +2015,6 @@ void SwitchInlandEcdisMode(bool Switch) {
     g_bDrawAISSize = false;
     if (gFrame) gFrame->RequestNewToolbars(true);
   } else {
-    wxLogMessage(_T("Switch InlandEcdis mode Off"));
     // reread the settings overruled by inlandEcdis
     if (pConfig) {
       pConfig->SetPath(_T ( "/Settings" ));
@@ -2169,9 +2060,6 @@ bool LogMessageOnce(const wxString &msg) {
 
   // Not found, so add to the array
   pMessageOnceArray->Add(msg);
-
-  //    And print it
-  wxLogMessage(msg);
   return true;
 }
 

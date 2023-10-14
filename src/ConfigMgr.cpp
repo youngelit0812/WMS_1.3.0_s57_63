@@ -1,26 +1,3 @@
-/***************************************************************************
- *
- * Project:  OpenCPN
- *
- ***************************************************************************
- *   Copyright (C) 2018 by David S. Register                               *
- *                                                                         *
- *   This program is free software; you can redistribute it and/or modify  *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation; either version 2 of the License, or     *
- *   (at your option) any later version.                                   *
- *                                                                         *
- *   This program is distributed in the hope that it will be useful,       *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
- *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program; if not, write to the                         *
- *   Free Software Foundation, Inc.,                                       *
- *   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301,  USA.         *
- **************************************************************************/
-
 #ifdef __MINGW32__
 #undef IPV6STRICT  // mingw FTBS fix:  missing struct ip_mreq
 #include <windows.h>
@@ -52,21 +29,16 @@
 #include "georef.h"
 #include "cutil.h"
 #include "styles.h"
-#include "routeman.h"
 #include "s52utils.h"
 #include "chartbase.h"
 #include "ocpndc.h"
 #include "geodesic.h"
-#include "multiplexer.h"
 #include "nmea0183.h"
-#include "ais.h"
-#include "route.h"
 #include "select.h"
 #include "FontMgr.h"
 #include "Layer.h"
 #include "nav_object_database.h"
 #include "NMEALogWindow.h"
-#include "ais_decoder.h"
 #include "OCPNPlatform.h"
 #include "track.h"
 #include "chartdb.h"
@@ -74,11 +46,6 @@
 #include "ocpn_frame.h"
 
 #include "s52plib.h"
-#include "cm93.h"
-
-#ifdef ocpnUSE_GL
-#include "glChartCanvas.h"
-#endif
 
 // Global statics
 //    Statics
@@ -166,7 +133,6 @@ extern bool g_bHideMoored;
 extern double g_ShowMoored_Kts;
 extern bool g_bAllowShowScaled;
 extern bool g_bShowScaled;
-extern int g_ShowScaled_Num;
 extern bool g_bAIS_CPA_Alert;
 extern bool g_bAIS_CPA_Alert_Audio;
 extern int g_ais_alert_dialog_x, g_ais_alert_dialog_y;
@@ -190,12 +156,6 @@ extern bool g_bShowAISName;
 extern int g_Show_Target_Name_Scale;
 extern int g_WplAction;
 extern bool g_benableAISNameCache;
-extern int g_ScaledNumWeightSOG;
-extern int g_ScaledNumWeightCPA;
-extern int g_ScaledNumWeightTCPA;
-extern int g_ScaledNumWeightRange;
-extern int g_ScaledNumWeightSizeOfT;
-extern int g_ScaledSizeMinimal;
 
 extern int g_S57_dialog_sx, g_S57_dialog_sy;
 
@@ -290,7 +250,6 @@ extern int g_lastClientRectw;
 extern int g_lastClientRecth;
 
 extern int g_cog_predictor_width;
-extern int g_ais_cog_predictor_width;
 
 extern wxString g_default_wp_icon;
 extern ChartGroupArray *g_pGroupArray;
@@ -306,7 +265,6 @@ extern bool g_bresponsive;
 extern bool g_bGLexpert;
 
 extern int g_SENC_LOD_pixels;
-extern ArrayOfMmsiProperties g_MMSI_Props_Array;
 
 extern int g_chart_zoom_modifier_raster;
 extern int g_chart_zoom_modifier_vector;
@@ -342,10 +300,6 @@ extern bool g_useMUI;
 extern wxString g_gpx_path;
 
 extern unsigned int g_canvasConfig;
-
-#ifdef ocpnUSE_GL
-extern ocpnGLOptions g_GLOptions;
-#endif
 
 #if !defined(NAN)
 static const long long lNaN = 0xfff8000000000000;
@@ -582,8 +536,6 @@ void ConfigMgr::Init() {
 
   // Create the catalog, if necessary
   if (!wxFileExists(m_configCatalogName)) {
-    wxLogMessage(_T("Creating new Configs catalog: ") + m_configCatalogName);
-
     OCPNConfigCatalog *cat = new OCPNConfigCatalog();
     cat->SetRootConfigNode();
     cat->SaveFile(m_configCatalogName);
@@ -596,14 +548,11 @@ void ConfigMgr::Init() {
 
   //  Add the default "Recovery" template
   wxString t_title = _("Recovery Template");
-  wxString t_desc =
-      _("Apply this template to return to a known safe configuration");
-  CreateNamedConfig(t_title, t_desc,
-                    _T("11111111-1111-1111-1111-111111111111"));
+  wxString t_desc = _("Apply this template to return to a known safe configuration");
+  CreateNamedConfig(t_title, t_desc, _T("11111111-1111-1111-1111-111111111111"));
 }
 
 bool ConfigMgr::LoadCatalog() {
-  wxLogMessage(_T("Loading Configs catalog: ") + m_configCatalogName);
   m_configCatalog->LoadFile(m_configCatalogName);
 
   // Parse the config catalog
@@ -687,8 +636,6 @@ wxString ConfigMgr::CreateNamedConfig(const wxString &title,
     //  Save the template contents
     wxString templateFullFileName = GetConfigDir() + pConfig->templateFileName;
     if (!SaveTemplate(templateFullFileName)) {
-      wxLogMessage(_T("Unable to save template titled: ") + title +
-                   _T(" as file: ") + templateFullFileName);
       delete pConfig;
       return _T("");
     }
@@ -696,7 +643,6 @@ wxString ConfigMgr::CreateNamedConfig(const wxString &title,
 
   // Add this config to the catalog
   if (!m_configCatalog->AddConfig(pConfig, 0)) {
-    wxLogMessage(_T("Unable to add config to catalog...Title: ") + title);
     delete pConfig;
     return _T("");
   }
@@ -851,13 +797,6 @@ bool ConfigMgr::SaveTemplate(wxString fileName) {
   MyConfig *conf = new MyConfig(fileName);
 
 //  Write out all the elements of a config template....
-
-//  Temporarily suppress logging of trivial non-fatal wxLogSysError() messages
-//  provoked by Android security...
-#ifdef __OCPN__ANDROID__
-  wxLogNull logNo;
-#endif
-
   //    Global options and settings
   conf->SetPath(_T ( "/Settings" ));
 
@@ -1035,16 +974,7 @@ bool ConfigMgr::SaveTemplate(wxString fileName) {
   conf->Write(_T ( "ShowAISTargetNameScale" ), g_Show_Target_Name_Scale);
   conf->Write(_T ( "bWplIsAprsPositionReport" ), g_bWplUsePosition);
   conf->Write(_T ( "WplSelAction" ), g_WplAction);
-  conf->Write(_T ( "AISCOGPredictorWidth" ), g_ais_cog_predictor_width);
-  conf->Write(_T ( "bShowScaledTargets" ), g_bAllowShowScaled);
-  conf->Write(_T ( "AISScaledNumber" ), g_ShowScaled_Num);
-  conf->Write(_T ( "AISScaledNumberWeightSOG" ), g_ScaledNumWeightSOG);
-  conf->Write(_T ( "AISScaledNumberWeightCPA" ), g_ScaledNumWeightCPA);
-  conf->Write(_T ( "AISScaledNumberWeightTCPA" ), g_ScaledNumWeightTCPA);
-  conf->Write(_T ( "AISScaledNumberWeightRange" ), g_ScaledNumWeightRange);
-  conf->Write(_T ( "AISScaledNumberWeightSizeOfTarget" ),
-              g_ScaledNumWeightSizeOfT);
-  conf->Write(_T ( "AISScaledSizeMinimal" ), g_ScaledSizeMinimal);
+  conf->Write(_T ( "bShowScaledTargets" ), g_bAllowShowScaled);   
   conf->Write(_T ( "AISShowScaled"), g_bShowScaled);
 
   conf->Write(_T ( "AlertDialogSizeX" ), g_ais_alert_dialog_sx);
@@ -1196,7 +1126,7 @@ bool ConfigMgr::CheckTemplateGUID(wxString GUID) {
 
 #define CHECK_INT(s, t)                           \
   read_int = *t;                                  \
-  if (!conf->Read(s, &read_int)) wxLogMessage(s); \
+  conf->Read(s, &read_int);						  \
   if ((int)*t != read_int) return false;
 
 #define CHECK_STR(s, t) \
@@ -1301,20 +1231,6 @@ bool ConfigMgr::CheckTemplate(wxString fileName) {
   CHECK_STR(_T( "TalkerIdText" ), g_TalkerIdText);
   CHECK_INT(_T( "MaxWaypointNameLength" ), &g_maxWPNameLength);
 
-  /* opengl options */
-#ifdef ocpnUSE_GL
-  CHECK_INT(_T ( "OpenGLExpert" ), &g_bGLexpert);
-  CHECK_INT(_T ( "UseAcceleratedPanning" ),
-            &g_GLOptions.m_bUseAcceleratedPanning);
-  CHECK_INT(_T ( "GPUTextureCompression" ), &g_GLOptions.m_bTextureCompression);
-  CHECK_INT(_T ( "GPUTextureCompressionCaching" ),
-            &g_GLOptions.m_bTextureCompressionCaching);
-  CHECK_INT(_T ( "PolygonSmoothing" ), &g_GLOptions.m_GLPolygonSmoothing);
-  CHECK_INT(_T ( "LineSmoothing" ), &g_GLOptions.m_GLLineSmoothing);
-  CHECK_INT(_T ( "GPUTextureDimension" ), &g_GLOptions.m_iTextureDimension);
-  CHECK_INT(_T ( "GPUTextureMemSize" ), &g_GLOptions.m_iTextureMemorySize);
-
-#endif
   CHECK_INT(_T ( "SmoothPanZoom" ), &g_bsmoothpanzoom);
 
   CHECK_INT(_T ( "ToolbarX"), &g_maintoolbar_x);
@@ -1451,15 +1367,7 @@ bool ConfigMgr::CheckTemplate(wxString fileName) {
   CHECK_FLT(_T ( "CogArrowMinutes" ), &g_ShowCOG_Mins, 1);      
   CHECK_INT(_T ( "bHideMooredTargets" ), &g_bHideMoored)
   CHECK_FLT(_T ( "MooredTargetMaxSpeedKnots" ), &g_ShowMoored_Kts, .1)
-  CHECK_INT(_T ( "bShowScaledTargets"), &g_bAllowShowScaled);
-  CHECK_INT(_T ( "AISScaledNumber" ), &g_ShowScaled_Num);
-  CHECK_INT(_T ( "AISScaledNumberWeightSOG" ), &g_ScaledNumWeightSOG);
-  CHECK_INT(_T ( "AISScaledNumberWeightCPA" ), &g_ScaledNumWeightCPA);
-  CHECK_INT(_T ( "AISScaledNumberWeightTCPA" ), &g_ScaledNumWeightTCPA);
-  CHECK_INT(_T ( "AISScaledNumberWeightRange" ), &g_ScaledNumWeightRange);
-  CHECK_INT(_T ( "AISScaledNumberWeightSizeOfTarget" ),
-            &g_ScaledNumWeightSizeOfT);
-  CHECK_INT(_T ( "AISScaledSizeMinimal" ), &g_ScaledSizeMinimal);
+  CHECK_INT(_T ( "bShowScaledTargets"), &g_bAllowShowScaled);    
   CHECK_INT(_T(  "AISShowScaled"), &g_bShowScaled);
   CHECK_INT(_T ( "bShowAreaNotices" ), &g_bShowAreaNotices);
   CHECK_INT(_T ( "bDrawAISSize" ), &g_bDrawAISSize);
@@ -1470,7 +1378,6 @@ bool ConfigMgr::CheckTemplate(wxString fileName) {
   CHECK_INT(_T ( "ShowAISTargetNameScale" ), &g_Show_Target_Name_Scale);
   CHECK_INT(_T ( "bWplIsAprsPositionReport" ), &g_bWplUsePosition);
   CHECK_INT(_T ( "WplSelAction" ), &g_WplAction);
-  CHECK_INT(_T ( "AISCOGPredictorWidth" ), &g_ais_cog_predictor_width);
   CHECK_INT(_T ( "bAISAlertAudio" ), &g_bAIS_CPA_Alert_Audio);
   CHECK_STR(_T ( "AISAlertAudioFile" ), g_sAIS_Alert_Sound_File);
   CHECK_INT(_T ( "bAISAlertSuppressMoored" ),

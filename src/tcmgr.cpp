@@ -629,17 +629,6 @@ TC_Error_Code TCMgr::LoadDataSources(std::vector<std::string> &sources) {
     TCDataSource *s = new TCDataSource;
     TC_Error_Code r = s->LoadData(src);
     if (r != TC_NO_ERROR) {
-      wxString msg;
-      msg.Printf(_T("   Error loading Tide/Currect data source %s "),
-                 src.c_str());
-      if (r == TC_FILE_NOT_FOUND)
-        msg += _T("Error Code: TC_FILE_NOT_FOUND");
-      else {
-        wxString msg1;
-        msg1.Printf(_T("Error code: %d"), r);
-        msg += msg1;
-      }
-      wxLogMessage(msg);
       delete s;
     } else {
       m_source_array.Add(s);

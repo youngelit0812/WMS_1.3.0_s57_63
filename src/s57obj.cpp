@@ -31,9 +31,6 @@
 #include "setjmp.h"
 
 #include "ogr_s57.h"
-
-//#include "pluginmanager.h"  // for S57 lights overlay
-
 #include "Osenc.h"
 
 #ifdef __MSVC__
@@ -44,19 +41,12 @@
 #define new DEBUG_NEW
 #endif
 
-#ifdef ocpnUSE_GL
-#include "glChartCanvas.h"
-#endif
-
 #include <algorithm>  // for std::sort
 #include <map>
 
 #ifdef __MSVC__
 #define strncasecmp(x, y, z) _strnicmp(x, y, z)
 #endif
-
-extern bool g_b_EnableVBO;
-
 
 //----------------------------------------------------------------------------------
 //      S57Obj CTOR
@@ -83,14 +73,6 @@ S57Obj::~S57Obj() {
     free(att_array);
 
     if (pPolyTessGeo) {
-#ifdef ocpnUSE_GL
-      bool b_useVBO = g_b_EnableVBO && !auxParm1;  // VBO allowed?
-
-      PolyTriGroup *ppg_vbo = pPolyTessGeo->Get_PolyTriGroup_head();
-      if (b_useVBO && ppg_vbo && auxParm0 > 0 && ppg_vbo->single_buffer) {
-        glDeleteBuffers(1, (GLuint *)&auxParm0);
-      }
-#endif
       delete pPolyTessGeo;
     }
 

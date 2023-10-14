@@ -36,7 +36,7 @@ bool SndfileSoundLoader::Load(const char* path)
         wxLogWarning("Cannot open file %s: %s", path, err);
         return false;
     }
-    wxLogMessage("Using libsndfile sound loader.");
+    
     return true;
 }
 
