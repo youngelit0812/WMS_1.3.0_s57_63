@@ -26,8 +26,7 @@ public:
 
 	bool UpdateFrameCanvas(std::string&, int, int, std::string&, std::string&, bool);	
 
-	bool GetDBCreateResult() { return m_bDBCreateResult; }
-	bool GetSENCFileCreateState();
+	bool GetDBCreateResult() { return m_bDBCreateResult; }	
 #ifdef LINUX_CRASHRPT
 	//! fatal exeption handling
 	void OnFatalException();

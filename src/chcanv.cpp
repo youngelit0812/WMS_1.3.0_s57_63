@@ -478,9 +478,6 @@ ChartCanvas::ChartCanvas(wxFrame *frame, int canvasIndex)
 
   m_canvas_width = 1000;
 
-  m_overzoomTextWidth = 0;
-  m_overzoomTextHeight = 0;
-
   //    Create the default world chart
   pWorldBackgroundChart = new GSHHSChart;
 
@@ -491,9 +488,7 @@ ChartCanvas::ChartCanvas(wxFrame *frame, int canvasIndex)
 
   CreateDepthUnitEmbossMaps(GLOBAL_COLOR_SCHEME_DAY);
 
-  m_pEM_OverZoom = NULL;
-  SetOverzoomFont();
-  CreateOZEmbossMapData(GLOBAL_COLOR_SCHEME_DAY);
+  m_pEM_OverZoom = NULL;  
 
   //    Build icons for tide/current points
   ocpnStyle::Style *style = g_StyleManager->GetCurrentStyle();
@@ -786,7 +781,6 @@ void ChartCanvas::RebuildCursors() {
 
 void ChartCanvas::CanvasApplyLocale() {
   CreateDepthUnitEmbossMaps(m_cs);
-  CreateOZEmbossMapData(m_cs);
 }
 
 #ifdef HAVE_WX_GESTURE_EVENTS
@@ -2248,7 +2242,6 @@ void ChartCanvas::SetColorScheme(ColorScheme cs) {
   }
 
   CreateDepthUnitEmbossMaps(cs);
-  CreateOZEmbossMapData(cs);
 
   //  Set up fog effect base color
   m_fog_color = wxColor(
@@ -2594,171 +2587,14 @@ void ChartCanvas::GetCanvasPixPoint(double x, double y, double &lat,
 }
 
 void ChartCanvas::ZoomCanvasSimple(double factor) {
-  DoZoomCanvas(factor, false);
-  extendedSectorLegs.clear();
 }
 
 void ChartCanvas::ZoomCanvas(double factor, bool can_zoom_to_cursor,
                              bool stoptimer) {
-  m_bzooming_to_cursor = can_zoom_to_cursor && g_bEnableZoomToCursor;
 
-  if (g_bsmoothpanzoom) {
-    if (StartTimedMovement(stoptimer)) {
-      m_mustmove += 150; /* for quick presses register as 200 ms duration */
-      m_zoom_factor = factor;
-    }
-
-    m_zoom_target = VPoint.chart_scale / factor;
-  } else {
-    if (m_modkeys == wxMOD_ALT) factor = pow(factor, .15);
-
-    DoZoomCanvas(factor, can_zoom_to_cursor);
-  }
-
-  extendedSectorLegs.clear();
 }
 
 void ChartCanvas::DoZoomCanvas(double factor, bool can_zoom_to_cursor) {
-  // possible on startup
-  if (!ChartData) return;
-  if (!m_pCurrentStack) return;
-
-  /* TODO: queue the quilted loading code to a background thread
-     so yield is never called from here, and also rendering is not delayed */
-
-  //    Cannot allow Yield() re-entrancy here
-  if (m_bzooming) return;
-  m_bzooming = true;
-
-  double old_ppm = GetVP().view_scale_ppm;
-
-  //  Capture current cursor position for zoom to cursor
-  double zlat = m_cursor_lat;
-  double zlon = m_cursor_lon;
-
-  double proposed_scale_onscreen =
-      GetVP().chart_scale /
-      factor;  // GetCanvasScaleFactor() / ( GetVPScale() * factor );
-  bool b_do_zoom = false;
-
-  if (factor > 1) {
-    b_do_zoom = true;
-
-    // double zoom_factor = factor;
-
-    ChartBase *pc = NULL;
-
-    if (!VPoint.b_quilt) {
-      pc = m_singleChart;
-    } else {
-      int new_db_index = m_pQuilt->AdjustRefOnZoomIn(proposed_scale_onscreen);
-      if (new_db_index >= 0)
-        pc = ChartData->OpenChartFromDB(new_db_index, FULL_INIT);
-
-      if (m_pCurrentStack)
-        m_pCurrentStack->SetCurrentEntryFromdbIndex(
-            new_db_index);  // highlite the correct bar entry
-    }
-
-    if (pc) {
-      //             double target_scale_ppm = GetVPScale() * zoom_factor;
-      //             proposed_scale_onscreen = GetCanvasScaleFactor() /
-      //             target_scale_ppm;
-
-      //  Query the chart to determine the appropriate zoom range
-      double min_allowed_scale =
-          g_maxzoomin;  // Roughly, latitude dependent for mercator charts
-
-      if (proposed_scale_onscreen < min_allowed_scale) {
-        if (min_allowed_scale == GetCanvasScaleFactor() / (GetVPScale())) {
-          m_zoom_factor = 1; /* stop zooming */
-          b_do_zoom = false;
-        } else
-          proposed_scale_onscreen = min_allowed_scale;
-      }
-
-    } else {
-      proposed_scale_onscreen = wxMax(proposed_scale_onscreen, g_maxzoomin);
-    }
-
-  } else if (factor < 1) {
-    b_do_zoom = true;
-
-    ChartBase *pc = NULL;
-
-    bool b_smallest = false;
-
-    if (!VPoint.b_quilt) {  // not quilted
-      pc = m_singleChart;
-
-      if (pc) {
-        //      If m_singleChart is not on the screen, unbound the zoomout
-        LLBBox viewbox = VPoint.GetBBox();
-        //                BoundingBox chart_box;
-        int current_index = ChartData->FinddbIndex(pc->GetFullPath());
-        double max_allowed_scale;
-
-        max_allowed_scale = GetCanvasScaleFactor() / m_absolute_min_scale_ppm;
-
-        //  We can allow essentially unbounded zoomout in single chart mode
-        //                if( ChartData->GetDBBoundingBox( current_index,
-        //                &chart_box ) &&
-        //                    !viewbox.IntersectOut( chart_box ) )
-        //                    //  Clamp the minimum scale zoom-out to the value
-        //                    specified by the chart max_allowed_scale =
-        //                    wxMin(max_allowed_scale, 4.0 *
-        //                                              pc->GetNormalScaleMax(
-        //                                              GetCanvasScaleFactor(),
-        //                                                                     GetCanvasWidth() ) );
-        if (proposed_scale_onscreen > max_allowed_scale) {
-          m_zoom_factor = 1; /* stop zooming */
-          proposed_scale_onscreen = max_allowed_scale;
-        }
-      }
-
-    } else {
-      int new_db_index = m_pQuilt->AdjustRefOnZoomOut(proposed_scale_onscreen);
-      if (new_db_index >= 0)
-        pc = ChartData->OpenChartFromDB(new_db_index, FULL_INIT);
-
-      if (m_pCurrentStack)
-        m_pCurrentStack->SetCurrentEntryFromdbIndex(
-            new_db_index);  // highlite the correct bar entry
-
-      b_smallest = m_pQuilt->IsChartSmallestScale(new_db_index);
-
-      if (b_smallest || (0 == m_pQuilt->GetExtendedStackCount()))
-        proposed_scale_onscreen =
-            wxMin(proposed_scale_onscreen,
-                  GetCanvasScaleFactor() / m_absolute_min_scale_ppm);
-    }
-
-    // set a minimum scale
-    if ((GetCanvasScaleFactor() / proposed_scale_onscreen) <
-        m_absolute_min_scale_ppm)
-      b_do_zoom = false;
-  }
-
-  double new_scale =
-      GetVPScale() * (GetVP().chart_scale / proposed_scale_onscreen);
-
-  if (b_do_zoom) {
-    if (can_zoom_to_cursor && g_bEnableZoomToCursor) {
-      //  Arrange to combine the zoom and pan into one operation for smoother
-      //  appearance
-      SetVPScale(new_scale, false);  // adjust, but deferred refresh
-
-      wxPoint r;
-      GetCanvasPointPix(zlat, zlon, &r);
-      PanCanvas(r.x - mouse_x, r.y - mouse_y);  // this will give the Refresh()
-    } else {
-      SetVPScale(new_scale);
-
-      if (m_bFollow) DoCanvasUpdate();
-    }
-  }
-
-  m_bzooming = false;
 }
 int rot;
 void ChartCanvas::RotateCanvas(double dir) {
@@ -3133,12 +2969,12 @@ bool ChartCanvas::SetViewPoint(double lat, double lon, double scale_ppm,
   else if (VPoint.m_projection_type == PROJECTION_UNKNOWN) VPoint.SetProjectionType(PROJECTION_MERCATOR);
 
   // don't allow latitude above 88 for mercator (90 is infinity)
-  if (VPoint.m_projection_type == PROJECTION_MERCATOR || VPoint.m_projection_type == PROJECTION_TRANSVERSE_MERCATOR) {
+  /* if (VPoint.m_projection_type == PROJECTION_MERCATOR || VPoint.m_projection_type == PROJECTION_TRANSVERSE_MERCATOR) {
     if (VPoint.clat > 89.5)
       VPoint.clat = 89.5;
     else if (VPoint.clat < -89.5)
       VPoint.clat = -89.5;
-  }
+  } */
 
   // don't zoom out too far for transverse mercator polyconic until we resolve
   // issues
@@ -3947,7 +3783,7 @@ void ChartCanvas::GridDraw(ocpnDC &dc) {
 	lat = ceil(slat / gridlatMajor) * gridlatMajor;
 
 	// Draw Major latitude grid lines and text
-	while (lat < nlat) {
+	while (lat <= nlat) {
 		wxPoint r;		
 		GetCanvasPointPixVP(GetVP(), lat, (elon + wlon) / 2, &r);
 		dc.DrawLine(0, r.y, w, r.y, false);  // draw grid line		
@@ -4630,8 +4466,101 @@ void ChartCanvas::UpdateCanvasS52PLIBConfig() {
 int spaint;
 int s_in_update;
 
+void ChartCanvas::RescaleCanvas(LLBBox& llbBox)
+{
+	double factor;
+	int nCompareResult = GetVP().GetOldBBox().CompareWithOther(llbBox);	
+	if (nCompareResult >= 0) {
+		factor = g_plus_minus_zoom_factor;
+	}
+	else {
+		factor = 1.0 / g_plus_minus_zoom_factor;
+	}
+
+	if (!ChartData) return;
+	if (!m_pCurrentStack) return;		
+	
+	if (m_bzooming) return;
+	m_bzooming = true;
+
+	double zlat = m_cursor_lat;
+	double zlon = m_cursor_lon;
+
+	double proposed_scale_onscreen = GetVP().chart_scale / factor;
+	bool b_do_zoom = false;
+
+	if (factor > 1) {
+		b_do_zoom = true;
+		ChartBase* pc = NULL;
+		if (!VPoint.b_quilt) {
+			pc = m_singleChart;
+		}
+		else {
+			int new_db_index = m_pQuilt->AdjustRefOnZoomIn(proposed_scale_onscreen);			
+			if (m_pCurrentStack) {
+				m_pCurrentStack->SetCurrentEntryFromdbIndex(new_db_index);  // highlite the correct bar entry
+			}
+		}
+
+		if (pc) {
+			//  Query the chart to determine the appropriate zoom range
+			double min_allowed_scale = g_maxzoomin;  // Roughly, latitude dependent for mercator charts
+
+			if (proposed_scale_onscreen < min_allowed_scale) {
+				if (min_allowed_scale == GetCanvasScaleFactor() / (GetVPScale())) {
+					m_zoom_factor = 1; /* stop zooming */
+					b_do_zoom = false;
+				}
+				else {
+					proposed_scale_onscreen = min_allowed_scale;
+				}
+			}
+		} else {
+			proposed_scale_onscreen = wxMax(proposed_scale_onscreen, g_maxzoomin);
+		}
+	} else if (factor < 1) {
+		b_do_zoom = true;
+
+		ChartBase* pc = NULL;
+
+		bool b_smallest = false;
+
+		if (!VPoint.b_quilt) {  // not quilted
+			pc = m_singleChart;
+
+			if (pc) {
+				double max_allowed_scale;
+				max_allowed_scale = GetCanvasScaleFactor() / m_absolute_min_scale_ppm;
+
+				if (proposed_scale_onscreen > max_allowed_scale) {
+					m_zoom_factor = 1; /* stop zooming */
+					proposed_scale_onscreen = max_allowed_scale;
+				}
+			}
+		}
+		else {
+			int new_db_index = m_pQuilt->AdjustRefOnZoomOut(proposed_scale_onscreen);
+			if (m_pCurrentStack) {
+				m_pCurrentStack->SetCurrentEntryFromdbIndex(new_db_index);  // highlite the correct bar entry
+			}
+
+			b_smallest = m_pQuilt->IsChartSmallestScale(new_db_index);
+			if (b_smallest || (0 == m_pQuilt->GetExtendedStackCount())) {
+				proposed_scale_onscreen = wxMin(proposed_scale_onscreen, GetCanvasScaleFactor() / m_absolute_min_scale_ppm);
+			}
+		}
+
+		// set a minimum scale
+		if ((GetCanvasScaleFactor() / proposed_scale_onscreen) < m_absolute_min_scale_ppm) b_do_zoom = false;
+	}
+
+	m_bzooming = false;
+}
+
 void ChartCanvas::DrawCanvasData(LLBBox &llbBox, int nWidth, int nHeight, std::vector<int>& vnLayers, std::string& sIMGFilePath, bool bPNGFlag) {
+	RescaleCanvas(llbBox);
 	SetViewPointByCorners(llbBox.GetMinLat(), llbBox.GetMinLon(), llbBox.GetMaxLat(), llbBox.GetMaxLon());	
+	GetVP().SetOldBBox(llbBox);
 
 	SetShowENCText(HasLayer(vnLayers, LAYER_TEXT));
 	SetShowENCLightDesc(HasLayer(vnLayers, LAYER_LDESCR));
@@ -4655,6 +4584,11 @@ void ChartCanvas::DrawCanvasData(LLBBox &llbBox, int nWidth, int nHeight, std::v
 
 	if ((GetVP().pix_width == 0) || (GetVP().pix_height == 0)) return;
 	
+	wxRegion ru(0, 0, GetVP().pix_width, GetVP().pix_height);
+
+	int rx, ry, rwidth, rheight;
+	ru.GetBox(rx, ry, rwidth, rheight);
+
 #ifdef ocpnUSE_DIBSECTION
 	ocpnMemDC temp_dc;
 #else
@@ -4669,11 +4603,39 @@ void ChartCanvas::DrawCanvasData(LLBBox &llbBox, int nWidth, int nHeight, std::v
 	if (!style->chartStatusWindowTransparent && g_bShowChartBar)
 		height += m_Piano->GetHeight();
 #endif  // __WXMAC__	
-	wxRegion rgn_blit(0, 0, GetVP().pix_width, height);
+	wxRegion rgn_chart(0, 0, GetVP().pix_width, height);
+
+	//    In case Thumbnail is shown, set up dc clipper and blt iterator regions
+	if (pthumbwin) {
+		int thumbx, thumby, thumbsx, thumbsy;
+		pthumbwin->GetPosition(&thumbx, &thumby);
+		pthumbwin->GetSize(&thumbsx, &thumbsy);
+		wxRegion rgn_thumbwin(thumbx, thumby, thumbsx - 1, thumbsy - 1);
+
+		if (pthumbwin->IsShown()) {
+			rgn_chart.Subtract(rgn_thumbwin);
+			ru.Subtract(rgn_thumbwin);
+		}
+	}
+
+	wxRegion rgn_blit = ru;
+
+	bool b_newview = true;
+
+	if ((m_cache_vp.view_scale_ppm == VPoint.view_scale_ppm) &&
+		(m_cache_vp.rotation == VPoint.rotation) &&
+		(m_cache_vp.clat == VPoint.clat) && (m_cache_vp.clon == VPoint.clon) &&
+		m_cache_vp.IsValid()) {
+		b_newview = false;
+	}
+
 	//  If the ViewPort is skewed or rotated, we may be able to use the cached
 	//  rotated bitmap.
 	bool b_rcache_ok = false;
-	if (fabs(VPoint.skew) > 0.01 || fabs(VPoint.rotation) > 0.01) b_rcache_ok = true;
+	if (fabs(VPoint.skew) > 0.01 || fabs(VPoint.rotation) > 0.01) {
+		//b_rcache_ok = true;
+		b_rcache_ok = !b_newview;
+	}
 
 	//  Make a special VP
 	if (VPoint.b_MercatorProjectionOverride) VPoint.SetProjectionType(PROJECTION_MERCATOR);
@@ -4683,13 +4645,20 @@ void ChartCanvas::DrawCanvasData(LLBBox &llbBox, int nWidth, int nHeight, std::v
 	svp.pix_height = svp.rv_rect.height;
 
 	OCPNRegion chart_get_region(wxRect(0, 0, svp.pix_width, svp.pix_height));
-	
+	if (b_rcache_ok) chart_get_region.Clear();
+
 	//  Blit pan acceleration
 	if (VPoint.b_quilt)  // quilted
 	{
 		if (!m_pQuilt || !m_pQuilt->IsComposed()) return;  // not ready
 
 		bool bvectorQuilt = m_pQuilt->IsQuiltVector();
+
+		bool busy = false;
+		if (bvectorQuilt && (m_cache_vp.view_scale_ppm != VPoint.view_scale_ppm || m_cache_vp.rotation != VPoint.rotation)) {		
+			busy = true;
+		}
+
 		if ((m_working_bm.GetWidth() != svp.pix_width) || (m_working_bm.GetHeight() != svp.pix_height)) {
 			m_working_bm.Create(svp.pix_width, svp.pix_height, -1);  // make sure the target is big enoug
 		}
@@ -4704,76 +4673,98 @@ void ChartCanvas::DrawCanvasData(LLBBox &llbBox, int nWidth, int nHeight, std::v
 				}
 			}
 
-			wxPoint c_old = VPoint.GetPixFromLL(VPoint.clat, VPoint.clon);
-			wxPoint c_new = m_bm_cache_vp.GetPixFromLL(VPoint.clat, VPoint.clon);
+			if (m_bm_cache_vp.IsValid() && m_cache_vp.IsValid()) {
+				if (b_newview) {
+					wxPoint c_old = VPoint.GetPixFromLL(VPoint.clat, VPoint.clon);
+					wxPoint c_new = m_bm_cache_vp.GetPixFromLL(VPoint.clat, VPoint.clon);
 
-			int dy = c_new.y - c_old.y;
-			int dx = c_new.x - c_old.x;
+					int dy = c_new.y - c_old.y;
+					int dx = c_new.x - c_old.x;
 
-			if (m_pQuilt->IsVPBlittable(VPoint, dx, dy, true)) {
-				if (dx || dy) {
-					//  Blit the reuseable portion of the cached wxBitmap to a working
-					//  bitmap
-					temp_dc.SelectObject(m_working_bm);
+					if (m_pQuilt->IsVPBlittable(VPoint, dx, dy, true)) {
+						if (dx || dy) {
+							//  Blit the reuseable portion of the cached wxBitmap to a working
+							//  bitmap
+							temp_dc.SelectObject(m_working_bm);
 
-					wxMemoryDC cache_dc;
-					cache_dc.SelectObject(m_cached_chart_bm);
+							wxMemoryDC cache_dc;
+							cache_dc.SelectObject(m_cached_chart_bm);
 
-					if (dy > 0) {
-						if (dx > 0) {
-							temp_dc.Blit(0, 0, VPoint.pix_width - dx,
-								VPoint.pix_height - dy, &cache_dc, dx, dy);
+							if (dy > 0) {
+								if (dx > 0) {
+									temp_dc.Blit(0, 0, VPoint.pix_width - dx,
+										VPoint.pix_height - dy, &cache_dc, dx, dy);
+								}
+								else {
+									temp_dc.Blit(-dx, 0, VPoint.pix_width + dx,
+										VPoint.pix_height - dy, &cache_dc, 0, dy);
+								}
+							}
+							else {
+								if (dx > 0) {
+									temp_dc.Blit(0, -dy, VPoint.pix_width - dx,
+										VPoint.pix_height + dy, &cache_dc, dx, 0);
+								}
+								else {
+									temp_dc.Blit(-dx, -dy, VPoint.pix_width + dx,
+										VPoint.pix_height + dy, &cache_dc, 0, 0);
+								}
+							}
+
+							OCPNRegion update_region;
+							if (dy) {
+								if (dy > 0)
+									update_region.Union(
+										wxRect(0, VPoint.pix_height - dy, VPoint.pix_width, dy));
+								else
+									update_region.Union(wxRect(0, 0, VPoint.pix_width, -dy));
+							}
+
+							if (dx) {
+								if (dx > 0)
+									update_region.Union(
+										wxRect(VPoint.pix_width - dx, 0, dx, VPoint.pix_height));
+								else
+									update_region.Union(wxRect(0, 0, -dx, VPoint.pix_height));
+							}
+
+							//  Render the new region
+							m_pQuilt->RenderQuiltRegionViewOnDCNoText(temp_dc, svp, update_region, HasLayer(vnLayers, LAYER_DEPTHS), HasLayer(vnLayers, LAYER_LIGHTS), HasLayer(vnLayers, LAYER_BLLABELS), HasLayer(vnLayers, LAYER_LDESCR), HasLayer(vnLayers, LAYER_AINFO), HasLayer(vnLayers, LAYER_SLVIS));
+							cache_dc.SelectObject(wxNullBitmap);
 						}
 						else {
-							temp_dc.Blit(-dx, 0, VPoint.pix_width + dx,
-								VPoint.pix_height - dy, &cache_dc, 0, dy);
+							//    No sensible (dx, dy) change in the view, so use the cached
+							//    member bitmap
+							temp_dc.SelectObject(m_cached_chart_bm);
+							b_save = false;
 						}
-					}
-					else {
-						if (dx > 0) {
-							temp_dc.Blit(0, -dy, VPoint.pix_width - dx,
-								VPoint.pix_height + dy, &cache_dc, dx, 0);
-						}
-						else {
-							temp_dc.Blit(-dx, -dy, VPoint.pix_width + dx,
-								VPoint.pix_height + dy, &cache_dc, 0, 0);
-						}
-					}
 
-					OCPNRegion update_region;
-					if (dy) {
-						if (dy > 0)
-							update_region.Union(
-								wxRect(0, VPoint.pix_height - dy, VPoint.pix_width, dy));
-						else
-							update_region.Union(wxRect(0, 0, VPoint.pix_width, -dy));
-					}
+						m_pQuilt->ComputeRenderRegion(svp, chart_get_region);
+					} 
+					else {  // not blitable				
+						temp_dc.SelectObject(m_working_bm);
 
-					if (dx) {
-						if (dx > 0)
-							update_region.Union(
-								wxRect(VPoint.pix_width - dx, 0, dx, VPoint.pix_height));
-						else
-							update_region.Union(wxRect(0, 0, -dx, VPoint.pix_height));
+						m_pQuilt->RenderQuiltRegionViewOnDCNoText(temp_dc, svp, chart_get_region, HasLayer(vnLayers, LAYER_DEPTHS), HasLayer(vnLayers, LAYER_LIGHTS), HasLayer(vnLayers, LAYER_BLLABELS), HasLayer(vnLayers, LAYER_LDESCR), HasLayer(vnLayers, LAYER_AINFO), HasLayer(vnLayers, LAYER_SLVIS));
 					}
-
-					//  Render the new region
-					m_pQuilt->RenderQuiltRegionViewOnDCNoText(temp_dc, svp, update_region, HasLayer(vnLayers, LAYER_DEPTHS), HasLayer(vnLayers, LAYER_LIGHTS), HasLayer(vnLayers, LAYER_BLLABELS), HasLayer(vnLayers, LAYER_LDESCR), HasLayer(vnLayers, LAYER_AINFO), HasLayer(vnLayers, LAYER_SLVIS));
-					cache_dc.SelectObject(wxNullBitmap);
 				}
 				else {
-					//    No sensible (dx, dy) change in the view, so use the cached
-					//    member bitmap
 					temp_dc.SelectObject(m_cached_chart_bm);
 					b_save = false;
 				}
-
-				m_pQuilt->ComputeRenderRegion(svp, chart_get_region);
-			} else {  // not blitable				
+			} else {  // cached bitmap is not yet valid			
 				temp_dc.SelectObject(m_working_bm);
+				m_pQuilt->RenderQuiltRegionViewOnDCNoText(temp_dc, svp, chart_get_region);
+			}
 
-				m_pQuilt->RenderQuiltRegionViewOnDCNoText(temp_dc, svp, chart_get_region, HasLayer(vnLayers, LAYER_DEPTHS), HasLayer(vnLayers, LAYER_LIGHTS), HasLayer(vnLayers, LAYER_BLLABELS), HasLayer(vnLayers, LAYER_LDESCR), HasLayer(vnLayers, LAYER_AINFO), HasLayer(vnLayers, LAYER_SLVIS));
-			}	
+			if (b_save) {			
+				wxMemoryDC scratch_dc_0;
+				scratch_dc_0.SelectObject(m_cached_chart_bm);
+				scratch_dc_0.Blit(0, 0, svp.pix_width, svp.pix_height, &temp_dc, 0, 0);
+
+				scratch_dc_0.SelectObject(wxNullBitmap);
+
+				m_bm_cache_vp = VPoint;  // save the ViewPort associated with the cached wxBitmap
+			}
 		} else  // quilted, rotated
 		{
 			temp_dc.SelectObject(m_working_bm);
@@ -4781,7 +4772,9 @@ void ChartCanvas::DrawCanvasData(LLBBox &llbBox, int nWidth, int nHeight, std::v
 			m_pQuilt->RenderQuiltRegionViewOnDCNoText(temp_dc, svp, chart_get_all_region, HasLayer(vnLayers, LAYER_DEPTHS), HasLayer(vnLayers, LAYER_LIGHTS), HasLayer(vnLayers, LAYER_BLLABELS), HasLayer(vnLayers, LAYER_LDESCR), HasLayer(vnLayers, LAYER_AINFO), HasLayer(vnLayers, LAYER_SLVIS));
 		}
 	} else {
-		if (!m_singleChart) return;
+		if (!m_singleChart) {			
+			return;
+		}
 		
 		if (!chart_get_region.IsEmpty()) {
 			m_singleChart->RenderRegionViewOnDC(temp_dc, svp, chart_get_region);
@@ -4798,8 +4791,7 @@ void ChartCanvas::DrawCanvasData(LLBBox &llbBox, int nWidth, int nHeight, std::v
 				chartValidRegion.Offset(-VPoint.rv_rect.x, -VPoint.rv_rect.y);
 			}
 		}
-		else
-			chartValidRegion = m_pQuilt->GetFullQuiltRenderedRegion();
+		else chartValidRegion = m_pQuilt->GetFullQuiltRenderedRegion();
 
 		temp_dc.DestroyClippingRegion();
 
@@ -4906,7 +4898,7 @@ void ChartCanvas::DrawCanvasData(LLBBox &llbBox, int nWidth, int nHeight, std::v
 
 	mscratch_dc.ResetBoundingBox();
 	mscratch_dc.DestroyClippingRegion();
-	mscratch_dc.SetDeviceClippingRegion(rgn_blit);
+	if (rgn_blit.IsOk()) mscratch_dc.SetDeviceClippingRegion(rgn_blit);
 
 	wxRegionIterator upd(rgn_blit);  // get the update rect list
 	while (upd) {
@@ -4917,10 +4909,10 @@ void ChartCanvas::DrawCanvasData(LLBBox &llbBox, int nWidth, int nHeight, std::v
 		upd++;
 	}
 
-	if (mscratch_dc.IsOk()) {
+	/*if (mscratch_dc.IsOk()) {
 		mscratch_dc.SetBackground(*wxBLACK_BRUSH);
 		mscratch_dc.SetTextForeground(*wxBLACK);
-	}
+	}*/
 
 	// If multi-canvas, indicate which canvas has keyboard focus
 	// by drawing a simple blue bar at the top.
@@ -5048,8 +5040,8 @@ void ChartCanvas::DrawCanvasData(LLBBox &llbBox, int nWidth, int nHeight, std::v
 			}
 		}
 	}
-	
-	GenerateImageFile(&mscratch_dc, sIMGFilePath, bPNGFlag);
+		
+	GenerateImageFile(&mscratch_dc, sIMGFilePath, bPNGFlag);	
 	
 	temp_dc.SelectObject(wxNullBitmap);
 	mscratch_dc.SelectObject(wxNullBitmap);
@@ -5061,6 +5053,7 @@ void ChartCanvas::GenerateImageFile(wxMemoryDC* pMemDC, std::string& sIMGFilePat
 	nDCWidth = pMemDC->GetSize().GetWidth();
 	nDCHeight = pMemDC->GetSize().GetHeight();
 
+	if (nDCWidth < 1 || nDCHeight < 1) return;
 	wxBitmap xbTargetBitmap(nDCWidth, nDCHeight, -1);
 	wxMemoryDC xMemDC;
 	xMemDC.SelectObject(xbTargetBitmap);
@@ -5095,12 +5088,13 @@ void ChartCanvas::GenerateImageFile(wxMemoryDC* pMemDC, std::string& sIMGFilePat
 		}
 
 		xImage.Blur(3);
-
+		xImage.SetOption(wxIMAGE_OPTION_QUALITY, 100);
 		wxFileOutputStream xFileOutput(sIMGFilePath);
-		if (xFileOutput.IsOk()) {			
-			xImage.SetOption(wxIMAGE_OPTION_QUALITY, 100);			
+		if (xFileOutput.IsOk()) {
 			xImage.SaveFile(xFileOutput, wxBITMAP_TYPE_JPEG);			
 		}
+
+		xImage.Destroy();
 	}
 }
 
@@ -5242,13 +5236,6 @@ void ChartCanvas::Refresh(bool eraseBackground, const wxRect *rect) {
   if (g_bquiting) return;
   //  Keep the mouse position members up to date
   GetCanvasPixPoint(mouse_x, mouse_y, m_cursor_lat, m_cursor_lon);
-
-  //      Retrigger the route leg popup timer
-  //      This handles the case when the chart is moving in auto-follow mode,
-  //      but no user mouse input is made. The timer handler may Hide() the
-  //      popup if the chart moved enough n.b.  We use slightly longer oneshot
-  //      value to allow this method's Refresh() to complete before potentially
-  //      getting another Refresh() in the popup timer handler.  
 
     wxWindow::Refresh(eraseBackground, rect);
 }
@@ -5442,45 +5429,6 @@ void ChartCanvas::CreateDepthUnitEmbossMaps(ColorScheme cs) {
       CreateEmbossMapData(font, emboss_width, emboss_height, _("Meters"), cs);
   m_pEM_Fathoms =
       CreateEmbossMapData(font, emboss_width, emboss_height, _("Fathoms"), cs);
-}
-
-#define OVERZOOM_TEXT _("OverZoom")
-
-void ChartCanvas::SetOverzoomFont() {
-  ocpnStyle::Style *style = g_StyleManager->GetCurrentStyle();
-  int w, h;
-
-  wxFont font;
-  if (style->embossFont == wxEmptyString) {
-    wxFont *dFont = FontMgr::Get().GetFont(_("Dialog"), 0);
-    font = *dFont;
-    font.SetPointSize(40);
-    font.SetWeight(wxFONTWEIGHT_BOLD);
-  } else
-    font = wxFont(style->embossHeight, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL,
-                  wxFONTWEIGHT_BOLD, false, style->embossFont);
-
-  wxClientDC dc(this);
-  dc.SetFont(font);
-  dc.GetTextExtent(OVERZOOM_TEXT, &w, &h);
-
-  while (font.GetPointSize() > 10 && (w > 500 || h > 100)) {
-    font.SetPointSize(font.GetPointSize() - 1);
-    dc.SetFont(font);
-    dc.GetTextExtent(OVERZOOM_TEXT, &w, &h);
-  }
-  m_overzoomFont = font;
-  m_overzoomTextWidth = w;
-  m_overzoomTextHeight = h;
-}
-
-void ChartCanvas::CreateOZEmbossMapData(ColorScheme cs) {
-  delete m_pEM_OverZoom;
-
-  if (m_overzoomTextWidth > 0 && m_overzoomTextHeight > 0)
-    m_pEM_OverZoom =
-        CreateEmbossMapData(m_overzoomFont, m_overzoomTextWidth + 10,
-                            m_overzoomTextHeight + 10, OVERZOOM_TEXT, cs);
 }
 
 emboss_data *ChartCanvas::CreateEmbossMapData(wxFont &font, int width,

@@ -6343,7 +6343,7 @@ int s52plib::DoRenderObject(wxDC *pdcin, ObjRazRules *rzRules, bool bCSShowFlag,
 
   m_pdc = pdcin;  // use this DC
   Rules *rules = rzRules->LUP->ruleList;
-  int nRuleCnt = 0;
+
   while (rules != NULL) {
     switch (rules->ruleType) {
       case RUL_TXT_TX:
@@ -6372,9 +6372,7 @@ int s52plib::DoRenderObject(wxDC *pdcin, ObjRazRules *rzRules, bool bCSShowFlag,
         break;  // Circular Arc, 2 colors
 
       case RUL_CND_SY: {
-        // printf("s52plib : Render try to RUL_CND_SY 1\n");
-        if (!rzRules->obj->bCS_Added || strncmp(rzRules->obj->FeatureName, "SOUNDG", 6) == 0) {
-          // printf("s52plib : Render try to RUL_CND_SY 1-1\n");
+        if (!rzRules->obj->bCS_Added) {
           rzRules->obj->CSrules = NULL;
           GetAndAddCSRules(rzRules, rules);
           if (strncmp(rzRules->obj->FeatureName, "SOUNDG", 6))
@@ -6428,10 +6426,8 @@ int s52plib::DoRenderObject(wxDC *pdcin, ObjRazRules *rzRules, bool bCSShowFlag,
     }           // switch
 
     rules = rules->next;
-    nRuleCnt++;
   }
 
-  // printf("s52plib : rule count:%d\n", nRuleCnt);
   return 1;
 }
 
@@ -6456,7 +6452,7 @@ int s52plib::DoRenderObjectTextOnly(wxDC *pdcin, ObjRazRules *rzRules) {
         RenderTE(rzRules, rules);
         break;  // TE
       case RUL_CND_SY: {
-        if (!rzRules->obj->bCS_Added) {
+        if (!rzRules->obj->bCS_Added || strncmp(rzRules->obj->FeatureName, "SOUNDG", 6) == 0) {
           rzRules->obj->CSrules = NULL;
           GetAndAddCSRules(rzRules, rules);
           if (strncmp(rzRules->obj->FeatureName, "SOUNDG", 6))

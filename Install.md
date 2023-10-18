@@ -23,10 +23,13 @@
 * Run the "command prompt" and go to the "Release" path and execute the "WMSServer.exe".
   Wait until the message "Press Enter to stop the server or '!' to restart the server..." is displayed.
 
-## Steps - Ubuntu
-* At first, unzip the "modules.7z" file.
-* Go to the project path.
+## Steps - Ubuntu server 22.04.3 LTS
 * Run the following commands.
+  - sudo apt install ubuntu-gnome-desktop 
+  - reboot
+* Go to the project path
+* Unzip the "cache.7z" and "modules.7z" file. then 2 folders (cache and modules) will be generated.
+* Go to the project path and run the following commands.
   - sudo apt install devscripts equivs
   - sudo mk-build-deps -i -r ci/control
   - sudo apt-get --allow-unauthenticated install -f
@@ -38,6 +41,9 @@
   - make -j4
 * Execute the "build/WMSServer".
   Wait until the message "Press Enter to stop the server or '!' to restart the server..." is displayed.
+  
+### NOTE:
+	Opencpn uses a lot of packages(GUI components too) and those packages were integrated complicatedly into source.
 
 ## Pre-Build Steps
 * The directory that contains ENC files must be typed at "ENCDirPath" in "project_path/env/config.json" file.  

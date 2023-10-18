@@ -520,10 +520,7 @@ public:
   bool singleClickEventIsValid;
   wxMouseEvent singleClickEvent;
 
-  std::vector<s57Sector_t> extendedSectorLegs;
-  wxFont m_overzoomFont;
-  int m_overzoomTextWidth;
-  int m_overzoomTextHeight;
+  std::vector<s57Sector_t> extendedSectorLegs;  
 
   //    Methods
   void OnActivate(wxActivateEvent &event);
@@ -553,11 +550,12 @@ public:
   void CreateDepthUnitEmbossMaps(ColorScheme cs);
   wxBitmap CreateDimBitmap(wxBitmap &Bitmap, double factor);
 
-  void CreateOZEmbossMapData(ColorScheme cs);
   emboss_data *EmbossOverzoomIndicator(ocpnDC &dc);
-  void SetOverzoomFont();
 
   void DrawEmboss(ocpnDC &dc, emboss_data *pemboss);    
+
+  void RescaleCanvas(LLBBox&);
+
   //    Data
   int m_canvas_width, m_canvas_height;
 

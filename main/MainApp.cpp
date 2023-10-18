@@ -630,7 +630,6 @@ bool b_reloadForPlugins;
 unsigned int g_canvasConfig;
 bool g_useMUI;
 bool g_bmasterToolbarFull = true;
-bool g_bSENCFileCreateFinish;
 int g_memUsed;
 
 wxString g_lastAppliedTemplateGUID;
@@ -917,10 +916,6 @@ MainApp::MainApp()
 #endif   // __linux__
 }
 
-bool MainApp::GetSENCFileCreateState() {
-	return g_bSENCFileCreateFinish;
-}
-
 bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart) {
 	if (!wxApp::OnInit()) return false;
 		g_unit_test_2 = 0;
@@ -929,8 +924,7 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart) {
 		g_bdisable_opengl = false;
 		g_rebuild_gl_cache = false;
 		g_parse_all_enc = false;
-		g_unit_test_1 = 0;
-		g_bSENCFileCreateFinish = false;
+		g_unit_test_1 = 0;		
 
 	GpxDocument::SeedRandom();
 	last_own_ship_sog_cog_calc_ts = wxInvalidDateTime;
@@ -1418,6 +1412,8 @@ bool MainApp::UpdateFrameCanvas(std::string& sBBox, int nWidth, int nHeight, std
 
 	LLBBox llbBox;
 	llbBox.Set(dMinLat, dMinLon, dMaxLat, dMaxLon);
+
+	if (dMinLat < -89.5 || dMinLat > 89.5 || dMaxLat < -89.5 || dMaxLat > 89.5) return false;
 
 	std::vector<int> vnLayers;
 

@@ -118,8 +118,10 @@ public:
   bool ContainsMarge(double Lat, double Lon, double Marge) const;
   bool GetValid() const { return m_valid; }
   void Invalidate() { m_valid = false; }
+  int  CompareWithOther(LLBBox&);
 
   bool IntersectIn(const LLBBox& other) const;
+  bool IntersectIn(double, double, double, double) const;
 
   //  Add some epsilon to the equality measurement
   //  This class is concerned with lat/lon, in degrees

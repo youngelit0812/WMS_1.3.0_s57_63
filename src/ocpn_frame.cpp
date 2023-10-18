@@ -55,6 +55,7 @@
 #include "navutil.h"
 #include "NMEALogWindow.h"
 #include "OCPN_AUIManager.h"
+#include "own_ship.h"
 #include "ocpn_frame.h"
 #include "OCPNPlatform.h"
 #include "OCPN_Sound.h"
@@ -262,7 +263,6 @@ extern int g_memUsed;
 extern int g_chart_zoom_modifier_vector;
 extern bool g_config_display_size_manual;
 extern bool g_bresponsive;
-extern bool g_bSENCFileCreateFinish;
 
 #ifdef __WXMSW__
 // System color control support
@@ -323,29 +323,27 @@ void SetSystemColors(ColorScheme cs);
 //     ID_PIANO_DISABLE_QUILT_CHART = 32000, ID_PIANO_ENABLE_QUILT_CHART
 // };
 
-// begin duplicated code
 static double chart_dist(int index) {
 	double d;
-	//float clon;
-	//float clat;
-	//const ChartTableEntry &cte = ChartData->GetChartTableEntry(index);
+	float clon;
+	float clat;
+	const ChartTableEntry& cte = ChartData->GetChartTableEntry(index);
 	//// if the chart contains ownship position set the distance to 0
-	//if (cte.GetBBox().Contains(gLat, gLon))
-	d = 0.;
-	//else {
-	//  // find the nearest edge
-	//  double t;
-	//  clon = (cte.GetLonMax() + cte.GetLonMin()) / 2;
-	//  d = DistGreatCircle(cte.GetLatMax(), clon, gLat, gLon);
-	//  t = DistGreatCircle(cte.GetLatMin(), clon, gLat, gLon);
-	//  if (t < d) d = t;
+	if (cte.GetBBox().Contains(gLat, gLon)) d = 0.;
+	else {
+		// find the nearest edge
+		double t;
+		clon = (cte.GetLonMax() + cte.GetLonMin()) / 2;
+		d = DistGreatCircle(cte.GetLatMax(), clon, gLat, gLon);
+		t = DistGreatCircle(cte.GetLatMin(), clon, gLat, gLon);
+		if (t < d) d = t;
 
-	//  clat = (cte.GetLatMax() + cte.GetLatMin()) / 2;
-	//  t = DistGreatCircle(clat, cte.GetLonMin(), gLat, gLon);
-	//  if (t < d) d = t;
-	//  t = DistGreatCircle(clat, cte.GetLonMax(), gLat, gLon);
-	//  if (t < d) d = t;
-	//}
+		clat = (cte.GetLatMax() + cte.GetLatMin()) / 2;
+		t = DistGreatCircle(clat, cte.GetLonMin(), gLat, gLon);
+		if (t < d) d = t;
+		t = DistGreatCircle(clat, cte.GetLonMax(), gLat, gLon);
+		if (t < d) d = t;
+	}
 	return d;
 }
 
@@ -467,8 +465,7 @@ void ParseAllENC(wxWindow * parent) {
 		}
 	}
 	delete[] workers;
-#endif
-	g_bSENCFileCreateFinish = true;
+#endif	
 }
 
 
@@ -2781,7 +2778,49 @@ wxDEFINE_EVENT(EVT_BASIC_NAV_DATA, ObservedEvt);
 wxDEFINE_EVENT(EVT_GPS_WATCHDOG, ObservedEvt);
 
 void MyFrame::UpdateDB_Canvas() {
-	ParseAllENC(NULL);
+	if (g_bNeedDBUpdate) {
+		RebuildChartDatabase();
+		for (unsigned int i = 0; i < g_canvasArray.GetCount(); i++) {
+			ChartCanvas* cc = g_canvasArray.Item(i);
+			if (cc) {
+				cc->SetGroupIndex(0, false);  // all charts
+			}
+		}
+
+		//    As a favor to new users, poll the database and
+		//    move the initial viewport so that a chart will come up.
+
+		double clat, clon;
+		if (ChartData->GetCentroidOfLargestScaleChart(&clat, &clon,
+			CHART_FAMILY_RASTER)) {
+			gLat = clat;
+			gLon = clon;
+			gFrame->ClearbFollow(gFrame->GetPrimaryCanvas());
+		}
+		else {
+			if (ChartData->GetCentroidOfLargestScaleChart(&clat, &clon,
+				CHART_FAMILY_VECTOR)) {
+				gLat = clat;
+				gLon = clon;
+				gFrame->ClearbFollow(gFrame->GetPrimaryCanvas());
+			}
+		}
+
+		g_bNeedDBUpdate = false;
+	}
+	
+	for (unsigned int i = 0; i < g_canvasArray.GetCount(); i++) {
+		ChartCanvas* cc = g_canvasArray.Item(i);
+		if (cc) {
+			wxSize frameSize = GetClientSize();
+			wxSize minSize = g_pauimgr->GetPane(cc).min_size;
+			int width = wxMax(minSize.x, frameSize.x / 10);
+			g_pauimgr->GetPane(cc).MinSize(frameSize.x * 1 / 5, frameSize.y);
+		}
+	}
+	g_pauimgr->Update();
+
+	ParseAllENC(NULL);	
 
 	pConfig->LoadNavObjects();
 	//    Re-enable anchor watches if set in config file      

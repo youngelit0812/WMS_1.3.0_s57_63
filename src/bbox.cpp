@@ -281,6 +281,16 @@ void LLBBox::Set(double minlat, double minlon, double maxlat, double maxlon) {
   m_valid = minlat <= maxlat && minlon <= maxlon;
 }
 
+int LLBBox::CompareWithOther(LLBBox& other) {
+	if (IntersectIn(other)) return 1;
+	if (other.IntersectIn(m_minlat, m_minlon, m_maxlat, m_maxlon)) return -1;
+
+	return 0;
+/*
+	double dLatInterval = abs(m_maxlat - m_minlat);
+	double dLonInterval = abs(m_maxlon - m_minlon);*/
+}
+
 void LLBBox::SetFromSegment(double lat1, double lon1, double lat2,
                             double lon2) {
   m_minlat = wxMin(lat1, lat2);
@@ -423,6 +433,24 @@ bool LLBBox::IntersectIn(const LLBBox& other) const {
     minlon -= 360, maxlon -= 360;
 
   return (other.m_minlon > minlon) && (other.m_maxlon < maxlon);
+}
+
+bool LLBBox::IntersectIn(double dMinLat, double dMinLon, double dMaxLat, double dMaxLon) const {
+	LLBBox other;
+	other.Set(dMinLat, dMinLon, dMaxLat, dMaxLon);
+
+	if (!GetValid() || !other.GetValid()) return false;
+
+	if ((m_maxlat <= other.m_maxlat) || (m_minlat >= other.m_minlat))
+		return false;
+
+	double minlon = m_minlon, maxlon = m_maxlon;
+	if (m_maxlon < other.m_minlon)
+		minlon += 360, maxlon += 360;
+	else if (m_minlon > other.m_maxlon)
+		minlon -= 360, maxlon -= 360;
+
+	return (other.m_minlon > minlon) && (other.m_maxlon < maxlon);
 }
 
 bool LLBBox::IntersectOutGetBias(const LLBBox& other, double bias) const {

@@ -181,7 +181,8 @@ static void PrepareForRender(ViewPort *pvp, s52plib *plib) {
                     pvp->rv_rect,
                     pvp->GetBBox(),
                     pvp->ref_scale,
-                    0);
+                    gFrame->GetPrimaryCanvas()->GetContentScaleFactor()
+                      );
  plib->PrepareForRender();
 
 }
@@ -1421,7 +1422,6 @@ bool s57chart::RenderRegionViewOnDCNoText(wxMemoryDC &dc, const ViewPort &VPoint
 
   bool b_text = ps52plib->GetShowS57Text();
   ps52plib->m_bShowS57Text = false;
-  //ps52plib->m_bShowLdisText = bLDESCRShowFlag;
   bool b_ret = DoRenderRegionViewOnDC(dc, VPoint, Region, false, bCSShowFlag, bLHShowFlag, bBUOYShowFlag, bLDESCRShowFlag, bAIShowFlag, bSlvisShowFlag);
   ps52plib->m_bShowS57Text = b_text;
 
@@ -1492,7 +1492,9 @@ bool s57chart::RenderOverlayRegionViewOnDC(wxMemoryDC &dc,
 bool s57chart::DoRenderRegionViewOnDC(wxMemoryDC &dc, const ViewPort &VPoint, const OCPNRegion &Region, bool b_overlay, bool bCSShowFlag, bool bLHShowFlag, bool bBUOYShowFlag, bool bLDESCRShowFlag, bool bAIShowFlag, bool bSlvisShowFlag) {
   SetVPParms(VPoint);
 
-  bool force_new_view = true;
+  bool force_new_view = false;
+
+  if (Region != m_last_Region) force_new_view = true;
 
   PrepareForRender((ViewPort *)&VPoint, ps52plib);
 
@@ -1511,7 +1513,7 @@ bool s57chart::DoRenderRegionViewOnDC(wxMemoryDC &dc, const ViewPort &VPoint, co
 
   SetLinePriorities();
 
-  m_last_vp.Invalidate();
+
   bool bnew_view = DoRenderViewOnDC(dc, VPoint, DC_RENDER_ONLY, force_new_view, bCSShowFlag, bLHShowFlag, bBUOYShowFlag, bLDESCRShowFlag, bAIShowFlag, bSlvisShowFlag);
 
   //    If quilting, we need to return a cloned bitmap instead of the original
@@ -1789,7 +1791,7 @@ bool s57chart::DoRenderViewOnDC(wxMemoryDC &dc, const ViewPort &VPoint, RenderTy
     bnewview = true;
 
     //      Update last_vp to reflect the current cached bitmap
-    //m_last_vp = VPoint;
+    m_last_vp = VPoint;
 
   }
 
@@ -1811,7 +1813,7 @@ bool s57chart::DoRenderViewOnDC(wxMemoryDC &dc, const ViewPort &VPoint, RenderTy
     bnewview = true;
 
     //      Update last_vp to reflect the current cached bitmap
-    //m_last_vp = VPoint;
+    m_last_vp = VPoint;
   }
 
   return bnewview;

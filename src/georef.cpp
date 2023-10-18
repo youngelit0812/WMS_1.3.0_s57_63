@@ -353,6 +353,9 @@ void toDMM(double a, char *bufp, int bufplen) {
 /****************************************************************************/
 void toSM(double lat, double lon, double lat0, double lon0, double *x,
           double *y) {
+    toEQUIRECT(lat, lon, lat0, lon0, x, y);
+    return;
+
   double xlon = lon;
 
   /*  Make sure lon and lon0 are same phase */
@@ -374,7 +377,30 @@ void toSM(double lat, double lon, double lat0, double lon0, double *x,
   *y = y3 - y30;
 }
 
+void toSM_M(double lat, double lon, double lat0, double lon0, double* x, double* y) {
+	double xlon = lon;
+
+	/*  Make sure lon and lon0 are same phase */
+
+	if ((lon * lon0 < 0.) && (fabs(lon - lon0) > 180.)) {
+		lon < 0.0 ? xlon += 360.0 : xlon -= 360.0;
+	}
+
+	const double z = WGS84_semimajor_axis_meters * mercator_k0;
+
+	*x = (xlon - lon0) * DEGREE * z;
+
+	// y =.5 ln( (1 + sin t) / (1 - sin t) )
+	const double s = sin(lat * DEGREE);
+	const double y3 = (.5 * log((1 + s) / (1 - s))) * z;
+
+	const double s0 = sin(lat0 * DEGREE);
+	const double y30 = (.5 * log((1 + s0) / (1 - s0))) * z;
+	*y = y3 - y30;
+}
+
 double toSMcache_y30(double lat0) {
+  return lat0;
   const double z = WGS84_semimajor_axis_meters * mercator_k0;
   const double s0 = sin(lat0 * DEGREE);
   const double y30 = (.5 * log((1 + s0) / (1 - s0))) * z;
@@ -383,6 +409,10 @@ double toSMcache_y30(double lat0) {
 
 void toSMcache(double lat, double lon, double y30, double lon0, double *x,
                double *y) {
+
+    toEQUIRECT(lat, lon, y30, lon0, x, y);
+    return;
+
   double xlon = lon;
 
   /*  Make sure lon and lon0 are same phase */
@@ -404,6 +434,9 @@ void toSMcache(double lat, double lon, double y30, double lon0, double *x,
 
 void fromSM(double x, double y, double lat0, double lon0, double *lat,
             double *lon) {
+    fromEQUIRECT(x, y, lat0, lon0, lat, lon);
+    return;
+
   const double z = WGS84_semimajor_axis_meters * mercator_k0;
 
   // lat = arcsin((e^2(y+y0) - 1)/(e^2(y+y0) + 1))

@@ -100,7 +100,9 @@ public:
   ViewPort BuildExpandedVP(int width, int height);
 
   void SetBoxes(void);  
-
+  void SetOldBBox(LLBBox& llBBox) {
+	  vpOldBBox.Set(llBBox.GetMinLat(), llBBox.GetMinLon(), llBBox.GetMaxLat(), llBBox.GetMaxLon());
+  }
   //  Accessors
   void Invalidate() { bValid = false; }
   void Validate() { bValid = true; }
@@ -110,6 +112,7 @@ public:
   void SetProjectionType(int type) { m_projection_type = type; }
 
   LLBBox &GetBBox() { return vpBBox; }
+  LLBBox& GetOldBBox() { return vpOldBBox; }
 
   void SetBBoxDirect(const LLBBox &bbox) { vpBBox = bbox; }
   void SetBBoxDirect(double latmin, double lonmin, double latmax,
@@ -165,6 +168,7 @@ public:
 private:
   LLBBox vpBBox;  // An un-skewed rectangular lat/lon bounding box
                   // which contains the entire vieport
+  LLBBox vpOldBBox;
 
   bool bValid;  // This VP is valid
 
