@@ -45,6 +45,7 @@
 #include "dychart.h"
 #include "FontMgr.h"
 #include "georef.h"
+#include "glChartCanvas.h"
 #include "gui_lib.h"
 #include "idents.h"
 #include "Layer.h"
@@ -67,8 +68,6 @@
 #include "SystemCmdSound.h"
 #include "tcmgr.h"
 #include "timers.h"
-
-static void UpdatePositionCalculatedSogCog();
 
 //------------------------------------------------------------------------------
 //      Fwd Declarations
@@ -588,7 +587,6 @@ BEGIN_EVENT_TABLE(MyFrame, wxFrame)
 EVT_MENU(wxID_EXIT, MyFrame::OnExit)
 EVT_SIZE(MyFrame::OnSize)
 EVT_MAXIMIZE(MyFrame::OnMaximize)
-EVT_ERASE_BACKGROUND(MyFrame::OnEraseBackground)
 EVT_COMMAND(wxID_ANY, BELLS_PLAYED_EVTYPE, MyFrame::OnBellsFinished)
 
 #ifdef wxHAS_POWER_EVENTS
@@ -768,8 +766,6 @@ void MyFrame::OnBellsFinished(wxCommandEvent &event) {
   m_BellsToPlay -= bells;
 }
 
-void MyFrame::OnEraseBackground(wxEraseEvent &event) {}
-
 void MyFrame::OnMaximize(wxMaximizeEvent &event) {
   g_click_stop = 0;
 #ifdef __WXOSX__
@@ -888,8 +884,6 @@ void MyFrame::SetAndApplyColorScheme(ColorScheme cs) {
   //    For the AIS target query dialog, we must rebuild it to incorporate the
   //    style desired for the colorscheme selected
   ApplyGlobalColorSchemetoStatusBar();
-
-  UpdateAllToolbars(cs);
 }
 
 void MyFrame::ApplyGlobalColorSchemetoStatusBar(void) {
@@ -953,6 +947,10 @@ void MyFrame::CreateCanvasLayout(bool b_useStoredSize) {
         cc = g_canvasArray[0];
       }
 	  
+      if (g_bopengl) {
+        if (!cc->GetglCanvas()) cc->SetupGlCanvas();
+        cc->GetglCanvas()->Show();
+      }
       g_canvasConfigArray.Item(0)->canvas = cc;
 
       cc->SetDisplaySizeMM(g_display_size_mm);
@@ -970,6 +968,72 @@ void MyFrame::CreateCanvasLayout(bool b_useStoredSize) {
       break;
 
     case 1: {  // two canvas, horizontal
+      if (!g_canvasArray.GetCount() || !g_canvasArray[0]) {
+        cc = new ChartCanvas(this, 0);  // the chart display canvas
+        g_canvasArray.Add(cc);
+      } else {
+        cc = g_canvasArray[0];
+      }
+
+      // Verify that glCanvas is ready, if not already built
+      if (g_bopengl) {
+        if (!cc->GetglCanvas()) cc->SetupGlCanvas();
+      }
+
+      g_canvasConfigArray.Item(0)->canvas = cc;
+
+      cc->ApplyCanvasConfig(g_canvasConfigArray.Item(0));
+
+      cc->SetDisplaySizeMM(g_display_size_mm);
+      cc->SetColorScheme(global_color_scheme);
+      g_pauimgr->AddPane(cc);
+      g_pauimgr->GetPane(cc).Name(_T("ChartCanvas"));
+      g_pauimgr->GetPane(cc)
+          .CaptionVisible(false)
+          .PaneBorder(false)
+          .CloseButton(false);
+
+      g_pauimgr->GetPane(cc).CenterPane();
+
+      cc = new ChartCanvas(this, 1);  // the chart display canvas
+      g_canvasArray.Add(cc);
+      if (g_canvasConfigArray.GetCount() < 2) {
+        canvasConfig *pcc = new canvasConfig(*g_canvasConfigArray.Item(0));
+        pcc->configIndex = 1;
+
+        // Arbitrarily establish the initial size of the new canvas to be
+        // half the screen width.
+        pcc->canvasSize = wxSize(GetClientSize().x / 2, GetClientSize().y);
+        g_canvasConfigArray.Add(pcc);
+      }
+
+      g_canvasConfigArray.Item(1)->canvas = cc;
+
+      cc->ApplyCanvasConfig(g_canvasConfigArray.Item(1));
+
+      cc->SetDisplaySizeMM(g_display_size_mm);
+      cc->SetColorScheme(global_color_scheme);
+      g_pauimgr->AddPane(cc);
+      g_pauimgr->GetPane(cc).Name(_T("ChartCanvas2"));
+      g_pauimgr->GetPane(cc)
+          .CaptionVisible(false)
+          .PaneBorder(false)
+          .CloseButton(false);
+      g_pauimgr->GetPane(cc).RightDockable(true);
+      g_pauimgr->GetPane(cc).Right();
+      if (b_useStoredSize) {
+        int ccw = g_canvasConfigArray.Item(1)->canvasSize.x;
+        int cch = g_canvasConfigArray.Item(1)->canvasSize.y;
+
+        // Check for undefined size, and set a nice default size if necessary.
+        if (ccw < GetClientSize().x / 10) {
+          ccw = GetClientSize().x / 2;
+          cch = GetClientSize().y;
+        }
+
+        g_pauimgr->GetPane(cc).BestSize(ccw, cch);
+        cc->SetSize(ccw, cch);
+      }
       break;
     }
     case 2:  // two canvas, vertical
@@ -984,12 +1048,6 @@ void MyFrame::RequestNewToolbars(bool bforcenew) {
   if (b_inCloseWindow) {
     return;
   }
-}
-
-//      Update inplace the various controls with bitmaps corresponding to the
-//      current color scheme
-void MyFrame::UpdateAllToolbars(ColorScheme cs) {
-  return;
 }
 
 ChartCanvas *MyFrame::GetCanvasUnderMouse() {
@@ -1449,12 +1507,8 @@ void MyFrame::PositionConsole(void) {
 
 void MyFrame::UpdateAllFonts() {
   //  Close and destroy any persistent dialogs, so that new fonts will be
-  //  utilized
-  DestroyPersistentDialogs();
+  //  utilized  
   RefreshAllCanvas();
-}
-
-void MyFrame::DestroyPersistentDialogs() {  
 }
 
 void MyFrame::RefreshGroupIndices(void) {
@@ -1538,44 +1592,21 @@ void MyFrame::setStringVP(wxString VPS) {
   ChartCanvas *cc = GetPrimaryCanvas();
 
   if (!cc) return;
-}
+  wxStringTokenizer tkz(VPS, _T(";"));
 
-void MyFrame::DoSettings() {
-  if (g_boptionsactive) return;
+  wxString token = tkz.GetNextToken();
+  double lat = gLat;
+  token.ToDouble(&lat);
 
-  bool bnewtoolbar = !(DoOptionsDialog() == 0);
+  token = tkz.GetNextToken();
+  double lon = gLon;
+  token.ToDouble(&lon);
 
-  //              Apply various system settings
-  ApplyGlobalSettings(bnewtoolbar);
-// ..For each canvas...
-  bool b_loadHarmonics = false;
-  for (unsigned int i = 0; i < g_canvasArray.GetCount(); i++) {
-    ChartCanvas *cc = g_canvasArray.Item(i);
-    if (cc) {
-      if (cc->GetbShowCurrent() || cc->GetbShowTide()) b_loadHarmonics = true;
-    }
-  }
-  if (b_loadHarmonics) LoadHarmonics();
+  token = tkz.GetNextToken();
+  double scale_ppm = cc->GetVP().view_scale_ppm;
+  token.ToDouble(&scale_ppm);
 
-  //  The chart display options may have changed, especially on S57 ENC,
-  //  So, flush the cache and redraw
-  ReloadAllVP();
-}
-
-void MyFrame::ToggleChartBar(ChartCanvas *cc) {
-  g_bShowChartBar = !g_bShowChartBar;
-
-  if (g_bShowChartBar) cc->m_brepaint_piano = true;
-
-  cc->ReloadVP();  // needed to set VP.pix_height
-  Refresh();
-
-  if (g_bShowChartBar) {
-    DoChartUpdate();
-    UpdateControlBar(cc);
-  }
-
-  SetMenubarItemState(ID_MENU_UI_CHARTBAR, g_bShowChartBar);
+  cc->SetViewPoint(lat, lon, scale_ppm, 0, cc->GetVPRotation());
 }
 
 void MyFrame::ToggleColorScheme() {
@@ -1607,7 +1638,6 @@ void MyFrame::ToggleFullScreen() {
   ShowFullScreen(to, style);
 #endif
 
-  UpdateAllToolbars(global_color_scheme);
   UpdateControlBar(GetPrimaryCanvas());
   Layout();  
 }
@@ -1752,7 +1782,8 @@ void MyFrame::ToggleAISMinimizeTargets(ChartCanvas *cc) {
   cc->Refresh();
 }
 
-void MyFrame::SetbFollow(ChartCanvas *cc) {  
+void MyFrame::SetbFollow(ChartCanvas *cc) {
+  JumpToPosition(cc, gLat, gLon, cc->GetVPScale());
   cc->m_bFollow = true;
 
   SetMenubarItemState(ID_MENU_NAV_FOLLOW, true);
@@ -1764,7 +1795,9 @@ void MyFrame::SetbFollow(ChartCanvas *cc) {
 
 void MyFrame::ClearbFollow(ChartCanvas *cc) {
   //    Center the screen on the GPS position, for lack of a better place
-  
+  vLat = gLat;
+  vLon = gLon;
+
   cc->m_bFollow = false;
   SetMenubarItemState(ID_MENU_NAV_FOLLOW, false);
 
@@ -2232,291 +2265,14 @@ void MyFrame::CenterView(ChartCanvas *cc, const LLBBox &RBBox, int nWidth, int n
   JumpToPosition(cc, clat, clon, ppm);
 }
 
-int MyFrame::DoOptionsDialog() {
-  if (g_boptionsactive) return 0;
-
-  g_boptionsactive = true;
-  g_last_ChartScaleFactor = g_ChartScaleFactor;
-
-  if (NULL == g_options) {
-    int sx, sy;
-    pConfig->SetPath("/Settings");
-    pConfig->Read("OptionsSizeX", &sx, -1);
-    pConfig->Read("OptionsSizeY", &sy, -1);
-
-    wxWindow *optionsParent = this;
-#ifdef __WXOSX__
-    optionsParent = GetPrimaryCanvas();
-#endif
-    g_options = new options(optionsParent, -1, _("Options"), wxPoint(-1, -1), wxSize(sx, sy));
-  }
-
-  //    Set initial Chart Dir
-  g_options->SetInitChartDir(*pInit_Chart_Dir);
-
-  //      Pass two working pointers for Chart Dir Dialog
-  g_options->SetCurrentDirList(ChartData->GetChartDirArray());
-  ArrayOfCDI *pWorkDirArray = new ArrayOfCDI;
-  g_options->SetWorkDirListPtr(pWorkDirArray);
-
-  //      Pass a ptr to MyConfig, for updates
-  g_options->SetConfigPtr(pConfig);
-
-  g_options->SetInitialSettings();
-
-  bPrevQuilt = g_bQuiltEnable;
-  bPrevFullScreenQuilt = g_bFullScreenQuilt;
-  bPrevOGL = g_bopengl;
-
-  prev_locale = g_locale;
-
-  bool b_sub = false;
-
-#if defined(__WXOSX__) || defined(__WXQT__)
-  bool b_restoreAIS = false;
-  if (g_pAISTargetList && g_pAISTargetList->IsShown()) {
-    b_restoreAIS = true;
-    g_pAISTargetList->Shutdown();
-    g_pAISTargetList = NULL;
-  }
-#endif
-
-#ifdef __WXOSX__
-  // ..For each canvas...
-  
-  SubmergeAllCanvasToolbars();  
-#endif
-
-  g_options->SetInitialPage(options_lastPage, options_subpage);
-  g_options->lastWindowPos = options_lastWindowPos;
-  if (options_lastWindowPos != wxPoint(0, 0)) {
-    g_options->Move(options_lastWindowPos);
-    g_options->SetSize(options_lastWindowSize);
-  } else {
-    g_options->CenterOnScreen();
-  }
-  if (options_lastWindowSize != wxSize(0, 0)) {
-    g_options->SetSize(options_lastWindowSize);
-  }
-
-  // Correct some fault in Options dialog layout logic on GTK3 by forcing a
-  // re-layout to new slightly reduced size.
-#ifdef __WXGTK3__
-  if (options_lastWindowSize != wxSize(0, 0))
-    g_options->SetSize(options_lastWindowSize.x - 1, options_lastWindowSize.y);
-#endif
-
-  unsigned int last_canvasConfig = g_canvasConfig;
-  wxSize cc1SizeBefore;
-  if (g_canvasConfig > 0) {
-    canvasConfig *cc = g_canvasConfigArray.Item(0);
-    if (cc) cc1SizeBefore = g_canvasArray.Item(0)->GetSize();
-  }
-
-  //  Capture the full path names and VPScale of charts currently shown in all
-  //  canvases
-  wxArrayString pathArray;
-  double restoreScale[4];
-
-  // ..For each canvas...
-  for (unsigned int i = 0; i < g_canvasArray.GetCount(); i++) {
-    ChartCanvas *cc = g_canvasArray.Item(i);
-    if (cc) {
-      wxString chart_file_name;
-      if (cc->GetQuiltMode()) {
-        int dbi = cc->GetQuiltRefChartdbIndex();
-        chart_file_name = ChartData->GetDBChartFileName(dbi);
-      } else {
-        if (cc->m_singleChart)
-          chart_file_name = cc->m_singleChart->GetFullPath();
-      }
-
-      pathArray.Add(chart_file_name);
-      restoreScale[i] = cc->GetVPScale();
-    }
-  }
-
-  int rr = g_options->ShowModal();
-
-  options_lastPage = g_options->lastPage;
-  options_subpage = g_options->lastSubPage;
-
-  options_lastWindowPos = g_options->lastWindowPos;
-  options_lastWindowSize = g_options->lastWindowSize;
-
-  if (1) {  // always surface toolbar, and restart the timer if needed
-    GetPrimaryCanvas()->SetFocus();
-  }
-
-#ifdef __WXGTK__
-  Raise();  // I dunno why...
-#endif
-
-  bool ret_val = false;
-  rr = g_options->GetReturnCode();
-
-  if (g_last_ChartScaleFactor != g_ChartScaleFactor) rr |= S52_CHANGED;
-
-  bool b_refresh = true;
-
-#if 0
-    bool ccRightSizeChanged = false;
-    if( g_canvasConfig > 0 ){
-        canvasConfig *cc = g_canvasConfigArray.Item(0);
-        if(cc ){
-            wxSize cc1Size = cc->canvasSize;
-            if(cc1Size.x != cc1SizeBefore.x)
-                ccRightSizeChanged = true;
-        }
-    }
-#endif
-
-  if ((g_canvasConfig != last_canvasConfig) || (rr & GL_CHANGED)) {
-    UpdateCanvasConfigDescriptors();
-
-    if ((g_canvasConfig > 0) && (last_canvasConfig == 0))
-      CreateCanvasLayout(true);
-    else
-      CreateCanvasLayout();
-
-    SendSizeEvent();
-
-    g_pauimgr->Update();
-
-    // We need a yield() here to pick up the size event
-    // so that the toolbars will be sized correctly
-    wxYield();
-
-    rr |= GENERIC_CHANGED;
-
-    if (g_bopengl)  // Force mark/waypoint icon reload
-      rr |= S52_CHANGED;
-
-    b_refresh = true;
-  }
-
-  if (rr & CONFIG_CHANGED) {
-    // Apply the changed canvas configs to each canvas
-    // ..For each canvas...
-    for (unsigned int i = 0; i < g_canvasConfigArray.GetCount(); i++) {
-      canvasConfig *cc = g_canvasConfigArray.Item(i);
-      if (cc) {
-        ChartCanvas *chartCanvas = cc->canvas;
-        if (chartCanvas) {
-          chartCanvas->ApplyCanvasConfig(cc);
-        }
-      }
-    }
-  }
-
-  if (rr) {
-    bDBUpdateInProgress = true;
-    b_refresh |= ProcessOptionsDialog(rr, g_options->GetWorkDirListPtr());
-    ChartData->GetChartDirArray() =
-        *(g_options->GetWorkDirListPtr());  // Perform a deep copy back to main
-                                            // database.
-    bDBUpdateInProgress = false;
-    ret_val = true;
-  }
-
-  delete pWorkDirArray;
-
-  DoChartUpdate();
-
-  // ..For each canvas...
-  for (unsigned int i = 0; i < g_canvasArray.GetCount(); i++) {
-    ChartCanvas *cc = g_canvasArray.Item(i);
-    if (cc) {      
-      cc->UpdateCanvasControlBar();
-    }
-  }
-  
-  RequestNewToolbars();
-
-  //  Rebuild cursors
-  // ..For each canvas...
-  for (unsigned int i = 0; i < g_canvasArray.GetCount(); i++) {
-    ChartCanvas *cc = g_canvasArray.Item(i);
-    if (cc) {
-      cc->RebuildCursors();
-    }
-  }
-
-  // Change of master toolbar scale?
-  bool b_masterScaleChange = false;  
-
-  if ((rr & TOOLBAR_CHANGED) || b_masterScaleChange)
-    RequestNewMasterToolbar(true);
-
-  bool bMuiChange = false;
-
-  // Inform the canvases
-  if (b_masterScaleChange || bMuiChange) {
-    // ..For each canvas...
-    for (unsigned int i = 0; i < g_canvasArray.GetCount(); i++) {
-      ChartCanvas *cc = g_canvasArray.Item(i);
-      if (cc) {
-        cc->ProcessNewGUIScale();
-      }
-    }
-  }
-    
-#if defined(__WXOSX__) || defined(__WXQT__)
-  if (b_restoreAIS) {
-    g_pAISTargetList = new AISTargetListDialog(this, g_pauimgr, g_pAIS);
-    g_pAISTargetList->UpdateAISTargetList();
-  }
-#endif
-  
-  //  Force reload of options dialog to pick up font changes or other major
-  //  layout changes
-  if ((rr & FONT_CHANGED) || (rr & NEED_NEW_OPTIONS)) {
-    delete g_options;
-    g_options = NULL;
-    g_pOptions = NULL;
-  }
-#if wxUSE_XLOCALE
-  if (rr & LOCALE_CHANGED) {
-    g_Platform->ChangeLocale(g_locale, plocale_def_lang, &plocale_def_lang);
-    ApplyLocale();
-  }
-#endif
-
-  // If needed, refresh each canvas,
-  // trying to reload the previously displayed chart by name as saved in
-  // pathArray Also, restoring the previous chart VPScale, if possible
-  if (b_refresh) {
-    // ..For each canvas...
-    for (unsigned int i = 0; i < g_canvasArray.GetCount(); i++) {
-      ChartCanvas *cc = g_canvasArray.Item(i);
-      if (cc) {
-        int index_hint = -1;
-        if (i < pathArray.GetCount())
-          index_hint = ChartData->FinddbIndex(pathArray.Item(i));
-        cc->canvasChartsRefresh(index_hint);
-        if (index_hint != -1) cc->SetVPScale(restoreScale[i]);
-      }
-    }
-  }
-
-  g_boptionsactive = false;
-
-  //  If we had a config chamge, then schedule a re-entry to the settings dialog
-  if (rr & CONFIG_CHANGED) {
-    options_subpage = 3;  // Back to the "templates" page
-    ScheduleSettingsDialog();
-  } else
-    options_subpage = 0;
-
-  return ret_val;
-}
-
 bool MyFrame::ProcessOptionsDialog(int rr, ArrayOfCDI *pNewDirArray) {
   bool b_need_refresh = false;  // Do we need a full reload?
 
   if ((rr & VISIT_CHARTS) &&
       ((rr & CHANGE_CHARTS) || (rr & FORCE_UPDATE) || (rr & SCAN_UPDATE))) {
     if (pNewDirArray) {
+//      UpdateChartDatabaseInplace(*pNewDirArray, ((rr & FORCE_UPDATE) == FORCE_UPDATE), true, ChartListFileName);
+
       b_need_refresh = true;
     }
   }
@@ -3137,7 +2893,18 @@ void MyFrame::OnFrameTimer1(wxTimerEvent &event) {
   for (unsigned int i = 0; i < g_canvasArray.GetCount(); i++) {
     ChartCanvas *cc = g_canvasArray.Item(i);
     if (cc) {
-      if (!g_bopengl) {
+      if (g_bopengl) {
+#ifdef ocpnUSE_GL
+        if (cc->GetglCanvas()) {
+          if (m_fixtime - cc->GetglCanvas()->m_last_render_time > 0)
+            bnew_view = true;
+        }
+
+
+        if (bnew_view) /* full frame in opengl mode */
+          cc->Refresh(false);
+#endif
+      } else {
         //  Invalidate the ChartCanvas window appropriately
         //    In non-follow mode, invalidate the rectangles containing the AIS
         //    targets and the ownship, etc... In follow mode, if there has
@@ -3155,10 +2922,7 @@ void MyFrame::OnFrameTimer1(wxTimerEvent &event) {
       }
     }
   }
-
-  //  Pick up any change Toolbar status displays  
-  UpdateAISTool();
-
+  
   //  This little hack fixes a problem seen with some UniChrome OpenGL drivers
   //  We need a deferred resize to get glDrawPixels() to work right.
   //  So we set a trigger to generate a resize after 5 seconds....
@@ -3184,12 +2948,6 @@ void MyFrame::OnFrameTimer1(wxTimerEvent &event) {
 bool MyFrame::SendJSON_WMM_Var_Request(double lat, double lon,
                                        wxDateTime date) {
     return false;
-}
-
-void MyFrame::TouchAISActive(void) {  
-}
-
-void MyFrame::UpdateAISTool(void) {  
 }
 
 //    Cause refresh of active Tide/Current data, if displayed
@@ -3584,20 +3342,6 @@ void MyFrame::DoPrint(void) {
 }
 
 wxDateTime gTimeSource;
-
-static void UpdatePositionCalculatedSogCog() {
-}
-
-void MyFrame::FilterCogSog(void) {  
-}
-
-void MyFrame::StopSockets(void) {
-  // TODO: Can be removed?
-}
-
-void MyFrame::ResumeSockets(void) {
-  // TODO: Can be removed?
-}
 
 void MyFrame::LoadHarmonics() {
   if (!ptcmgr) {
@@ -4944,6 +4688,28 @@ void LoadS57() {
     // preset S52 PLIB scale factors
     ps52plib->SetScaleFactorExp(g_Platform->GetChartScaleFactorExp(g_ChartScaleFactor));
     ps52plib-> SetScaleFactorZoomMod(g_chart_zoom_modifier_vector);
+
+#ifdef ocpnUSE_GL
+
+    // Setup PLIB OpenGL options, if enabled
+    extern bool g_b_EnableVBO;
+    extern GLenum g_texture_rectangle_format;
+    extern OCPN_GLCaps *GL_Caps;
+
+    if (g_bopengl){
+      if(GL_Caps){
+        wxString renderer = wxString(GL_Caps->Renderer.c_str());
+        ps52plib->SetGLRendererString(renderer);
+      }
+
+      ps52plib->SetGLOptions(
+          glChartCanvas::s_b_useStencil, glChartCanvas::s_b_useStencilAP,
+          glChartCanvas::s_b_useScissorTest, glChartCanvas::s_b_useFBO,
+          g_b_EnableVBO, g_texture_rectangle_format, 1, 1);
+
+    }
+#endif
+
   } else {
     printf("   S52PLIB Initialization failed, disabling Vector charts.\n");
     

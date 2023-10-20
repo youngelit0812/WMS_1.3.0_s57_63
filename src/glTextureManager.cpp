@@ -1387,12 +1387,24 @@ void glTextureManager::BuildCompressedCache() {
 
   m_progDialog = new wxGenericProgressDialog();
 
+  wxFont *qFont = GetOCPNScaledFont(_("Dialog"));
+  int fontSize = qFont->GetPointSize();
+  wxFont *sFont;
   wxSize csz = gFrame->GetClientSize();
-  
+  if (csz.x < 500 || csz.y < 500)
+    sFont = FontMgr::Get().FindOrCreateFont(
+        10, wxFONTFAMILY_TELETYPE, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL);
+  else
+    sFont = FontMgr::Get().FindOrCreateFont(fontSize, wxFONTFAMILY_TELETYPE,
+                                            wxFONTSTYLE_NORMAL,
+                                            wxFONTWEIGHT_NORMAL);
+
+
   //  Should we use "compact" screen layout?
   wxScreenDC sdc;
   int height, width;
-  sdc.GetTextExtent(_T("[WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW]"), &width, &height, NULL, NULL);
+  sdc.GetTextExtent(_T("[WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW]"), &width, &height,
+                    NULL, NULL, sFont);
   if (width > (csz.x / 2)) m_bcompact = true;
 
   m_progDialog->Create(_("OpenCPN Compressed Cache Update"), msg0, count + 1,

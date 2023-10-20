@@ -33,6 +33,7 @@
 #include "base_platform.h"
 #include "logger.h"
 #include "ocpn_utils.h"
+#include "ocpn_plugin.h"
 
 #ifdef __WXOSX__
 #include "macutils.h"

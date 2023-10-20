@@ -3206,23 +3206,10 @@ bool s52plib::RenderRasterSymbol(ObjRazRules *rzRules, Rule *prule, wxPoint &r, 
 }
 
 // SYmbol
-int s52plib::RenderSY(ObjRazRules *rzRules, Rules *rules, bool bCSFlag, bool bLHShowFlag, bool bBUOYShowFlag, bool bAIShowFlag) {
+int s52plib::RenderSY(ObjRazRules *rzRules, Rules *rules) {
   float angle = 0;
   double orient;
-  
-  /*if (!bLHShowFlag && ((strncmp(rzRules->obj->FeatureName, "LIGHTS", 6) == 0) || (strncmp(rzRules->obj->FeatureName, "BCNSPP", 6) == 0))) {
-    return 0;
-  }
 
-  if (!bCSFlag) {
-    if (!bBUOYShowFlag && ((strncmp(rzRules->obj->FeatureName, "BOYSPP", 6) == 0) || (strncmp(rzRules->obj->FeatureName, "BOYSAW", 6) == 0) ||
-                          (strncmp(rzRules->obj->FeatureName, "BOYLAT", 6) == 0) || (strncmp(rzRules->obj->FeatureName, "BOYISD", 6) == 0) ||
-                          (strncmp(rzRules->obj->FeatureName, "BOYINB", 6) == 0) || (strncmp(rzRules->obj->FeatureName, "BOYCAR", 6) == 0))) {
-      return 0;
-    }
-  }*/
-
-  // printf("s52plib: RenderSY 1\n");
   if (rules->razRule != NULL) {
     if (rules->INSTstr[8] == ',')  // supplementary parameter assumed to be angle, seen in LIGHTSXX
     {
@@ -6320,8 +6307,8 @@ char *s52plib::RenderCS(ObjRazRules *rzRules, Rules *rules) {
   return (char *)ret;
 }
 
-int s52plib::RenderObjectToDC(wxDC *pdcin, ObjRazRules *rzRules, bool bCSShowFlag, bool bSY_LHShowFlag, bool bBUOYShowFlag, bool bLDESCRShowFlag, bool bAIShowFlag, bool bSlvisShowFlag) {
-  return DoRenderObject(pdcin, rzRules, bCSShowFlag, bSY_LHShowFlag, bBUOYShowFlag, bLDESCRShowFlag, bAIShowFlag, bSlvisShowFlag);
+int s52plib::RenderObjectToDC(wxDC *pdcin, ObjRazRules *rzRules) {
+  return DoRenderObject(pdcin, rzRules);
 }
 
 int s52plib::RenderObjectToGL(const wxGLContext &glcc, ObjRazRules *rzRules) {
@@ -6338,7 +6325,7 @@ int s52plib::RenderObjectToGLText(const wxGLContext &glcc, ObjRazRules *rzRules)
   return DoRenderObjectTextOnly(NULL, rzRules);
 }
 
-int s52plib::DoRenderObject(wxDC *pdcin, ObjRazRules *rzRules, bool bCSShowFlag, bool bSY_LHShowFlag, bool bBUOYShowFlag, bool bLDESCRShowFlag, bool bAIShowFlag, bool bSlvisShowFlag) {  
+int s52plib::DoRenderObject(wxDC *pdcin, ObjRazRules *rzRules) {  
   if (!ObjectRenderCheckRules(rzRules, true)) return 0;
 
   m_pdc = pdcin;  // use this DC
@@ -6353,7 +6340,7 @@ int s52plib::DoRenderObject(wxDC *pdcin, ObjRazRules *rzRules, bool bCSShowFlag,
         RenderTE(rzRules, rules);
         break;  // TE
       case RUL_SYM_PT:
-        RenderSY(rzRules, rules, false, bSY_LHShowFlag, bBUOYShowFlag);        
+        RenderSY(rzRules, rules);        
         break;  // SY
       case RUL_SIM_LN:
         if (m_pdc)
@@ -6391,7 +6378,7 @@ int s52plib::DoRenderObject(wxDC *pdcin, ObjRazRules *rzRules, bool bCSShowFlag,
               RenderTE(rzRules, rules);
               break;
             case RUL_SYM_PT:
-              RenderSY(rzRules, rules, true, bSY_LHShowFlag, bBUOYShowFlag);              
+              RenderSY(rzRules, rules);              
               break;
             case RUL_SIM_LN:
               if (m_pdc)

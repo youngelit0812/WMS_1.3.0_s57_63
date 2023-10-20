@@ -93,9 +93,7 @@ class OCPNStopWatch {
 };
 #endif
 
-#if defined(__OCPN__ANDROID__)
-#include "androidUTIL.h"
-#elif defined(__WXQT__) || defined(__WXGTK__) || defined(FLATPAK)
+#if defined(__WXQT__) || defined(__WXGTK__) || defined(FLATPAK)
 #include <GL/glew.h>
 #endif
 
@@ -104,17 +102,12 @@ class OCPNStopWatch {
 #define GL_ETC1_RGB8_OES 0x8D64
 #endif
 
-
 #include "lz4.h"
 
 #include "s57chart.h"  // for ArrayOfS57Obj
 #include "s52plib.h"
 
-#ifdef USE_ANDROID_GLES2
-#include <GLES2/gl2.h>
-#endif
-
-#if defined(USE_ANDROID_GLES2) || defined(ocpnUSE_GLSL)
+#if defined(ocpnUSE_GLSL)
 #include "linmath.h"
 #include "shaders.h"
 #endif
@@ -359,6 +352,7 @@ void glChartCanvas::Init() {
   m_tideTex = 0;
   m_currentTex = 0;
 
+  m_gldc.SetGLCanvas(this);
   m_gldc.SetDPIFactor(g_BasePlatform->GetDisplayDIPMult(GetParent()));
 
   m_displayScale = 1.0;
@@ -374,12 +368,9 @@ void glChartCanvas::Init() {
     wxLogError("Failed to enable touch events");
   }
 
-  Bind(wxEVT_GESTURE_ZOOM, &ChartCanvas::OnZoom, m_pParentCanvas);
-
   Bind(wxEVT_LONG_PRESS, &ChartCanvas::OnLongPress, m_pParentCanvas);
   Bind(wxEVT_PRESS_AND_TAP, &ChartCanvas::OnPressAndTap, m_pParentCanvas);
 
-  Bind(wxEVT_MOUSEWHEEL, &ChartCanvas::OnWheel, m_pParentCanvas);
 #endif /* HAVE_WX_GESTURE_EVENTS */
 
   if (!g_glTextureManager) g_glTextureManager = new glTextureManager;
@@ -665,9 +656,12 @@ void glChartCanvas::SetupOpenGL() {
 
   char *str = (char *)glGetString(GL_RENDERER);
   if (str == NULL) {
-    // perhaps we should edit the config and turn off opengl now
-    wxLogMessage(_T("Failed to initialize OpenGL"));
-    exit(1);
+	  GLenum error = glewInit();
+	  if (error != GLEW_OK) {
+		  // perhaps we should edit the config and turn off opengl now
+		  printf("Failed to initialize OpenGL. error string:%s\n", glewGetErrorString(error));
+		  exit(1);
+	  }
   }
 
   char render_string[80];
@@ -678,7 +672,7 @@ void glChartCanvas::SetupOpenGL() {
   if (g_bSoftwareGL) msg.Printf(_T("OpenGL-> Software OpenGL"));
   msg.Printf(_T("OpenGL-> Renderer String: "));
   msg += m_renderer;
-  wxLogMessage(msg);
+  printf((const char *)msg.mb_str(wxConvUTF8));
 
   if (ps52plib) ps52plib->SetGLRendererString(m_renderer);
 
@@ -687,16 +681,15 @@ void glChartCanvas::SetupOpenGL() {
   msg.Printf(_T("OpenGL-> Version reported:  "));
   m_version = wxString(version_string, wxConvUTF8);
   msg += m_version;
-  wxLogMessage(msg);
+  printf((const char*)msg.mb_str(wxConvUTF8));
 
   char GLSL_version_string[80];
   strncpy(GLSL_version_string, (char *)glGetString(GL_SHADING_LANGUAGE_VERSION), 79);
   msg.Printf(_T("OpenGL-> GLSL Version reported:  "));
   m_GLSLversion = wxString(GLSL_version_string, wxConvUTF8);
   msg += m_GLSLversion;
-  wxLogMessage(msg);
+  printf((const char*)msg.mb_str(wxConvUTF8));
 
-#ifndef __OCPN__ANDROID__
 #ifndef __WXOSX__
   GLenum err = glewInit();
 #ifdef GLEW_ERROR_NO_GLX_DISPLAY
@@ -712,7 +705,6 @@ void glChartCanvas::SetupOpenGL() {
   {
   printf("GLEW init success!n");
   }
-#endif
 #endif
 
   const GLubyte *ext_str = glGetString(GL_EXTENSIONS);
@@ -990,6 +982,40 @@ no_compression:
   wxLogMessage(wxString::Format(_T("OpenGL-> Not Using compression")));
 }
 
+void glChartCanvas::DrawGLCanvasData(std::string& sIMGFilePath, bool bPNGFlag) {
+  if (!m_pcontext) return;
+
+  if (!g_bopengl) {    
+    return;
+  }
+
+  SetCurrent(*m_pcontext);
+
+  if (!m_bsetup) {
+    SetupOpenGL();
+
+    if (ps52plib) ps52plib->FlushSymbolCaches(ChartCtxFactory());
+
+    m_bsetup = true;  
+  }
+
+  //  Paint updates may have been externally disabled (temporarily, to avoid
+  //  Yield() recursion performance loss)
+  if (!m_b_paint_enable) return;
+  //      Recursion test, sometimes seen on GTK systems when wxBusyCursor is
+  //      activated
+  if (m_in_glpaint) return;
+
+  //  If necessary, reconfigure the S52 PLIB
+  m_pParentCanvas->UpdateCanvasS52PLIBConfig();
+
+  m_in_glpaint++;
+  Render();
+  m_in_glpaint--;
+
+  GenerateImageFile(m_gldc.GetDC(), sIMGFilePath, bPNGFlag);
+}
+
 //   These routines allow reusable coordinates
 bool glChartCanvas::HasNormalizedViewPort(const ViewPort &vp) {
   return vp.m_projection_type == PROJECTION_MERCATOR ||
@@ -1005,7 +1031,7 @@ bool glChartCanvas::HasNormalizedViewPort(const ViewPort &vp) {
    the world can be up to 3 meters off because limited floating point precision,
    and if the points cross 180 longitude then two passes will be required to
    render them correctly */
-
+#define NORM_FACTOR 4096.0
 void glChartCanvas::MultMatrixViewPort(ViewPort &vp, float lat, float lon) {
   wxPoint2DDouble point;
 
@@ -2193,18 +2219,6 @@ void glChartCanvas::RenderQuiltViewGL(ViewPort &vp,
 
   LLRegion rendered_region;
   while (chart) {
-    //  This test does not need to be done for raster charts, since
-    //  we can assume that texture binding is acceptably fast regardless of the
-    //  render region, and that the quilt zoom methods choose a reasonable
-    //  reference chart.
-    //if (chart->GetChartFamily() != CHART_FAMILY_RASTER) {
-      //                if( ! m_pParentCanvas->IsChartLargeEnoughToRender(
-      //                chart, vp ) ) {
-      //                    chart = m_pParentCanvas->m_pQuilt->GetNextChart();
-      //                    continue;
-      //                }
-    //}
-
     QuiltPatch *pqp = m_pParentCanvas->m_pQuilt->GetCurrentPatch();
     if (pqp->b_Valid) {
       LLRegion get_region = pqp->ActiveRegion;
@@ -2212,47 +2226,53 @@ void glChartCanvas::RenderQuiltViewGL(ViewPort &vp,
 
       if (!pqp->b_overlay) {
         get_region.Intersect(region);
-        if (!get_region.Empty()) {          
-              s57chart *Chs57 = dynamic_cast<s57chart *>(chart);
-              if (Chs57) {
-                if (Chs57->m_RAZBuilt) {
-                  RenderNoDTA(vp, get_region);
-                  Chs57->RenderRegionViewOnGLNoText(*m_pcontext, vp,
-                                                    rect_region, get_region);
-                  DisableClipRegion();
-                } else {
-                  // The SENC is quesed for building, so..
-                  // Show GSHHS with compatible color scheme in the meantime.
-                  ocpnDC gldc(*this);
-                  const LLRegion &oregion = get_region;
-                  LLBBox box = oregion.GetBox();
+		if (!get_region.Empty()) {
+			if (chart->GetChartFamily() == CHART_FAMILY_VECTOR) {
+				if (chart->GetChartType() == CHART_TYPE_CM93COMP) {
+					RenderNoDTA(vp, get_region);
+					chart->RenderRegionViewOnGL(*m_pcontext, vp, rect_region, get_region);
+				}
+				else {
+					s57chart* Chs57 = dynamic_cast<s57chart*>(chart);
+					if (Chs57) {
+						if (Chs57->m_RAZBuilt) {
+							RenderNoDTA(vp, get_region);
+							Chs57->RenderRegionViewOnGLNoText(*m_pcontext, vp,
+								rect_region, get_region);
+							DisableClipRegion();
+						}
+						else {
+							// The SENC is quesed for building, so..
+							// Show GSHHS with compatible color scheme in the meantime.
+							ocpnDC gldc(*this);
+							const LLRegion& oregion = get_region;
+							LLBBox box = oregion.GetBox();
 
-                  wxPoint p1 =
-                      vp.GetPixFromLL(box.GetMaxLat(), box.GetMinLon());
-                  wxPoint p2 =
-                      vp.GetPixFromLL(box.GetMaxLat(), box.GetMaxLon());
-                  wxPoint p3 =
-                      vp.GetPixFromLL(box.GetMinLat(), box.GetMaxLon());
-                  wxPoint p4 =
-                      vp.GetPixFromLL(box.GetMinLat(), box.GetMinLon());
+							wxPoint p1 =
+								vp.GetPixFromLL(box.GetMaxLat(), box.GetMinLon());
+							wxPoint p2 =
+								vp.GetPixFromLL(box.GetMaxLat(), box.GetMaxLon());
+							wxPoint p3 =
+								vp.GetPixFromLL(box.GetMinLat(), box.GetMaxLon());
+							wxPoint p4 =
+								vp.GetPixFromLL(box.GetMinLat(), box.GetMinLon());
 
-                  wxRect srect(p1.x, p1.y, p3.x - p1.x, p4.y - p2.y);
+							wxRect srect(p1.x, p1.y, p3.x - p1.x, p4.y - p2.y);
 
-                  bool world = false;
-                  ViewPort cvp = ClippedViewport(vp, get_region);
-                  if (m_pParentCanvas->GetWorldBackgroundChart()) {
-                    SetClipRegion(cvp, get_region);
-                    m_pParentCanvas->GetWorldBackgroundChart()->SetColorsDirect(
-                        GetGlobalColor(_T ( "LANDA" )),
-                        GetGlobalColor(_T ( "DEPMS" )));
-                    RenderWorldChart(gldc, cvp, srect, world);
-                    m_pParentCanvas->GetWorldBackgroundChart()->SetColorScheme(
-                        global_color_scheme);
-                    DisableClipRegion();
-                  }
-                }
-              }              
-        }
+							bool world = false;
+							ViewPort cvp = ClippedViewport(vp, get_region);
+							if (m_pParentCanvas->GetWorldBackgroundChart()) {
+								SetClipRegion(cvp, get_region);
+								m_pParentCanvas->GetWorldBackgroundChart()->SetColorsDirect(GetGlobalColor(_T("LANDA")), GetGlobalColor(_T("DEPMS")));
+								RenderWorldChart(gldc, cvp, srect, world);
+								m_pParentCanvas->GetWorldBackgroundChart()->SetColorScheme(global_color_scheme);
+								DisableClipRegion();
+							}
+						}
+					}
+				}
+			}
+		}
       }
     }
 
@@ -2345,37 +2365,47 @@ void glChartCanvas::RenderQuiltViewGLText(ViewPort &vp, const OCPNRegion &rect_r
 
     chart = m_pParentCanvas->m_pQuilt->GetNextSmallerScaleChart();
   }
-
-  /*
-          //    Render any Overlay patches for s57 charts(cells)
-          if( m_pParentCanvas->m_pQuilt->HasOverlays() ) {
-              ChartBase *pch = m_pParentCanvas->m_pQuilt->GetFirstChart();
-              while( pch ) {
-                  QuiltPatch *pqp =
-     m_pParentCanvas->m_pQuilt->GetCurrentPatch(); if( pqp->b_Valid &&
-     pqp->b_overlay && pch->GetChartFamily() == CHART_FAMILY_VECTOR ) { LLRegion
-     get_region = pqp->ActiveRegion;
-
-                      get_region.Intersect( region );
-                      if( !get_region.Empty()  ) {
-                          s57chart *Chs57 = dynamic_cast<s57chart*>( pch );
-                          if( Chs57 )
-                              Chs57->RenderOverlayRegionViewOnGL( *m_pcontext,
-     vp, rect_region, get_region );
-                      }
-                  }
-
-                  pch = m_pParentCanvas->m_pQuilt->GetNextChart();
-              }
-          }
-  */
 }
 
 void glChartCanvas::RenderCharts(ocpnDC &dc, const OCPNRegion &rect_region) {
   ViewPort &vp = m_pParentCanvas->VPoint;
 
-  LLRegion chart_region;  
-  chart_region = vp.b_quilt ? m_pParentCanvas->m_pQuilt->GetFullQuiltRegion() : m_pParentCanvas->m_singleChart->GetValidRegion();
+  LLRegion chart_region;
+  if (!vp.b_quilt && (m_pParentCanvas->m_singleChart->GetChartType() == CHART_TYPE_PLUGIN)) {
+    if (m_pParentCanvas->m_singleChart->GetChartFamily() == CHART_FAMILY_RASTER) {
+      // We do this the hard way, since PlugIn Raster charts do not understand
+      // LLRegion yet...
+      double ll[8];
+      ChartPlugInWrapper *cpw =
+          dynamic_cast<ChartPlugInWrapper *>(m_pParentCanvas->m_singleChart);
+      if (!cpw) return;
+
+      cpw->chartpix_to_latlong(0, 0, ll + 0, ll + 1);
+      cpw->chartpix_to_latlong(0, cpw->GetSize_Y(), ll + 2, ll + 3);
+      cpw->chartpix_to_latlong(cpw->GetSize_X(), cpw->GetSize_Y(), ll + 4,
+                               ll + 5);
+      cpw->chartpix_to_latlong(cpw->GetSize_X(), 0, ll + 6, ll + 7);
+
+      // for now don't allow raster charts to cross both 0 meridian and IDL
+      // (complicated to deal with)
+      for (int i = 1; i < 6; i += 2)
+        if (fabs(ll[i] - ll[i + 2]) > 180) {
+          // we detect crossing idl here, make all longitudes positive
+          for (int i = 1; i < 8; i += 2)
+            if (ll[i] < 0) ll[i] += 360;
+          break;
+        }
+
+      chart_region = LLRegion(4, ll);
+    } else {
+      Extent ext;
+      m_pParentCanvas->m_singleChart->GetChartExtent(&ext);
+
+      double ll[8] = {ext.SLAT, ext.WLON, ext.SLAT, ext.ELON,
+                      ext.NLAT, ext.ELON, ext.NLAT, ext.WLON};
+      chart_region = LLRegion(4, ll);
+    }
+  } else chart_region = vp.b_quilt ? m_pParentCanvas->m_pQuilt->GetFullQuiltRegion() : m_pParentCanvas->m_singleChart->GetValidRegion();
 
   bool world_view = false;
   for (OCPNRegionIterator upd(rect_region); upd.HaveRects(); upd.NextRect()) {
@@ -2393,19 +2423,25 @@ void glChartCanvas::RenderCharts(ocpnDC &dc, const OCPNRegion &rect_region) {
     }
   }
 
-  if (vp.b_quilt)
-    RenderQuiltViewGL(vp, rect_region);
+  if (vp.b_quilt) RenderQuiltViewGL(vp, rect_region);
   else {
-    LLRegion region = vp.GetLLRegion(rect_region);    
-      chart_region.Intersect(region);
-      RenderNoDTA(vp, chart_region);
-      m_pParentCanvas->m_singleChart->RenderRegionViewOnGL(*m_pcontext, vp, rect_region, region);    
+    LLRegion region = vp.GetLLRegion(rect_region);
+    if (m_pParentCanvas->m_singleChart->GetChartFamily() == CHART_FAMILY_RASTER) {
+      if (m_pParentCanvas->m_singleChart->GetChartType() == CHART_TYPE_MBTILES)
+        m_pParentCanvas->m_singleChart->RenderRegionViewOnGL(*m_pcontext, vp, rect_region, region);
+      else
+        RenderRasterChartRegionGL(m_pParentCanvas->m_singleChart, vp, region);
+	}
+	else if (m_pParentCanvas->m_singleChart->GetChartFamily() == CHART_FAMILY_VECTOR) {
+		chart_region.Intersect(region);
+		RenderNoDTA(vp, chart_region);
+		m_pParentCanvas->m_singleChart->RenderRegionViewOnGL(*m_pcontext, vp, rect_region, region);
+	}
   }
   glUseProgram(0);
 }
 
-void glChartCanvas::RenderNoDTA(ViewPort &vp, const LLRegion &region,
-                                int transparency) {
+void glChartCanvas::RenderNoDTA(ViewPort &vp, const LLRegion &region, int transparency) {
   wxColour color = GetGlobalColor(_T ( "NODTA" ));
 #if !defined(USE_ANDROID_GLES2) && !defined(ocpnUSE_GLSL)
   if (color.IsOk())
@@ -2639,9 +2675,12 @@ void glChartCanvas::RenderGLAlertMessage() {
   if (!m_pParentCanvas->GetAlertString().IsEmpty()) {
     wxString msg = m_pParentCanvas->GetAlertString();
 
+    wxFont *pfont = GetOCPNScaledFont(_("Dialog"));
+    m_gldc.SetFont(*pfont);
+
     int w, h;
     wxScreenDC sdc;
-    sdc.GetTextExtent(msg, &w, &h, NULL, NULL);
+    sdc.GetTextExtent(msg, &w, &h, NULL, NULL, pfont);
 
     h += 2;
     w += 4;
@@ -2699,7 +2738,7 @@ void glChartCanvas::Render() {
       g_glstopwatch.Start();
     }
   }
-  wxPaintDC(this);
+  //wxPaintDC(this);
 
   ocpnDC gldc(*this);
 
@@ -3046,7 +3085,6 @@ void glChartCanvas::Render() {
     useFBO = true;
   }
 
-#ifndef __OCPN__ANDROID__
   if (VPoint.tilt) {
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
@@ -3065,7 +3103,6 @@ void glChartCanvas::Render() {
     glGetDoublev(GL_PROJECTION_MATRIX, projmatrix);
     glGetDoublev(GL_MODELVIEW_MATRIX, mvmatrix);
   }
-#endif
 
   if (useFBO) {
 #if 0  //#ifndef USE_ANDROID_GLES2
@@ -3203,7 +3240,6 @@ void glChartCanvas::Render() {
   // cached from the previous frame
   DrawFloatingOverlayObjects(m_gldc);
 
-#ifndef USE_ANDROID_GLES2
   // from this point on don't use perspective
   if (VPoint.tilt) {
     glMatrixMode(GL_PROJECTION);
@@ -3213,20 +3249,11 @@ void glChartCanvas::Render() {
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
   }
-#endif
 
   DrawEmboss(m_gldc, m_pParentCanvas->EmbossDepthScale());
   DrawEmboss(m_gldc, m_pParentCanvas->EmbossOverzoomIndicator(gldc));
 
-  /*if (m_pParentCanvas->m_pTrackRolloverWin)
-    m_pParentCanvas->m_pTrackRolloverWin->Draw(gldc);
-
-  if (m_pParentCanvas->m_pRouteRolloverWin)
-    m_pParentCanvas->m_pRouteRolloverWin->Draw(gldc);
-
-  if (m_pParentCanvas->m_pAISRolloverWin)
-    m_pParentCanvas->m_pAISRolloverWin->Draw(gldc);*/
-
+  
     //  On some platforms, the opengl context window is always on top of any
     //  standard DC windows, so we need to draw the Chart Info Window and the
     //  Thumbnail as overlayed bmps.
@@ -3317,6 +3344,56 @@ void glChartCanvas::Render() {
   m_bforcefull = false;
 
   n_render++;
+}
+
+void glChartCanvas::GenerateImageFile(wxDC* pMemDC, std::string& sIMGFilePath, bool bPNGFlag) {
+	int nDCWidth, nDCHeight;
+	nDCWidth = pMemDC->GetSize().GetWidth();
+	nDCHeight = pMemDC->GetSize().GetHeight();
+
+	if (nDCWidth < 1 || nDCHeight < 1) return;
+	wxBitmap xbTargetBitmap(nDCWidth, nDCHeight, -1);
+	wxMemoryDC xMemDC;
+	xMemDC.SelectObject(xbTargetBitmap);
+
+	if (nDCHeight > 1) {
+		xMemDC.Blit(0, 0, nDCWidth, nDCHeight, pMemDC, 0, 0);
+	}
+	xMemDC.SelectObject(wxNullBitmap);
+
+	wxImage xImage;
+	if (xbTargetBitmap.IsOk()) {
+		xImage = xbTargetBitmap.ConvertToImage();
+
+		for (int i = 0; i < xImage.GetWidth(); i++)
+		{
+			for (int j = 0; j < xImage.GetHeight(); j++)
+			{
+				int r = xImage.GetRed(i, j);
+				int g = xImage.GetGreen(i, j);
+				int b = xImage.GetBlue(i, j);
+
+				r = (r - 128) * 1.3 + 128;
+				g = (g - 128) * 1.3 + 128;
+				b = (b - 128) * 1.3 + 128;
+
+				r = wxMin(255, wxMax(0, r));
+				g = wxMin(255, wxMax(0, g));
+				b = wxMin(255, wxMax(0, b));
+
+				xImage.SetRGB(i, j, r, g, b);
+			}
+		}
+
+		xImage.Blur(3);
+		xImage.SetOption(wxIMAGE_OPTION_QUALITY, 100);
+		wxFileOutputStream xFileOutput(sIMGFilePath);
+		if (xFileOutput.IsOk()) {
+			xImage.SaveFile(xFileOutput, wxBITMAP_TYPE_JPEG);
+		}
+
+		xImage.Destroy();
+	}
 }
 
 void glChartCanvas::RenderS57TextOverlay(ViewPort &VPoint) {

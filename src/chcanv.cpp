@@ -31,10 +31,12 @@
 #include "ocpndc.h"
 #include "timers.h"
 #include "tide_time.h"
+#include "glTextureDescriptor.h"
 #include "ChInfoWin.h"
 #include "Quilt.h"
 #include "SystemCmdSound.h"
 #include "FontMgr.h"
+#include "compass.h"
 
 #include "OCPNRegion.h"
 #include "gshhs.h"
@@ -46,6 +48,9 @@
 #include "idents.h"
 #include "line_clip.h"
 
+#ifdef ocpnUSE_GL
+#include "glChartCanvas.h"
+#endif
 #include "s57chart.h"  // for ArrayOfS57Obj
 #include "s52plib.h"
 #include "s52utils.h"
@@ -124,6 +129,8 @@ extern bool g_bsimplifiedScalebar;
 extern bool bDrawCurrentValues;
 
 extern s52plib *ps52plib;
+
+extern bool g_bShowCompassWin;
 
 extern bool bGPSValid;
 extern bool g_bTempShowMenuBar;
@@ -209,6 +216,7 @@ extern int g_ChartScaleFactor;
 #endif
 
 extern bool g_bShowFPS;
+extern double g_gl_ms_per_frame;
 extern bool g_benable_rotate;
 extern bool g_bRollover;
 
@@ -374,6 +382,7 @@ ChartCanvas::ChartCanvas(wxFrame *frame, int canvasIndex)
 
   VPoint.Invalidate();
 
+  m_glcc = NULL;
   m_toolbar_scalefactor = 1.0;
   m_toolbarOrientation = wxTB_HORIZONTAL;
   m_focus_indicator_pix = 1;
@@ -381,6 +390,7 @@ ChartCanvas::ChartCanvas(wxFrame *frame, int canvasIndex)
   m_pCurrentStack = NULL;
   m_bpersistent_quilt = false;
   m_piano_ctx_menu = NULL;  
+  m_Compass = NULL;
 
   g_ChartNotRenderScaleFactor = 2.0;
   m_bShowScaleInStatusBar = true;
@@ -408,6 +418,7 @@ ChartCanvas::ChartCanvas(wxFrame *frame, int canvasIndex)
   m_leftdown = false;
 #endif /* HAVE_WX_GESTURE_EVENTS */
 
+  SetupGlCanvas();
   singleClickEventIsValid = false;
 
   //    Build the cursors
@@ -619,6 +630,12 @@ ChartCanvas::ChartCanvas(wxFrame *frame, int canvasIndex)
 
   m_Piano = new Piano(this);
 
+  m_bShowCompassWin = g_bShowCompassWin;
+
+  m_Compass = new ocpnCompass(this);
+  m_Compass->SetScaleFactor(g_compass_scalefactor);
+  m_Compass->Show(m_bShowCompassWin);
+
   m_bToolbarEnable = false;
   m_pianoFrozen = false;
 
@@ -696,10 +713,21 @@ ChartCanvas::~ChartCanvas() {
   delete m_pos_image_user_yellow_dusk;
   delete m_pos_image_user_yellow_night;
 
+#ifdef ocpnUSE_GL
+  if (!g_bdisable_opengl) {
+    delete m_glcc;
+
+#if wxCHECK_VERSION(2, 9, 0)
+    if (IsPrimaryCanvas() && g_bopengl) delete g_pGLcontext;
+#endif
+  }
+#endif
+
   // Delete the MUI bar, but make sure there is no pointer to it during destroy.
   // wx tries to deliver events to this canvas during destroy.
   delete m_pQuilt;
-  delete m_pCurrentStack;  
+  delete m_pCurrentStack;
+  delete m_Compass;
   delete m_Piano;
 }
 
@@ -781,6 +809,44 @@ void ChartCanvas::RebuildCursors() {
 
 void ChartCanvas::CanvasApplyLocale() {
   CreateDepthUnitEmbossMaps(m_cs);
+}
+
+void ChartCanvas::SetupGlCanvas() {
+#ifdef ocpnUSE_GL
+  if (!g_bdisable_opengl) {
+    if (g_bopengl) {
+      printf("Creating glChartCanvas\n");
+      m_glcc = new glChartCanvas(this);
+
+      // We use one context for all GL windows, so that textures etc will be
+      // automatically shared
+      if (IsPrimaryCanvas()) {        
+        wxGLContext *pctx = new wxGLContext(m_glcc);
+        m_glcc->SetContext(pctx);
+        g_pGLcontext = pctx;  // Save a copy of the common context
+      } else {
+#ifdef __WXOSX__
+        m_glcc->SetContext(new wxGLContext(m_glcc, g_pGLcontext));
+#else
+        m_glcc->SetContext(g_pGLcontext);  // If not primary canvas, use the
+                                           // saved common context
+#endif
+      }
+    }
+  }
+#endif
+}
+
+void ChartCanvas::ResetGLContext() {
+	if (g_bopengl) {
+		/*m_glcc->SetContext(g_pGLcontext);
+		g_pGLcontext->SetCurrent(*m_glcc);
+		m_glcc->SetCurrent(*g_pGLcontext);*/
+
+		wxGLContext* pctx = new wxGLContext(m_glcc);
+		m_glcc->SetContext(pctx);
+		g_pGLcontext = pctx;
+	}
 }
 
 #ifdef HAVE_WX_GESTURE_EVENTS
@@ -879,7 +945,12 @@ void ChartCanvas::ApplyCanvasConfig(canvasConfig *pcc) {
 }
 
 void ChartCanvas::ApplyGlobalSettings() {
-
+  // GPS compas window
+  m_bShowCompassWin = g_bShowCompassWin;
+  if (m_Compass) {
+    m_Compass->Show(m_bShowCompassWin);
+    if (m_bShowCompassWin) m_Compass->UpdateStatus();
+  }
 }
 
 void ChartCanvas::CheckGroupValid(bool showMessage, bool switchGroup0) {
@@ -985,7 +1056,28 @@ void ChartCanvas::SetGroupIndex(int index, bool autoSwitch) {
   canvasChartsRefresh(dbi_hint);
 
   if (!autoSwitch && bgroup_override) {
+    // show a short timed message box
+    wxString msg(_("Group \""));
+
+    ChartGroup *pGroup = g_pGroupArray->Item(new_index - 1);
+    msg += pGroup->m_group_name;
+
+    msg += _("\" is empty.");
+
+
     return;
+  }
+
+  //    Message box is deferred so that canvas refresh occurs properly before
+  //    dialog
+  if (bgroup_override) {
+    wxString msg(_("Group \""));
+
+    ChartGroup *pGroup = g_pGroupArray->Item(old_group_index - 1);
+    msg += pGroup->m_group_name;
+
+    msg += _("\" is empty, switching to \"All Active Charts\" group.");
+
   }
 }
 
@@ -1031,10 +1123,6 @@ void ChartCanvas::canvasChartsRefresh(int dbi_hint) {
   SetQuiltRefChart(-1);
 
   m_singleChart = NULL;
-
-  // delete m_pCurrentStack;
-  // m_pCurrentStack = NULL;
-
   //    Build a new ChartStack
   if (!m_pCurrentStack) {
     m_pCurrentStack = new ChartStack;
@@ -1107,25 +1195,6 @@ bool ChartCanvas::DoCanvasUpdate(void) {
   if (!ChartData) return false;
 
   if (ChartData->IsBusy()) return false;
-
-  //    Startup case:
-  //    Quilting is enabled, but the last chart seen was not quiltable
-  //    In this case, drop to single chart mode, set persistence flag,
-  //    And open the specified chart
-  // TODO implement this
-  //     if( m_bFirstAuto && ( g_restore_dbindex >= 0 ) ) {
-  //         if( GetQuiltMode() ) {
-  //             if( !IsChartQuiltableRef( g_restore_dbindex ) ) {
-  //                 gFrame->ToggleQuiltMode();
-  //                 m_bpersistent_quilt = true;
-  //                 m_singleChart = NULL;
-  //             }
-  //         }
-  //     }
-
-  //      If in auto-follow mode, use the current glat,glon to build chart
-  //      stack. Otherwise, use vLat, vLon gotten from click on chart canvas, or
-  //      other means
 
   if (m_bFollow) {
     tLat = gLat;
@@ -1514,6 +1583,12 @@ update_finish:
   //  But don't duplicate a Refresh() done by SetViewPoint()
   if (bNewChart && !bNewView) Refresh(false);
 
+#ifdef ocpnUSE_GL
+  // If a new chart, need to invalidate gl viewport for refresh
+  // so the fbo gets flushed
+  if (m_glcc && g_bopengl && bNewChart) GetglCanvas()->Invalidate();
+#endif
+
   return bNewChart | bNewView;
 }
 
@@ -1829,6 +1904,11 @@ void ChartCanvas::OnEvtCompressProgress( OCPN_CompressProgressEvent & event )
 }
 #endif
 void ChartCanvas::InvalidateGL() {
+  if (!m_glcc) return;
+#ifdef ocpnUSE_GL
+  if (g_bopengl) m_glcc->Invalidate();
+#endif
+  if (m_Compass) m_Compass->UpdateStatus(true);
 }
 
 int ChartCanvas::GetCanvasChartNativeScale() {
@@ -1897,6 +1977,9 @@ int ChartCanvas::FindClosestCanvasChartdbIndex(int scale) {
 
 void ChartCanvas::EnablePaint(bool b_enable) {
   m_b_paint_enable = b_enable;
+#ifdef ocpnUSE_GL
+  if (m_glcc) m_glcc->EnablePaint(b_enable);
+#endif
 }
 
 bool ChartCanvas::IsQuiltDelta() { return m_pQuilt->IsQuiltDelta(VPoint); }
@@ -2278,6 +2361,13 @@ void ChartCanvas::SetColorScheme(ColorScheme cs) {
   m_Piano->SetColorScheme(cs);
 
   if (pWorldBackgroundChart) pWorldBackgroundChart->SetColorScheme(cs);
+#ifdef ocpnUSE_GL
+  if (g_bopengl && m_glcc) {
+    m_glcc->SetColorScheme(cs);
+    g_glTextureManager->ClearAllRasterTextures();
+    // m_glcc->FlushFBO();
+  }
+#endif
   SetbTCUpdate(true);  // force re-render of tide/current locators
   m_brepaint_piano = true;
 
@@ -2779,8 +2869,18 @@ void ChartCanvas::ReloadVP(bool b_adjust) {
 }
 
 void ChartCanvas::LoadVP(ViewPort &vp, bool b_adjust) {
-    m_cache_vp.Invalidate(); //bValid : false
-    m_bm_cache_vp.Invalidate(); //bValid : false
+#ifdef ocpnUSE_GL
+  if (g_bopengl && m_glcc) {
+    m_glcc->Invalidate();
+    if (m_glcc->GetSize() != GetSize()) {
+      m_glcc->SetSize(GetSize());
+    }
+  } else
+#endif
+  {
+    m_cache_vp.Invalidate();
+    m_bm_cache_vp.Invalidate();
+  }
 
   VPoint.Invalidate();
 
@@ -3306,7 +3406,19 @@ bool ChartCanvas::SetViewPoint(double lat, double lon, double scale_ppm,
           _T("%s %4.0f (---)"), _("Scale"),
           true_scale_display);  // Generally, no chart, so no chart scale factor
     }
-	
+
+#ifdef ocpnUSE_GL
+    if (g_bopengl && g_bShowFPS) {
+      wxString fps_str;
+      double fps = 0.;
+      if (g_gl_ms_per_frame > 0) {
+        fps = 1000. / g_gl_ms_per_frame;
+        fps_str.Printf(_T("  %3d fps"), (int)fps);
+      }
+      text += fps_str;
+    }
+#endif
+
     m_scaleValue = true_scale_display;
     m_scaleText = text;    
   }
@@ -3992,7 +4104,13 @@ void ChartCanvas::OnSize(wxSizeEvent &event) {
   //  Rescale again, to capture all the changes for new canvas size
   SetVPScale(GetVPScale());
 
-  //printf("s57chart : onSize : ReloadVP\n");
+#ifdef ocpnUSE_GL
+  if (/*g_bopengl &&*/ m_glcc) {
+    //FIXME (dave)  This can go away?
+    m_glcc->OnSize(event);
+  }
+#endif
+
   FormatPianoKeys();
   //  Invalidate the whole window
   ReloadVP();
@@ -4252,6 +4370,14 @@ void ChartCanvas::RenderAllChartOutlines(ocpnDC &dc, ViewPort &vp) {
 }
 
 void ChartCanvas::RenderChartOutline(ocpnDC &dc, int dbIndex, ViewPort &vp) {
+#ifdef ocpnUSE_GL
+  if (g_bopengl && m_glcc) {
+    /* opengl version specially optimized */
+    m_glcc->RenderChartOutline(dc, dbIndex, vp);
+    return;
+  }
+#endif
+
   if (ChartData->GetDBChartType(dbIndex) == CHART_TYPE_PLUGIN) {
     if (!ChartData->IsChartAvailable(dbIndex)) return;
   }
@@ -4574,13 +4700,21 @@ void ChartCanvas::DrawCanvasData(LLBBox &llbBox, int nWidth, int nHeight, std::v
 	ps52plib->m_bUseSCAMIN = false;
 	ps52plib->UpdateMarinerParams();
 
+	UpdateCanvasS52PLIBConfig();
+
+#if defined ocpnUSE_GL
+	if (!g_bdisable_opengl && m_glcc) m_glcc->Show(g_bopengl);
+
+	if (g_bopengl && m_glcc) {
+		m_glcc->DrawGLCanvasData(sIMGFilePath, bPNGFlag);
+		return;
+	}
+#endif
+	if (!m_b_paint_enable) return;
+	m_b_paint_enable = false;
+
 	pscratch_bm->Create(VPoint.pix_width, VPoint.pix_height, -1);
 	m_working_bm.Create(VPoint.pix_width, VPoint.pix_height, -1);
-
-	if (!m_b_paint_enable) return;	
-	m_b_paint_enable = false;
-	//  If necessary, reconfigure the S52 PLIB
-	UpdateCanvasS52PLIBConfig();
 
 	if ((GetVP().pix_width == 0) || (GetVP().pix_height == 0)) return;
 	
@@ -5229,6 +5363,11 @@ void ChartCanvas::RenderGeorefErrorMap( wxMemoryDC *pmdc, ViewPort *vp)
 
 #endif
 bool ChartCanvas::SetCursor(const wxCursor &c) {
+#ifdef ocpnUSE_GL
+  if (g_bopengl && m_glcc)
+    return m_glcc->SetCursor(c);
+  else
+#endif
     return wxWindow::SetCursor(c);
 }
 
@@ -5237,10 +5376,48 @@ void ChartCanvas::Refresh(bool eraseBackground, const wxRect *rect) {
   //  Keep the mouse position members up to date
   GetCanvasPixPoint(mouse_x, mouse_y, m_cursor_lat, m_cursor_lon);
 
+#ifdef ocpnUSE_GL
+  if (m_glcc && g_bopengl) {
+    //      We need to invalidate the FBO cache to ensure repaint of "grounded"
+    //      overlay objects.
+    if (eraseBackground && m_glcc->UsingFBO()) m_glcc->Invalidate();
+
+    m_glcc->Refresh(eraseBackground,
+                    NULL);  // We always are going to render the entire screen
+                            // anyway, so make
+    // sure that the window managers understand the invalid area
+    // is actually the entire client area.
+
+    //  We need to selectively Refresh some child windows, if they are visible.
+    //  Note that some children are refreshed elsewhere on timer ticks, so don't
+    //  need attention here.
+
+    //      Thumbnail chart
+    if (pthumbwin && pthumbwin->IsShown()) {
+      pthumbwin->Raise();
+      pthumbwin->Refresh(false);
+    }
+
+    //      ChartInfo window
+    if (m_pCIWin && m_pCIWin->IsShown()) {
+      m_pCIWin->Raise();
+      m_pCIWin->Refresh(false);
+    }
+
+    //        if(g_MainToolbar)
+    //            g_MainToolbar->UpdateRecoveryWindow(g_bshowToolbar);
+
+  } else
+#endif
     wxWindow::Refresh(eraseBackground, rect);
 }
 
 void ChartCanvas::Update() {  
+  if (m_glcc && g_bopengl) {
+#ifdef ocpnUSE_GL
+    m_glcc->Update();
+#endif
+  } else
     wxWindow::Update();
 }
 
@@ -6944,7 +7121,55 @@ WORD *g_pSavedGammaMap;
 #endif
 
 int InitScreenBrightness(void) {
-#ifdef _WIN32  
+#ifdef _WIN32
+  if (gFrame->GetPrimaryCanvas()->GetglCanvas() && g_bopengl) {
+    HDC hDC;
+    BOOL bbr;
+
+    if (NULL == hGDI32DLL) {
+      hGDI32DLL = LoadLibrary(TEXT("gdi32.dll"));
+
+      if (NULL != hGDI32DLL) {
+        // Get the entry points of the required functions
+        g_pSetDeviceGammaRamp = (SetDeviceGammaRamp_ptr_type)GetProcAddress(
+            hGDI32DLL, "SetDeviceGammaRamp");
+        g_pGetDeviceGammaRamp = (GetDeviceGammaRamp_ptr_type)GetProcAddress(
+            hGDI32DLL, "GetDeviceGammaRamp");
+
+        //    If the functions are not found, unload the DLL and return false
+        if ((NULL == g_pSetDeviceGammaRamp) ||
+            (NULL == g_pGetDeviceGammaRamp)) {
+          FreeLibrary(hGDI32DLL);
+          hGDI32DLL = NULL;
+          return 0;
+        }
+      }
+    }
+
+    //    Interface is ready, so....
+    //    Get some storage
+    if (!g_pSavedGammaMap) {
+      g_pSavedGammaMap = (WORD *)malloc(3 * 256 * sizeof(WORD));
+
+      hDC = GetDC(NULL);  // Get the full screen DC
+      bbr = g_pGetDeviceGammaRamp(
+          hDC, g_pSavedGammaMap);  // Get the existing ramp table
+      ReleaseDC(NULL, hDC);        // Release the DC
+    }
+
+    //    On Windows hosts, try to adjust the registry to allow full range
+    //    setting of Gamma table This is an undocumented Windows hack.....
+    wxRegKey *pRegKey = new wxRegKey(
+        _T("HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows ")
+        _T("NT\\CurrentVersion\\ICM"));
+    if (!pRegKey->Exists()) pRegKey->Create();
+    pRegKey->SetValue(_T("GdiIcmGammaRange"), 256);
+
+    g_brightness_init = true;
+    return 1;
+  }
+
+  else {
     if (NULL == g_pcurtain) {
       if (gFrame->CanSetTransparent()) {
         //    Build the curtain window
@@ -6980,7 +7205,8 @@ int InitScreenBrightness(void) {
     }
     g_brightness_init = true;
 
-    return 1;  
+    return 1;
+  }
 #else
   //    Look for "xcalib" application
   wxString cmd(_T ( "xcalib -version" ));
@@ -7038,6 +7264,72 @@ int SetScreenBrightness(int brightness) {
   //    Under Windows, we use the SetDeviceGammaRamp function which exists in
   //    some (most modern?) versions of gdi32.dll Load the required library dll,
   //    if not already in place
+  if (gFrame->GetPrimaryCanvas()->GetglCanvas() && g_bopengl) {
+    if (g_pcurtain) {
+      g_pcurtain->Close();
+      g_pcurtain->Destroy();
+      g_pcurtain = NULL;
+    }
+
+    InitScreenBrightness();
+
+    if (NULL == hGDI32DLL) {
+      // Unicode stuff.....
+      wchar_t wdll_name[80];
+      MultiByteToWideChar(0, 0, "gdi32.dll", -1, wdll_name, 80);
+      LPCWSTR cstr = wdll_name;
+
+      hGDI32DLL = LoadLibrary(cstr);
+
+      if (NULL != hGDI32DLL) {
+        // Get the entry points of the required functions
+        g_pSetDeviceGammaRamp = (SetDeviceGammaRamp_ptr_type)GetProcAddress(
+            hGDI32DLL, "SetDeviceGammaRamp");
+        g_pGetDeviceGammaRamp = (GetDeviceGammaRamp_ptr_type)GetProcAddress(
+            hGDI32DLL, "GetDeviceGammaRamp");
+
+        //    If the functions are not found, unload the DLL and return false
+        if ((NULL == g_pSetDeviceGammaRamp) ||
+            (NULL == g_pGetDeviceGammaRamp)) {
+          FreeLibrary(hGDI32DLL);
+          hGDI32DLL = NULL;
+          return 0;
+        }
+      }
+    }
+
+    HDC hDC = GetDC(NULL);  // Get the full screen DC
+
+    /*
+     int cmcap = GetDeviceCaps(hDC, COLORMGMTCAPS);
+     if (cmcap != CM_GAMMA_RAMP)
+     {
+     wxLogMessage(_T("    Video hardware does not support brightness control by
+     gamma ramp adjustment.")); return false;
+     }
+     */
+
+    int increment = brightness * 256 / 100;
+
+    // Build the Gamma Ramp table
+    WORD GammaTable[3][256];
+
+    int table_val = 0;
+    for (int i = 0; i < 256; i++) {
+      GammaTable[0][i] = r_gamma_mult * (WORD)table_val;
+      GammaTable[1][i] = g_gamma_mult * (WORD)table_val;
+      GammaTable[2][i] = b_gamma_mult * (WORD)table_val;
+
+      table_val += increment;
+
+      if (table_val > 65535) table_val = 65535;
+    }
+
+    g_pSetDeviceGammaRamp(hDC, GammaTable);  // Set the ramp table
+    ReleaseDC(NULL, hDC);                    // Release the DC
+
+    return 1;
+  } else {
     if (g_pSavedGammaMap) {
       HDC hDC = GetDC(NULL);  // Get the full screen DC
       g_pSetDeviceGammaRamp(hDC,
@@ -7063,6 +7355,8 @@ int SetScreenBrightness(int brightness) {
     }
 
     return 1;
+  }
+
 #endif
 
 #ifdef BRIGHT_XCALIB

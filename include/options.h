@@ -312,12 +312,9 @@ public:
   void OnButtonSelectSound(wxCommandEvent &event);
   void OnButtonTestSound(wxCommandEvent &event);
 
-  void OnShowGpsWindowCheckboxClick(wxCommandEvent &event);
-  void OnZTCCheckboxClick(wxCommandEvent &event);
   void OnRadarringSelect(wxCommandEvent &event);
   void OnWaypointRangeRingSelect(wxCommandEvent &event);
   void OnShipTypeSelect(wxCommandEvent &event);
-  void OnButtonGroups(wxCommandEvent &event);
   void OnInsertTideDataLocation(wxCommandEvent &event);
   void OnRemoveTideDataLocation(wxCommandEvent &event);
   void OnCharHook(wxKeyEvent &event);
@@ -568,9 +565,7 @@ public:
 private:
   void Init(void);
   void CreatePanel_MMSI(size_t parent, int border_size, int group_item_spacing);
-  void CreatePanel_AIS(size_t parent, int border_size, int group_item_spacing);
-  void CreatePanel_Ownship(size_t parent, int border_size,
-                           int group_item_spacing);
+  void CreatePanel_AIS(size_t parent, int border_size, int group_item_spacing);  
   void CreatePanel_NMEA(size_t parent, int border_size, int group_item_spacing);
   void CreatePanel_ChartsLoad(size_t parent, int border_size,
                               int group_item_spacing);
@@ -580,15 +575,11 @@ private:
                                  int group_item_spacing);
   void CreatePanel_ChartGroups(size_t parent, int border_size,
                                int group_item_spacing);
-  void CreatePanel_Display(size_t parent, int border_size,
-                           int group_item_spacing);
   void CreatePanel_UI(size_t parent, int border_size, int group_item_spacing);
   void CreatePanel_Units(size_t parent, int border_size,
                          int group_item_spacing);
   void CreatePanel_Sounds(size_t parent, int border_size,
                           int group_item_spacing);
-  void CreatePanel_Advanced(size_t parent, int border_size,
-                            int group_item_spacing);
   void CreatePanel_Configs(size_t parent, int border_size,
                            int group_item_spacing);
   void CreatePanel_Routes(size_t parent, int border_size,
@@ -701,7 +692,8 @@ private:
   wxGenericDirCtrl *allAvailableCtl, *defaultAllCtl;
   wxTreeCtrl *m_pActiveChartsTree, *lastSelectedCtl;
   wxTreeItemId lastDeletedItem;
-  wxNotebook *m_GroupNB;  
+  wxNotebook *m_GroupNB;
+  wxFont* iFont;
   wxFont *dialogFont;
 
   ArrayOfCDI m_db_dirs;

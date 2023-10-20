@@ -40,10 +40,8 @@
 
 #include "ocpCursor.h"
 #include "S57QueryDialog.h"
-#include "GoToPositionDialog.h"
 #include "DetailSlider.h"
 #include "RolloverWin.h"
-#include "AISTargetQueryDialog.h"
 #include "timers.h"
 #include "emboss_data.h"
 

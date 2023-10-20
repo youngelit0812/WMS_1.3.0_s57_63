@@ -32,6 +32,7 @@
 #include <wx/fileconf.h>
 
 #include "CanvasConfig.h"
+#include "ocpn_plugin.h"
 
 //----------------------------------------------------------------------------
 //   constants

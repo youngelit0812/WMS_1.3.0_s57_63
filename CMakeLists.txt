@@ -7,7 +7,7 @@ endif()
 
 set(OpenGL_GL_PREFERENCE "LEGACY")
 
-set(PACKAGE_NAME wmsserver)
+set(PACKAGE_NAME WMSServer)
 
 add_definitions("-DRAPIDJSON_HAS_STDSTRING=1")
 
@@ -256,7 +256,7 @@ option(OCPN_PEDANTIC "Enable more compiler warnings" OFF)
 
 set(OCPN_PACKAGE_RELEASE "1" CACHE STRING "Package release number")
 
-option(OCPN_USE_GL "Enable OpenGL support" OFF)
+option(OCPN_USE_GL "Enable OpenGL support" ON)
 option(OCPN_USE_GLES_SHIM "Enable GLESv1 Shim library" OFF)
 option(OCPN_USE_UDEV_PORTS "Use udev to enumerate serial ports" ON)
 option(OCPN_USE_SYSFS_PORTS "Use sysfs to enumerate serial ports" OFF)
@@ -569,18 +569,28 @@ if (NOT OPENGLES_FOUND)
   endif (OPENGL_FOUND)
 endif ()
 
+# configure GLEW
+if (OPENGL_FOUND)
+  if (CMAKE_HOST_WIN32)    
+    message("+++******************GLEW: include directories*********************+++")
+    include_directories(
+      "${CMAKE_CURRENT_SOURCE_DIR}/cache/buildwin/include/glew"
+    )
+    link_libraries(${CMAKE_SOURCE_DIR}/cache/buildwin/glew32.lib )
+  else (CMAKE_HOST_WIN32)
+    message("******************GLEW: include directories*********************")
+    if ("${DEB_DISTRIBUTION}" STREQUAL "bionic")
+      message(STATUS "Using GLEW_STATIC")
+      set(GLEW_USE_STATIC_LIBS ON)
+    endif ("${DEB_DISTRIBUTION}" STREQUAL "bionic")
+
+    find_package(GLEW REQUIRED)
+    include_directories(${GLEW_INCLUDE_DIRS})
+    link_libraries(${GLEW_LIBRARIES})    
+  endif (CMAKE_HOST_WIN32)
+endif (OPENGL_FOUND)
+
 if (LINUX)
-	if (OPENGL_FOUND)
-		if ("${DEB_DISTRIBUTION}" STREQUAL "bionic")
-			message(STATUS "Using GLEW_STATIC")
-			set(GLEW_USE_STATIC_LIBS ON)
-		endif ("${DEB_DISTRIBUTION}" STREQUAL "bionic")
-
-		find_package(GLEW REQUIRED)
-		include_directories(${GLEW_INCLUDE_DIRS})
-		link_libraries(${GLEW_LIBRARIES})
-	endif (OPENGL_FOUND)
-
 	set(wxWidgets_USE_DEBUG OFF)
 	set(wxWidgets_USE_UNICODE ON)
 	set(wxWidgets_USE_UNIVERSAL OFF)
@@ -661,18 +671,17 @@ if (LINUX)
 			message(STATUS "Forcing -NDEBUG on gtk3 build (#1500).")
 		endif ()
 	endif ()
+endif ()
 
-	if( wxWidgets_VERSION_STRING)
-		message(STATUS "Found wxWidgets_VERSION_STRING: ${wxWidgets_VERSION_STRING}")
-	else( wxWidgets_VERSION_STRING)
-		message(STATUS "Forcing wxWidgets_VERSION_STRING: ${wxWidgets_VERSION_STRING}")
-		set(wxWidgets_VERSION_STRING "3.0")
-	endif( wxWidgets_VERSION_STRING)
 
-	if (( wxWidgets_VERSION_STRING VERSION_GREATER "3.1.0") AND (NOT APPLE))
-		add_definitions("-DHAVE_WX_GESTURE_EVENTS")
-	endif()
+message(STATUS "Forcing wxWidgets_VERSION_STRING: ${wxWidgets_VERSION_STRING}")
+set(wxWidgets_VERSION_STRING "3.2.0")
 
+if ( wxWidgets_VERSION_STRING VERSION_GREATER "3.1.0")
+  add_definitions("-DHAVE_WX_GESTURE_EVENTS")
+endif()
+
+if (LINUX)
 	message(STATUS "")
 	message(STATUS "*** Staging to build ${PACKAGE_NAME}  ***")
 	message(STATUS "*** Build type: ${CMAKE_BUILD_TYPE}")
@@ -736,10 +745,6 @@ list(APPEND LINKLIBS cppserver)
 
 # Additional module components: benchmarks, examples, plugins, tests, tools and install
 if(NOT CPPSERVER_MODULE)  
-  if (LINUX)
-    add_subdirectory(libs/glu)
-  endif ()
-
   file(GLOB EXAMPLE_HEADER_FILES "main/*.h")
   file(GLOB EXAMPLE_INLINE_FILES "main/*.inl")  
   if (MSVC)  
@@ -747,7 +752,7 @@ if(NOT CPPSERVER_MODULE)
     target_include_directories(WMSServer
       PUBLIC
       prebuilt/include
-      cache/buildwin/include/glew
+      # cache/buildwin/include/glew
       include
       buildwin/crashrpt
       cache/buildwin/include
@@ -797,6 +802,7 @@ if(NOT CPPSERVER_MODULE)
       ${PROJECT_SOURCE_DIR}/src/ChInfoWin.cpp
       ${PROJECT_SOURCE_DIR}/src/color_handler.cpp
       ${PROJECT_SOURCE_DIR}/src/comm_vars.cpp
+      ${PROJECT_SOURCE_DIR}/src/compass.cpp
       ${PROJECT_SOURCE_DIR}/src/config_vars.cpp
       ${PROJECT_SOURCE_DIR}/src/ConfigMgr.cpp
       ${PROJECT_SOURCE_DIR}/src/cutil.cpp
@@ -805,10 +811,10 @@ if(NOT CPPSERVER_MODULE)
       ${PROJECT_SOURCE_DIR}/src/FontMgr.cpp
       ${PROJECT_SOURCE_DIR}/src/geodesic.cpp
       ${PROJECT_SOURCE_DIR}/src/georef.cpp
-      ${PROJECT_SOURCE_DIR}/src/glChartCanvas.cpp
-      ${PROJECT_SOURCE_DIR}/src/glTexCache.cpp
-      ${PROJECT_SOURCE_DIR}/src/glTextureDescriptor.cpp
-      ${PROJECT_SOURCE_DIR}/src/glTextureManager.cpp
+      # ${PROJECT_SOURCE_DIR}/src/glChartCanvas.cpp
+      # ${PROJECT_SOURCE_DIR}/src/glTexCache.cpp
+      # ${PROJECT_SOURCE_DIR}/src/glTextureDescriptor.cpp
+      # ${PROJECT_SOURCE_DIR}/src/glTextureManager.cpp
       ${PROJECT_SOURCE_DIR}/src/gshhs.cpp    
       ${PROJECT_SOURCE_DIR}/src/IDX_entry.cpp
       ${PROJECT_SOURCE_DIR}/src/Layer.cpp
@@ -883,6 +889,7 @@ if(NOT CPPSERVER_MODULE)
       ${PROJECT_SOURCE_DIR}/include/color_handler.h
       ${PROJECT_SOURCE_DIR}/include/color_types.h
       ${PROJECT_SOURCE_DIR}/include/comm_vars.h
+      ${PROJECT_SOURCE_DIR}/include/compass.h
       ${PROJECT_SOURCE_DIR}/include/config_vars.h
       ${PROJECT_SOURCE_DIR}/include/cutil.h
       ${PROJECT_SOURCE_DIR}/include/dychart.h
@@ -891,10 +898,10 @@ if(NOT CPPSERVER_MODULE)
       ${PROJECT_SOURCE_DIR}/include/FontMgr.h
       ${PROJECT_SOURCE_DIR}/include/geodesic.h
       ${PROJECT_SOURCE_DIR}/include/georef.h
-      ${PROJECT_SOURCE_DIR}/include/glChartCanvas.h
-      ${PROJECT_SOURCE_DIR}/include/glTexCache.h
-      ${PROJECT_SOURCE_DIR}/include/glTextureDescriptor.h
-      ${PROJECT_SOURCE_DIR}/include/glTextureManager.h
+      # ${PROJECT_SOURCE_DIR}/include/glChartCanvas.h
+      # ${PROJECT_SOURCE_DIR}/include/glTexCache.h
+      # ${PROJECT_SOURCE_DIR}/include/glTextureDescriptor.h
+      # ${PROJECT_SOURCE_DIR}/include/glTextureManager.h
       ${PROJECT_SOURCE_DIR}/include/gshhs.h
       ${PROJECT_SOURCE_DIR}/include/IDX_entry.h
       ${PROJECT_SOURCE_DIR}/include/Layer.h
@@ -945,7 +952,7 @@ if(NOT CPPSERVER_MODULE)
 
     target_link_libraries(WMSServer
       PUBLIC
-      debug ../cache/buildwin/glew32
+      # debug ../cache/buildwin/glew32
       debug ../prebuilt/libs/observable/Debug/_OBSERVABLE
       debug ../prebuilt/libs/ssl_sha1/Debug/SHA1
       debug ../prebuilt/libs/mongoose/Debug/MONGOOSE
@@ -1001,7 +1008,7 @@ if(NOT CPPSERVER_MODULE)
       debug ../prebuilt/libs/iso8211/Debug/ISO8211
       debug ../prebuilt/libs/gdal/Debug/GDAL
       debug ws2_32      
-      optimized ../cache/buildwin/glew32
+      # optimized ../cache/buildwin/glew32
       optimized ../prebuilt/libs/observable/Release/_OBSERVABLE
       optimized ../prebuilt/libs/ssl_sha1/Release/SHA1
       optimized ../prebuilt/libs/mongoose/Release/MONGOOSE
@@ -1082,6 +1089,7 @@ if(NOT CPPSERVER_MODULE)
       include/color_handler.h
       include/color_types.h
       include/comm_vars.h
+      include/compass.h
       include/config_vars.h
       include/cutil.h
       include/dychart.h
@@ -1090,10 +1098,10 @@ if(NOT CPPSERVER_MODULE)
       include/FontMgr.h
       include/geodesic.h
       include/georef.h
-      include/glChartCanvas.h
-      include/glTexCache.h
-      include/glTextureDescriptor.h
-      include/glTextureManager.h
+      # include/glChartCanvas.h
+      # include/glTexCache.h
+      # include/glTextureDescriptor.h
+      # include/glTextureManager.h
       include/gshhs.h
       include/IDX_entry.h
       include/Layer.h
@@ -1171,6 +1179,7 @@ if(NOT CPPSERVER_MODULE)
       src/ChInfoWin.cpp
       src/color_handler.cpp
       src/comm_vars.cpp
+      src/compass.cpp
       src/config_vars.cpp
       src/ConfigMgr.cpp
       src/cutil.cpp
@@ -1179,10 +1188,10 @@ if(NOT CPPSERVER_MODULE)
       src/FontMgr.cpp
       src/geodesic.cpp
       src/georef.cpp
-      src/glChartCanvas.cpp
-      src/glTexCache.cpp
-      src/glTextureDescriptor.cpp
-      src/glTextureManager.cpp
+      # src/glChartCanvas.cpp
+      # src/glTexCache.cpp
+      # src/glTextureDescriptor.cpp
+      # src/glTextureManager.cpp
       src/gshhs.cpp    
       src/IDX_entry.cpp
       src/Layer.cpp
@@ -1313,47 +1322,49 @@ if(NOT CPPSERVER_MODULE)
     else ()
       set(wxWidgets_FIND_COMPONENTS net xml html adv aui core base webview)
     endif ()
+  endif()
 
-    if (ARCH MATCHES "arm*" AND OCPN_USE_GLES_SHIM)
-      find_path(OPENGLESv1_INCLUDE_DIR GLES/gl.h)
-      if (OPENGLESv1_INCLUDE_DIR)
-        message(STATUS "Found OpenGLESv1")
-        add_definitions(-DocpnUSE_GL) # ocpnUSE_GLES is in config.h
+  if (ARCH MATCHES "arm*" AND OCPN_USE_GLES_SHIM)
+    find_path(OPENGLESv1_INCLUDE_DIR GLES/gl.h)
+    if (OPENGLESv1_INCLUDE_DIR)
+      message(STATUS "Found OpenGLESv1")
+      add_definitions(-DocpnUSE_GL) # ocpnUSE_GLES is in config.h
 
-        set(OPENGL_LIBRARIES "GL_static" "EGL" "X11" "drm")
-      endif ()
+      set(OPENGL_LIBRARIES "GL_static" "EGL" "X11" "drm")
     endif ()
+  endif ()
 
-    if (OPENGLES_FOUND)
+  if (OPENGLES_FOUND)
+    list(APPEND wxwidgets_FIND_COMPONENTS gl)
+  endif ()
+
+  if (NOT OPENGLES_FOUND)
+    if (OCPN_USE_GL)
+      find_package(OpenGL)
+    else (OCPN_USE_GL)
+      message(STATUS "OpenGL disabled by option USE_GL...")
+    endif (OCPN_USE_GL)
+
+    if (OPENGL_FOUND)
       list(APPEND wxwidgets_FIND_COMPONENTS gl)
-    endif ()
+      target_include_directories(WMSServer PRIVATE ${OPENGL_INCLUDE_DIR})
 
-    if (NOT OPENGLES_FOUND)
-      if (OCPN_USE_GL)
-        find_package(OpenGL)
-      else (OCPN_USE_GL)
-        message(STATUS "OpenGL disabled by option USE_GL...")
-      endif (OCPN_USE_GL)
+      message(STATUS "Found OpenGL....")
+      if (OCPN_VERBOSE)
+        message(STATUS "    GL Lib: " ${OPENGL_gl_LIBRARIES})
+        message(STATUS "    GL Include: " ${OPENGL_INCLUDE_DIR})
+      endif ()
 
-      if (OPENGL_FOUND)
-        list(APPEND wxwidgets_FIND_COMPONENTS gl)
-        target_include_directories(WMSServer PRIVATE ${OPENGL_INCLUDE_DIR})
+      set(wxWidgets_USE_LIBS gl ${wxWidgets_USE_LIBS})
+      add_definitions(-DocpnUSE_GL)
+      target_link_libraries(WMSServer PRIVATE ${OPENGL_gl_LIBRARIES})
+      target_include_directories(WMSServer PRIVATE ${OPENGL_INCLUDE_DIR})
+    else (OPENGL_FOUND)
+      message(STATUS "OpenGL not found...")
+    endif (OPENGL_FOUND)
+  endif ()
 
-        message(STATUS "Found OpenGL....")
-        if (OCPN_VERBOSE)
-          message(STATUS "    GL Lib: " ${OPENGL_gl_LIBRARIES})
-          message(STATUS "    GL Include: " ${OPENGL_INCLUDE_DIR})
-        endif ()
-
-        set(wxWidgets_USE_LIBS gl ${wxWidgets_USE_LIBS})
-        add_definitions(-DocpnUSE_GL)
-        target_link_libraries(WMSServer PRIVATE ${OPENGL_gl_LIBRARIES})
-        target_include_directories(WMSServer PRIVATE ${OPENGL_INCLUDE_DIR})
-      else (OPENGL_FOUND)
-        message(STATUS "OpenGL not found...")
-      endif (OPENGL_FOUND)
-    endif ()
-
+  if (LINUX)
     if (OCPN_USE_CRASHREPORT)
       message(STATUS "Crash reporting enabled")	
       
@@ -1432,25 +1443,30 @@ if(NOT CPPSERVER_MODULE)
       target_link_libraries(WMSServer PRIVATE ocpn::serial)
       message(STATUS "Using new serial library...")
     endif (OCPN_USE_NEWSERIAL)
-
-    if (ARCH MATCHES "arm*" AND OCPN_USE_GLES_SHIM)
-      find_path(OPENGLESv1_INCLUDE_DIR GLES/gl.h)
-      if (OPENGLESv1_INCLUDE_DIR)
-        message(STATUS "Found OpenGLESv1")
-        add_definitions(-DocpnUSE_GLES)
-        add_definitions(-DocpnUSE_GL)
-
-        add_subdirectory(libs/glshim)
-
-        set(OPENGL_LIBRARIES "GL_static" "EGL" "X11" "drm")
-      endif ()
-    endif ()
-        
+  endif ()
+  
+  if (OPENGL_FOUND)
+    target_sources(
+      ${PACKAGE_NAME}
+      PRIVATE
+      include/glChartCanvas.h
+      include/glTextureDescriptor.h
+      include/glTexCache.h
+      include/glTextureManager.h
+      src/glTextureDescriptor.cpp
+      src/glTexCache.cpp
+      src/glChartCanvas.cpp
+      src/glTextureManager.cpp
+    )
+  endif ()
+  
+  if (LINUX)
+    add_subdirectory(libs/glu)
     set(OPENGL_LIBRARIES "GLU_static" ${OPENGL_LIBRARIES})
     if (OCPN_VERBOSE)
-      message(STATUS "    Revised GL Lib (with local): " ${OPENGL_LIBRARIES})
+       message(STATUS "    Revised GL Lib (with local): " ${OPENGL_LIBRARIES})
     endif ()
-
+  
     find_package(OcpnLibarchive)
     if (NOT TARGET libarchive)
       message(FATAL:_ERROR "No libarchive!!!")
@@ -1551,13 +1567,13 @@ if(NOT CPPSERVER_MODULE)
 #############
     target_link_libraries(WMSServer PUBLIC S57ENC)
 
-    if (OPENGL_FOUND)
-      add_subdirectory("libs/texcmp")
-      target_link_libraries(WMSServer PUBLIC ocpn::texcmp)
+  if (OPENGL_FOUND)
+    add_subdirectory("libs/texcmp")
+    target_link_libraries(WMSServer PUBLIC ocpn::texcmp)
 
-      add_subdirectory("libs/mipmap")
-      target_link_libraries(WMSServer PUBLIC ocpn::mipmap)
-    endif (OPENGL_FOUND)
+    add_subdirectory("libs/mipmap")
+    target_link_libraries(WMSServer PUBLIC ocpn::mipmap)
+  endif (OPENGL_FOUND)
 
     pkg_search_module(LZ4 liblz4 lz4)
     USE_BUNDLED_LIB(USE_BUNDLED_LZ4 lz4)

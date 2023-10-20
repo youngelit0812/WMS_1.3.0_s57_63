@@ -377,28 +377,6 @@ void toSM(double lat, double lon, double lat0, double lon0, double *x,
   *y = y3 - y30;
 }
 
-void toSM_M(double lat, double lon, double lat0, double lon0, double* x, double* y) {
-	double xlon = lon;
-
-	/*  Make sure lon and lon0 are same phase */
-
-	if ((lon * lon0 < 0.) && (fabs(lon - lon0) > 180.)) {
-		lon < 0.0 ? xlon += 360.0 : xlon -= 360.0;
-	}
-
-	const double z = WGS84_semimajor_axis_meters * mercator_k0;
-
-	*x = (xlon - lon0) * DEGREE * z;
-
-	// y =.5 ln( (1 + sin t) / (1 - sin t) )
-	const double s = sin(lat * DEGREE);
-	const double y3 = (.5 * log((1 + s) / (1 - s))) * z;
-
-	const double s0 = sin(lat0 * DEGREE);
-	const double y30 = (.5 * log((1 + s0) / (1 - s0))) * z;
-	*y = y3 - y30;
-}
-
 double toSMcache_y30(double lat0) {
   return lat0;
   const double z = WGS84_semimajor_axis_meters * mercator_k0;

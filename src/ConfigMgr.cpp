@@ -104,8 +104,6 @@ extern int g_nframewin_y;
 extern int g_nframewin_posx;
 extern int g_nframewin_posy;
 extern bool g_bframemax;
-extern int g_route_prop_x, g_route_prop_y;
-extern int g_route_prop_sx, g_route_prop_sy;
 
 extern double g_PlanSpeed;
 extern wxString g_VisibleLayers;
@@ -155,7 +153,6 @@ extern double g_AIS_RealtPred_Kts;
 extern bool g_bShowAISName;
 extern int g_Show_Target_Name_Scale;
 extern int g_WplAction;
-extern bool g_benableAISNameCache;
 
 extern int g_S57_dialog_sx, g_S57_dialog_sy;
 
@@ -1219,8 +1216,6 @@ bool ConfigMgr::CheckTemplate(wxString fileName) {
 
   CHECK_INT(_T ( "CourseUpMode" ), &g_bCourseUp);
   CHECK_INT(_T ( "COGUPAvgSeconds" ), &g_COGAvgSec);
-  // CHECK_INT( _T ( "LookAheadMode" ), &g_bLookAhead );
-  // CHECK_INT( _T ( "SkewToNorthUp" ), &g_bskew_comp );
   CHECK_INT(_T ( "OpenGL" ), &g_bopengl);
   CHECK_INT(_T ( "SoftwareGL" ), &g_bSoftwareGL);
 
@@ -1324,9 +1319,7 @@ bool ConfigMgr::CheckTemplate(wxString fileName) {
 
   CHECK_INT(_T ( "EnableRotateKeys" ), &g_benable_rotate);
   CHECK_INT(_T ( "EmailCrashReport" ), &g_bEmailCrashReport);
-
-  CHECK_INT(_T ( "EnableAISNameCache" ), &g_benableAISNameCache);
-
+  
   CHECK_INT(_T ( "EnableUDPNullHeader" ), &g_benableUDPNullHeader);
 
   conf->SetPath(_T ( "/Settings/GlobalState" ));
@@ -1342,14 +1335,7 @@ bool ConfigMgr::CheckTemplate(wxString fileName) {
   CHECK_INT(_T ( "ClientSzX" ), &g_lastClientRectw);
   CHECK_INT(_T ( "ClientSzY" ), &g_lastClientRecth);
 
-  CHECK_INT(_T( "RoutePropSizeX" ), &g_route_prop_sx);
-  CHECK_INT(_T( "RoutePropSizeY" ), &g_route_prop_sy);
-  CHECK_INT(_T( "RoutePropPosX" ), &g_route_prop_x);
-  CHECK_INT(_T( "RoutePropPosY" ), &g_route_prop_y);
-
-  CHECK_INT(_T ( "S52_DEPTH_UNIT_SHOW" ),
-            &g_nDepthUnitDisplay);  // default is metres
-
+  CHECK_INT(_T ( "S52_DEPTH_UNIT_SHOW" ), &g_nDepthUnitDisplay);  // default is metres
   //    AIS
   conf->SetPath(_T ( "/Settings/AIS" ));
   CHECK_INT(_T ( "bNoCPAMax" ), &g_bCPAMax);

@@ -131,7 +131,6 @@ public:
 
   int GetApplicationMemoryUse(void);
 
-  void OnEraseBackground(wxEraseEvent &event);
   void OnMaximize(wxMaximizeEvent &event);
   void OnCloseWindow(wxCloseEvent &event);
   void OnExit(wxCommandEvent &event);
@@ -170,8 +169,7 @@ public:
   ChartCanvas *GetPrimaryCanvas();
   ChartCanvas *GetFocusCanvas();
 
-  void DoStackDelta(ChartCanvas *cc, int direction);
-  void DoSettings(void);
+  void DoStackDelta(ChartCanvas *cc, int direction);  
   void SwitchKBFocus(ChartCanvas *pCanvas);
   ChartCanvas *GetCanvasUnderMouse();
   int GetCanvasIndexUnderMouse();
@@ -191,15 +189,11 @@ public:
   void RegisterGlobalMenuItems();
   void UpdateGlobalMenuItems();
   void UpdateGlobalMenuItems(ChartCanvas *cc);
-  int DoOptionsDialog();
   bool ProcessOptionsDialog(int resultFlags, ArrayOfCDI *pNewDirArray);
-  void DoPrint(void);
-  void StopSockets(void);
-  void ResumeSockets(void);
+  void DoPrint(void);    
   void ToggleDataQuality(ChartCanvas *cc);
   void TogglebFollow(ChartCanvas *cc);
-  void ToggleFullScreen();
-  void ToggleChartBar(ChartCanvas *cc);
+  void ToggleFullScreen();  
   void SetbFollow(ChartCanvas *cc);
   void ClearbFollow(ChartCanvas *cc);
   void ToggleChartOutlines(ChartCanvas *cc);
@@ -244,9 +238,6 @@ public:
   bool CheckGroup(int igroup);  
   bool SendJSON_WMM_Var_Request(double lat, double lon, wxDateTime date);
 
-  void DestroyPersistentDialogs();
-  void TouchAISActive(void);
-  void UpdateAISTool(void);
   void UpdateDB_Canvas();
 
   wxStatusBar *m_pStatusBar;
@@ -302,10 +293,6 @@ public:
   void CheckToolbarPosition();
   void ODoSetSize(void);
   void DoCOGSet(void);
-
-  void UpdateAllToolbars(ColorScheme cs);
-
-  void FilterCogSog(void);
 
   void ApplyGlobalColorSchemetoStatusBar(void);
 

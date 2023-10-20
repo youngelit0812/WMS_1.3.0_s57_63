@@ -26,20 +26,25 @@
 #include "geodesic.h"
 #include "styles.h"
 
+#include "concanv.h"
 #include "thumbwin.h"
 #include "chartdb.h"
 #include "chartimg.h"
 #include "ocpn_pixel.h"
 #include "ocpndc.h"
+#include "glTextureDescriptor.h"
 #include "Quilt.h"
+#include "FontMgr.h"
 #include "OCPNRegion.h"
 #include "gshhs.h"
 
+#ifdef ocpnUSE_GL
+#include "glChartCanvas.h"
+#endif
 #include "s57chart.h"  // for ArrayOfS57Obj
 #include "s52plib.h"
 #include "poly_math.h"
 #include "linmath.h"
-#include "glChartCanvas.h"
 
 #ifdef __MSVC__
 #define _CRTDBG_MAP_ALLOC
@@ -80,6 +85,12 @@ ViewPort::ViewPort() {
   b_MercatorProjectionOverride = false;
   lat0_cache = NAN;
   m_projection_type = PROJECTION_MERCATOR;
+}
+
+void ViewPort::PixelScale(float scale){
+  pix_width *= scale;
+  pix_height *= scale;
+  view_scale_ppm *= scale;
 }
 
 // TODO: eliminate the use of this function

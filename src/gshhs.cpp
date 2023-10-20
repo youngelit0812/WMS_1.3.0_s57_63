@@ -9,6 +9,10 @@
 #include "dychart.h"
 #include "ocpndc.h"
 
+#ifdef ocpnUSE_GL
+#include "glChartCanvas.h"
+#endif
+
 #include "gshhs.h"
 #include "chartbase.h"  // for projections
 #include "shaders.h"
@@ -373,6 +377,9 @@ void GshhsPolyCell::DrawPolygonFilledGL(ocpnDC &pnt, contour_list *p, float_2Dpt
           g_vertexes.push_back(vertex);
 
           wxPoint2DDouble q;
+          if (glChartCanvas::HasNormalizedViewPort(vp))
+            q = GetDoublePixFromLL(vp, ccp.y, ccp.x);
+          else  // tesselation directly from lat/lon
             q.m_x = ccp.y, q.m_y = ccp.x;
 
           if (vp.m_projection_type != PROJECTION_POLAR) {
@@ -463,6 +470,23 @@ void GshhsPolyCell::DrawPolygonFilledGL(ocpnDC &pnt, contour_list *p, float_2Dpt
                      2.0 / (float)vp.pix_height, 1.0);
   mat4x4_translate_in_place(mvp, -vp.pix_width / 2, vp.pix_height / 2, 0);
 
+  if (glChartCanvas::HasNormalizedViewPort(vp)) {
+#if 0
+    GLint pos = glGetAttribLocation(color_tri_shader_program, "position");
+    glVertexAttribPointer(pos, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), *pv);
+    glEnableVertexAttribArray(pos);
+
+    // FIXME        glUniformMatrix4fv( matloc, 1, GL_FALSE, (const
+    // GLfloat*)vp.vp_transform);
+    mat4x4 m;
+    mat4x4_identity(m);
+    GLint tmatloc = glGetUniformLocation(color_tri_shader_program, "TransformMatrix");
+    glUniformMatrix4fv(tmatloc, 1, GL_FALSE, (const GLfloat*)m);
+
+    glUseProgram(color_tri_shader_program);
+    glDrawArrays(GL_TRIANGLES, 0, *pvc);
+#endif
+  } else {
     float *pvt = new float[2 * (*pvc)];
     for (int i = 0; i < *pvc; i++) {
       float_2Dpt *pc = *pv + i;
@@ -488,7 +512,7 @@ void GshhsPolyCell::DrawPolygonFilledGL(ocpnDC &pnt, contour_list *p, float_2Dpt
     delete[] pvt;
     glDeleteBuffers(1, &vbo);
     shader->UnBind();
-  
+  }
 #else
 #endif
 }
@@ -831,6 +855,30 @@ void GshhsPolyReader::drawGshhsPolyMapPlain(ocpnDC &pnt, ViewPort &vp, wxColor c
   GshhsPolyCell *cel;
 
   ViewPort nvp = vp;
+#ifdef ocpnUSE_GL
+  if (!pnt.GetDC()) {  // opengl
+    // clear cached data when the projection changes
+    if (vp.m_projection_type != last_rendered_vp.m_projection_type ||
+        (last_rendered_vp.m_projection_type == PROJECTION_POLAR &&
+         last_rendered_vp.clat * vp.clat <= 0)) {
+      last_rendered_vp = vp;
+      for (int clon = 0; clon < 360; clon++)
+        for (int clat = 0; clat < 180; clat++)
+          if (allCells[clon][clat]) allCells[clon][clat]->ClearPolyV();
+    }
+#if !defined(ocpnUSE_GLSL)
+    glEnableClientState(GL_VERTEX_ARRAY);
+
+    // use a viewport that allows the vertexes to be reused over many frames
+    // TODO fix for multicanvas
+    if (glChartCanvas::HasNormalizedViewPort(vp)) {
+      glPushMatrix();
+      glChartCanvas::MultMatrixViewPort(vp);
+      nvp = glChartCanvas::NormalizedViewPort(vp);
+    }
+#endif
+  }
+#endif
   for (clon = clonmin; clon < clonmax; clon++) {
     clonx = clon;
     while (clonx < 0) clonx += 360;
@@ -871,6 +919,15 @@ void GshhsPolyReader::drawGshhsPolyMapPlain(ocpnDC &pnt, ViewPort &vp, wxColor c
       }
     }
   }
+
+#ifdef ocpnUSE_GL
+#if !defined(ocpnUSE_GLSL)
+  if (!pnt.GetDC()) {  // opengl
+    if (glChartCanvas::HasNormalizedViewPort(vp)) glPopMatrix();
+    glDisableClientState(GL_VERTEX_ARRAY);
+  }
+#endif
+#endif
 }
 
 //-------------------------------------------------------------------------

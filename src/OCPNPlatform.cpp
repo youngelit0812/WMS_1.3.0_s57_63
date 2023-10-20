@@ -27,14 +27,18 @@
 #include "styles.h"
 #include "navutil.h"
 #include "ocpn_utils.h"
+#include "FontMgr.h"
 #include "s52s57.h"
 #include "options.h"
 #include "AboutFrameImpl.h"
 #include "about.h"
 #include "ocpn_frame.h"
-#include "FontMgr.h"
 #include <string>
 #include <vector>
+
+#ifdef ocpnUSE_GL
+#include "glChartCanvas.h"
+#endif
 
 // Include CrashRpt Header
 #ifdef OCPN_USE_CRASHREPORT
@@ -158,6 +162,9 @@ extern wxString g_toolbarConfig;
 extern bool g_bPreserveScaleOnX;
 extern bool g_running;
 
+#ifdef ocpnUSE_GL
+extern ocpnGLOptions g_GLOptions;
+#endif
 extern int g_default_font_size;
 extern wxString g_default_font_facename;
 
@@ -195,6 +202,8 @@ extern wxString g_androidDownloadDirectory;
 extern wxString g_gpx_path;
 extern BasePlatform *g_BasePlatform;
 extern bool g_bdisable_opengl;
+
+OCPN_GLCaps *GL_Caps;
 
 static const char *const DEFAULT_XDG_DATA_DIRS =
     "~/.local/share:/usr/local/share:/usr/share";
@@ -520,16 +529,36 @@ void OCPNPlatform::Initialize_2(void) {
 }
 
 void OCPNPlatform::Initialize_3(void) {
-	g_bopengl = false;	
+  bool bcapable = IsGLCapable();    
 
-	// Force a few items for Android, to ensure that UI is useable if config got
-	// scrambled	
-	if (g_bFirstRun || g_bUpgradeInProcess) {
-		if (!g_bRollover)  // Not explicit set before
-			g_bRollover = true;
-	}
+  if(!bcapable)
+    g_bopengl = false;
+  else {
+    g_bopengl = true;
+    g_bdisable_opengl = false;
+    pConfig->UpdateSettings();
+  }
 
-	g_FlushNavobjChangesTimeout = 300;  // Seconds, so 5 minutes
+
+  // Try to automatically switch to guaranteed usable GL mode on an OCPN upgrade
+  // or fresh install
+
+  if ((g_bFirstRun || g_bUpgradeInProcess) && bcapable) {
+    g_bopengl = true;
+
+    // Set up visually nice options
+    g_GLOptions.m_bUseAcceleratedPanning = true;
+    g_GLOptions.m_bTextureCompression = true;
+    g_GLOptions.m_bTextureCompressionCaching = true;
+
+    g_GLOptions.m_iTextureDimension = 512;
+    g_GLOptions.m_iTextureMemorySize = 64;
+
+    g_GLOptions.m_GLPolygonSmoothing = true;
+    g_GLOptions.m_GLLineSmoothing = true;
+  }
+    
+  g_FlushNavobjChangesTimeout = 300;  // Seconds, so 5 minutes
 }
 
 //  Called from MyApp() just before end of MyApp::OnInit()
@@ -553,6 +582,148 @@ void OCPNPlatform::OnExit_2(void) {
 #endif
 }
 
+
+bool OCPNPlatform::BuildGLCaps(void *pbuf) {
+  // Investigate OpenGL capabilities
+  gFrame->Show();
+  glTestCanvas *tcanvas = new glTestCanvas(gFrame);
+  tcanvas->Show();
+  wxYield();
+  wxGLContext *pctx = new wxGLContext(tcanvas);
+  tcanvas->SetCurrent(*pctx);
+
+  OCPN_GLCaps *pcaps = (OCPN_GLCaps *)pbuf;
+
+  char *str = (char *)glGetString(GL_RENDERER);
+  if (str == NULL) {    //No GL at all...
+    wxLogMessage("GL_RENDERER not found.");
+    delete tcanvas;
+    delete pctx;
+    return false;
+  }
+  pcaps->Renderer = std::string(str);
+
+  char *stv = (char *)glGetString(GL_VERSION);
+  if (stv == NULL) {    //No GL Version...
+    wxLogMessage("GL_VERSION not found");
+    delete tcanvas;
+    delete pctx;
+    return false;
+  }
+  pcaps->Version = std::string(stv);
+
+  char *stsv = (char *)glGetString(GL_SHADING_LANGUAGE_VERSION);
+  if (stsv == NULL) {    //No GLSL...
+    wxLogMessage("GL_SHADING_LANGUAGE_VERSION not found");
+    delete tcanvas;
+    delete pctx;
+    return false;
+  }
+  pcaps->GLSL_Version = std::string(stsv);
+
+  pcaps->dGLSL_Version = 0;
+  pcaps->dGLSL_Version = ::atof(pcaps->GLSL_Version.c_str());
+
+  if (pcaps->dGLSL_Version < 1.2){
+    wxString msg;
+    msg.Printf(_T("GLCaps Probe: OpenGL-> GLSL Version reported:  "));
+    msg += wxString(pcaps->GLSL_Version.c_str());
+    msg += "\n OpenGL disabled due to insufficient OpenGL capabilities";
+    wxLogMessage(msg);
+    pcaps->bCanDoGLSL = false;
+    return false;
+  }
+
+  pcaps->bCanDoGLSL = true;
+
+  if (QueryExtension("GL_ARB_texture_non_power_of_two"))
+    pcaps->TextureRectangleFormat = GL_TEXTURE_2D;
+  else if (QueryExtension("GL_OES_texture_npot"))
+    pcaps->TextureRectangleFormat = GL_TEXTURE_2D;
+  else if (QueryExtension("GL_ARB_texture_rectangle"))
+    pcaps->TextureRectangleFormat = GL_TEXTURE_RECTANGLE_ARB;
+
+  pcaps->bOldIntel = false;
+
+  // Can we use VBO?
+  pcaps->bCanDoVBO = true;
+
+#if defined(__WXMSW__) || defined(__WXOSX__)
+  if (pcaps->bOldIntel) pcaps->bCanDoVBO = false;
+#endif
+
+
+  // Can we use FBO?
+  pcaps->bCanDoFBO = true;
+
+  //  We need NPOT to support FBO rendering
+  if (!pcaps->TextureRectangleFormat) pcaps->bCanDoFBO = false;
+
+  //      We require certain extensions to support FBO rendering
+  if (!QueryExtension("GL_EXT_framebuffer_object")) pcaps->bCanDoFBO = false;
+
+  delete tcanvas;
+  delete pctx;
+
+  return true;
+}
+
+
+bool OCPNPlatform::IsGLCapable() {
+#if defined(CLI)
+  return false;
+#else
+
+  if(g_bdisable_opengl)
+    return false;
+
+  // Protect against fault in OpenGL caps test
+  // If this method crashes due to bad GL drivers,
+  // next startup will disable OpenGL
+  g_bdisable_opengl = true;
+
+  // Update and flush the config file
+  pConfig->UpdateSettings();
+
+  wxLogMessage("Starting OpenGL test...");
+  wxLog::FlushActive();
+
+  OCPN_GLCaps GL_Caps;
+  bool bcaps = BuildGLCaps(&GL_Caps);
+
+  wxLogMessage("OpenGL test complete.");
+  if (!bcaps){
+    wxLogMessage("BuildGLCaps fails.");
+    wxLog::FlushActive();
+    return false;
+  }
+
+  // and so we decide....
+
+  // Require a modern GLSL implementation
+  if (!GL_Caps.bCanDoGLSL) {
+    return false;
+  }
+
+  // We insist on FBO support, since otherwise DC mode is always faster on
+  // canvas panning..
+  if (!GL_Caps.bCanDoFBO)  {
+    return false;
+  }
+
+  // OpenGL is OK for OCPN
+  wxLogMessage("OpenGL determined CAPABLE.");
+  wxLog::FlushActive();
+
+  g_bdisable_opengl = false;
+  g_bopengl = true;
+
+  // Update and flush the config file
+  pConfig->UpdateSettings();
+
+  return true;
+#endif
+}
 void OCPNPlatform::SetLocaleSearchPrefixes(void) {
 #if wxUSE_XLOCALE
 // Add a new prefixes for search order.
@@ -910,32 +1081,7 @@ int OCPNPlatform::platformApplyPrivateSettingsString(wxString settings,
 static wxString ExpandPaths(wxString paths, OCPNPlatform *platform);
 
 
-int OCPNPlatform::DoFileSelectorDialog(wxWindow *parent, wxString *file_spec,
-                                       wxString Title, wxString initDir,
-                                       wxString suggestedName,
-                                       wxString wildcard) {
-  wxString file;
-  int result = wxID_CANCEL;
 
-  long flag = wxFD_DEFAULT_STYLE;
-  if (suggestedName.Length()) {  // new file
-    flag = wxFD_SAVE;
-  }
-
-  wxString mask = wildcard;
-  if (wxNOT_FOUND != mask.Find(_T("gpx")))
-    mask.Prepend(_T("GPX files (*.gpx)|"));
-
-#ifdef __WXOSX__
-  if (parent) parent->HideWithEffect(wxSHOW_EFFECT_BLEND);
-#endif
-
-#ifdef __WXOSX__
-  if (parent) parent->ShowWithEffect(wxSHOW_EFFECT_BLEND);
-#endif
-
-  return result;
-}
 
 MyConfig *OCPNPlatform::GetConfigObject() {
   MyConfig *result = NULL;

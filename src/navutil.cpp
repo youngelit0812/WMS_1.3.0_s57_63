@@ -57,6 +57,9 @@
 
 #include "s52plib.h"
 
+#ifdef ocpnUSE_GL
+#include "glChartCanvas.h"
+#endif
 //    Statics
 extern OCPNPlatform *g_Platform;
 extern MyFrame *gFrame;
@@ -156,6 +159,7 @@ extern bool g_bHideMoored;
 extern double g_ShowMoored_Kts;
 extern bool g_bAllowShowScaled;
 extern bool g_bShowScaled;
+extern int g_ShowScaled_Num;
 extern bool g_bAIS_CPA_Alert;
 extern bool g_bAIS_CPA_Alert_Audio;
 extern int g_ais_alert_dialog_x, g_ais_alert_dialog_y;
@@ -187,8 +191,13 @@ extern double g_AIS_RealtPred_Kts;
 extern bool g_bShowAISName;
 extern int g_Show_Target_Name_Scale;
 extern int g_WplAction;
-bool g_benableAISNameCache;
-bool g_bUseOnlyConfirmedAISName;
+
+extern int g_ScaledNumWeightSOG;
+extern int g_ScaledNumWeightCPA;
+extern int g_ScaledNumWeightTCPA;
+extern int g_ScaledNumWeightRange;
+extern int g_ScaledNumWeightSizeOfT;
+extern int g_ScaledSizeMinimal;
 
 extern int g_S57_dialog_sx, g_S57_dialog_sy;
 int g_S57_extradialog_sx, g_S57_extradialog_sy;
@@ -374,11 +383,9 @@ extern bool g_useMUI;
 int g_nCPUCount;
 
 extern unsigned int g_canvasConfig;
-arrayofCanvasConfigPtr g_canvasConfigArray;
+extern arrayofCanvasConfigPtr g_canvasConfigArray;
 extern wxString g_lastAppliedTemplateGUID;
 
-int g_route_prop_x, g_route_prop_y;
-int g_route_prop_sx, g_route_prop_sy;
 extern int g_AndroidVersionCode;
 
 extern wxString g_compatOS;
@@ -395,6 +402,10 @@ wxString g_catalog_channel;
 int g_trackFilterMax;
 double g_mouse_zoom_sensitivity;
 int g_mouse_zoom_sensitivity_ui;
+
+#ifdef ocpnUSE_GL
+extern ocpnGLOptions g_GLOptions;
+#endif
 
 #if !defined(NAN)
 static const long long lNaN = 0xfff8000000000000;
@@ -496,6 +507,20 @@ int MyConfig::LoadMyConfig(std::string& sENCDirPath) {
   //g_maxWPNameLength = 6;
   g_NMEAAPBPrecision = 3;
 
+#ifdef ocpnUSE_GL
+  g_GLOptions.m_bUseAcceleratedPanning = true;
+  g_GLOptions.m_GLPolygonSmoothing = true;
+  g_GLOptions.m_GLLineSmoothing = true;
+  g_GLOptions.m_iTextureDimension = 512;
+  g_GLOptions.m_iTextureMemorySize = 128;
+  if (!g_bGLexpert) {
+    g_GLOptions.m_iTextureMemorySize =
+        wxMax(128, g_GLOptions.m_iTextureMemorySize);
+    g_GLOptions.m_bTextureCompressionCaching =
+        g_GLOptions.m_bTextureCompression;
+  }
+#endif
+
   g_maintoolbar_orient = wxTB_HORIZONTAL;  
   g_restore_dbindex = -1;
   g_ChartNotRenderScaleFactor = 1.5;
@@ -522,7 +547,7 @@ int MyConfig::LoadMyConfig(std::string& sENCDirPath) {
   g_bFullScreenQuilt = 1;  
   g_bPreserveScaleOnX = 1;
   g_navobjbackups = 5;
-  g_benableAISNameCache = true;
+  
   g_n_arrival_circle_radius = 0.05;
   g_plus_minus_zoom_factor = 2.0;
   g_mouse_zoom_sensitivity = 1.5;
@@ -592,6 +617,15 @@ int MyConfig::LoadMyConfig(std::string& sENCDirPath) {
     if (g_bInlandEcdis) g_bLookAhead = 1;
 
     if (g_bdisable_opengl) g_bopengl = false;
+
+#ifdef ocpnUSE_GL
+    if (!g_bGLexpert) {
+      g_GLOptions.m_iTextureMemorySize =
+          wxMax(128, g_GLOptions.m_iTextureMemorySize);
+      g_GLOptions.m_bTextureCompressionCaching =
+          g_GLOptions.m_bTextureCompression;
+    }
+#endif
 
     g_chart_zoom_modifier_raster = wxMin(g_chart_zoom_modifier_raster, 5);
     g_chart_zoom_modifier_raster = wxMax(g_chart_zoom_modifier_raster, -5);
@@ -760,6 +794,24 @@ int MyConfig::LoadMyConfigRaw(bool bAsTemplate) {
 
   Read(_T( "ShowTrackPointTime" ), &g_bShowTrackPointTime, true);
   /* opengl options */
+#ifdef ocpnUSE_GL
+  if (!bAsTemplate) {
+    Read(_T ( "OpenGLExpert" ), &g_bGLexpert, false);
+    Read(_T ( "UseAcceleratedPanning" ), &g_GLOptions.m_bUseAcceleratedPanning,
+         true);
+    Read(_T ( "GPUTextureCompression" ), &g_GLOptions.m_bTextureCompression);
+    Read(_T ( "GPUTextureCompressionCaching" ),
+         &g_GLOptions.m_bTextureCompressionCaching);
+    Read(_T ( "PolygonSmoothing" ), &g_GLOptions.m_GLPolygonSmoothing);
+    Read(_T ( "LineSmoothing" ), &g_GLOptions.m_GLLineSmoothing);
+    Read(_T ( "GPUTextureDimension" ), &g_GLOptions.m_iTextureDimension);
+    Read(_T ( "GPUTextureMemSize" ), &g_GLOptions.m_iTextureMemorySize);
+    Read(_T ( "DebugOpenGL" ), &g_bDebugOGL);
+    Read(_T ( "OpenGL" ), &g_bopengl);
+    Read(_T ( "SoftwareGL" ), &g_bSoftwareGL);
+  }
+#endif
+
   Read(_T ( "SmoothPanZoom" ), &g_bsmoothpanzoom);
 
   Read(_T ( "ToolbarX"), &g_maintoolbar_x);
@@ -885,10 +937,6 @@ int MyConfig::LoadMyConfigRaw(bool bAsTemplate) {
 
   Read(_T ( "EnableRotateKeys" ), &g_benable_rotate);
   Read(_T ( "EmailCrashReport" ), &g_bEmailCrashReport);
-
-  g_benableAISNameCache = true;
-  Read(_T ( "EnableAISNameCache" ), &g_benableAISNameCache);
-
   Read(_T ( "EnableUDPNullHeader" ), &g_benableUDPNullHeader);
 
   SetPath(_T ( "/Settings/GlobalState" ));
@@ -903,12 +951,7 @@ int MyConfig::LoadMyConfigRaw(bool bAsTemplate) {
   Read(_T ( "ClientPosY" ), &g_lastClientRecty);
   Read(_T ( "ClientSzX" ), &g_lastClientRectw);
   Read(_T ( "ClientSzY" ), &g_lastClientRecth);
-
-  Read(_T( "RoutePropSizeX" ), &g_route_prop_sx);
-  Read(_T( "RoutePropSizeY" ), &g_route_prop_sy);
-  Read(_T( "RoutePropPosX" ), &g_route_prop_x);
-  Read(_T( "RoutePropPosY" ), &g_route_prop_y);
-
+  
   read_int = -1;
   Read(_T ( "S52_DEPTH_UNIT_SHOW" ), &read_int);  // default is metres
   if (read_int >= 0) {
@@ -939,13 +982,9 @@ int MyConfig::LoadMyConfigRaw(bool bAsTemplate) {
   Read(_T ( "bAIS_SART_AlertAudio" ), &g_bAIS_SART_Alert_Audio);
   Read(_T ( "bAIS_DSC_AlertAudio" ), &g_bAIS_DSC_Alert_Audio);
   Read(_T ( "bAnchorAlertAudio" ), &g_bAnchor_Alert_Audio);
-
   //    AIS
   wxString s;
   SetPath(_T ( "/Settings/AIS" ));
-
-  g_bUseOnlyConfirmedAISName = false;
-  Read(_T ( "UseOnlyConfirmedAISName" ), &g_bUseOnlyConfirmedAISName);
 
   Read(_T ( "bNoCPAMax" ), &g_bCPAMax);
 
@@ -1136,8 +1175,8 @@ int MyConfig::LoadMyConfigRaw(bool bAsTemplate) {
   bool bNewKey = false;
   while (bContk) {
     Read(strk, &kval);
-    //bNewKey = FontMgr::Get().AddAuxKey(kval);
-    if (!bAsTemplate) {// && !bNewKey) {
+    bNewKey = FontMgr::Get().AddAuxKey(kval);
+    if (!bAsTemplate && !bNewKey) {
       DeleteEntry(strk);
       dummyk--;
     }
@@ -1178,11 +1217,13 @@ int MyConfig::LoadMyConfigRaw(bool bAsTemplate) {
       // GetNextEntry() loop, so we need to save those and delete outside.
       deleteList.Add(str);
       wxString oldKey = pval->BeforeFirst(_T(':'));
+      str = FontMgr::GetFontConfigKey(oldKey);
     }
 
     if (pval->IsEmpty() || pval->StartsWith(_T(":"))) {
       deleteList.Add(str);
-    }
+    } else
+      FontMgr::Get().LoadFontNative(&str, pval);
 
     bCont = GetNextEntry(str, dummy);
   }
@@ -1847,47 +1888,6 @@ void MyConfig::SaveConfigCanvas(canvasConfig *cConfig) {
 
     Write(_T ( "canvasbFollow" ), cConfig->canvas->m_bFollow);
     Write(_T ( "ActiveChartGroup" ), cConfig->canvas->m_groupIndex);
-
-    Write(_T ( "canvasToolbarConfig" ),
-          cConfig->canvas->GetToolbarConfigString());
-    Write(_T ( "canvasShowToolbar" ), 0);
-
-    Write(_T ( "canvasQuilt" ), cConfig->canvas->GetQuiltMode());
-    Write(_T ( "canvasShowGrid" ), cConfig->canvas->GetShowGrid());
-    Write(_T ( "canvasShowOutlines" ), cConfig->canvas->GetShowOutlines());
-    Write(_T ( "canvasShowDepthUnits" ), cConfig->canvas->GetShowDepthUnits());
-
-    Write(_T ( "canvasShowAIS" ), cConfig->canvas->GetShowAIS());
-    Write(_T ( "canvasAttenAIS" ), cConfig->canvas->GetAttenAIS());
-
-    Write(_T ( "canvasShowTides" ), cConfig->canvas->GetbShowTide());
-    Write(_T ( "canvasShowCurrents" ), cConfig->canvas->GetbShowCurrent());
-
-    // ENC options
-    Write(_T ( "canvasShowENCText" ), cConfig->canvas->GetShowENCText());
-    Write(_T ( "canvasENCDisplayCategory" ),
-          cConfig->canvas->GetENCDisplayCategory());
-    Write(_T ( "canvasENCShowDepths" ), cConfig->canvas->GetShowENCDepth());
-    Write(_T ( "canvasENCShowBuoyLabels" ),
-          cConfig->canvas->GetShowENCBuoyLabels());
-    Write(_T ( "canvasENCShowLightDescriptions" ),
-          cConfig->canvas->GetShowENCLightDesc());
-    Write(_T ( "canvasENCShowLights" ), cConfig->canvas->GetShowENCLights());
-    Write(_T ( "canvasENCShowVisibleSectorLights" ),
-          cConfig->canvas->GetShowVisibleSectors());
-    Write(_T ( "canvasENCShowAnchorInfo" ),
-          cConfig->canvas->GetShowENCAnchor());
-    Write(_T ( "canvasENCShowDataQuality" ),
-          cConfig->canvas->GetShowENCDataQual());
-    Write(_T ( "canvasCourseUp" ),
-          cConfig->canvas->GetUpMode() == COURSE_UP_MODE);
-    Write(_T ( "canvasHeadUp" ), cConfig->canvas->GetUpMode() == HEAD_UP_MODE);
-    Write(_T ( "canvasLookahead" ), cConfig->canvas->GetLookahead());
-
-    int width = cConfig->canvas->GetSize().x;    
-
-    Write(_T ( "canvasSizeX" ), width);
-    Write(_T ( "canvasSizeY" ), cConfig->canvas->GetSize().y);
   }
 }
 
@@ -1956,48 +1956,9 @@ void MyConfig::UpdateSettings() {
   Flush();
 }
 
-void MyConfig::UpdateNavObjOnly() {
-
-}
-
-void MyConfig::UpdateNavObj(bool bRecreate) {
-
-}
-
-static wxFileName exportFileName(wxWindow *parent,
-                                 const wxString suggestedName) {
-  wxFileName ret;
-  wxString path;
-  wxString validName{suggestedName};
-  // replace common date characters invalid in filename
-  // MS-DOS file systems have many more
-  validName.Replace(_T("/"), _T("-"));
-  validName.Replace(_T(":"), _T("_"));
-  int response = g_Platform->DoFileSelectorDialog(
-      parent, &path, _("Export GPX file"), g_gpx_path, validName, wxT("*.gpx"));
-
-  if (response == wxID_OK) {
-    wxFileName fn(path);
-    g_gpx_path = fn.GetPath();
-    fn.SetExt(_T("gpx"));
-
-#ifndef __WXMAC__
-
-#endif
-    ret = fn;
-  }
-  return ret;
-}
-
 bool MyConfig::IsChangesFileDirty() {
   return true;
   
-}
-
-
-void UI_ImportGPX(wxWindow *parent, bool islayer, wxString dirpath,
-                  bool isdirectory, bool isPersistent) {
-
 }
 
 //-------------------------------------------------------------------------
@@ -2186,6 +2147,83 @@ wxString formatAngle(double angle) {
   return out;
 }
 
+/* render a rectangle at a given color and transparency */
+void AlphaBlending(ocpnDC &dc, int x, int y, int size_x, int size_y,
+                   float radius, wxColour color, unsigned char transparency) {
+  wxDC *pdc = dc.GetDC();
+  if (pdc) {
+    //    Get wxImage of area of interest
+    wxBitmap obm(size_x, size_y);
+    wxMemoryDC mdc1;
+    mdc1.SelectObject(obm);
+    mdc1.Blit(0, 0, size_x, size_y, pdc, x, y);
+    mdc1.SelectObject(wxNullBitmap);
+    wxImage oim = obm.ConvertToImage();
+
+    //    Create destination image
+    wxBitmap olbm(size_x, size_y);
+    wxMemoryDC oldc(olbm);
+    if (!oldc.IsOk()) return;
+
+    oldc.SetBackground(*wxBLACK_BRUSH);
+    oldc.SetBrush(*wxWHITE_BRUSH);
+    oldc.Clear();
+
+    if (radius > 0.0) oldc.DrawRoundedRectangle(0, 0, size_x, size_y, radius);
+
+    wxImage dest = olbm.ConvertToImage();
+    unsigned char *dest_data =
+        (unsigned char *)malloc(size_x * size_y * 3 * sizeof(unsigned char));
+    unsigned char *bg = oim.GetData();
+    unsigned char *box = dest.GetData();
+    unsigned char *d = dest_data;
+
+    //  Sometimes, on Windows, the destination image is corrupt...
+    if (NULL == box) {
+      free(d);
+      return;
+    }
+    float alpha = 1.0 - (float)transparency / 255.0;
+    int sb = size_x * size_y;
+    for (int i = 0; i < sb; i++) {
+      float a = alpha;
+      if (*box == 0 && radius > 0.0) a = 1.0;
+      int r = ((*bg++) * a) + (1.0 - a) * color.Red();
+      *d++ = r;
+      box++;
+      int g = ((*bg++) * a) + (1.0 - a) * color.Green();
+      *d++ = g;
+      box++;
+      int b = ((*bg++) * a) + (1.0 - a) * color.Blue();
+      *d++ = b;
+      box++;
+    }
+
+    dest.SetData(dest_data);
+
+    //    Convert destination to bitmap and draw it
+    wxBitmap dbm(dest);
+    dc.DrawBitmap(dbm, x, y, false);
+
+    // on MSW, the dc Bounding box is not updated on DrawBitmap() method.
+    // Do it explicitely here for all platforms.
+    dc.CalcBoundingBox(x, y);
+    dc.CalcBoundingBox(x + size_x, y + size_y);
+  } else {
+#ifdef ocpnUSE_GL
+    glEnable(GL_BLEND);
+
+    float radMod = wxMax(radius, 2.0);
+    wxColour c(color.Red(), color.Green(), color.Blue(), transparency);
+    dc.SetBrush(wxBrush(c));
+    dc.SetPen(wxPen(c, 1));
+    dc.DrawRoundedRectangle(x, y, size_x, size_y, radMod);
+
+    glDisable(GL_BLEND);
+
+#endif
+  }
+}
 
 void GpxDocument::SeedRandom() {
   /* Fill with random. Miliseconds hopefully good enough for our usage, reading
@@ -2311,7 +2349,23 @@ void DimeControl(wxWindow *ctrl, wxColour col, wxColour window_back_color,
     }
 #endif
 
+    else if (win->IsKindOf(CLASSINFO(wxHtmlWindow))) {
+      if (cs != GLOBAL_COLOR_SCHEME_DAY && cs != GLOBAL_COLOR_SCHEME_RGB)
+        ((wxPanel *)win)->SetBackgroundColour(ctrl_back_color);
+      else
+        ((wxPanel *)win)->SetBackgroundColour(wxNullColour);
+    }
 
+    else if (win->IsKindOf(CLASSINFO(wxGrid))) {
+      ((wxGrid *)win)->SetDefaultCellBackgroundColour(window_back_color);
+      ((wxGrid *)win)->SetDefaultCellTextColour(uitext);
+      ((wxGrid *)win)->SetLabelBackgroundColour(col);
+      ((wxGrid *)win)->SetLabelTextColour(uitext);
+#if !wxCHECK_VERSION(3, 0, 0)
+      ((wxGrid *)win)->SetDividerPen(wxPen(col));
+#endif
+      ((wxGrid *)win)->SetGridLineColour(gridline);
+    }
 
     if (win->GetChildren().GetCount() > 0) {
       depth++;

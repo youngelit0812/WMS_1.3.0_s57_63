@@ -246,7 +246,7 @@ public:
   void FlushSymbolCaches(const ChartCtx& ctx);
 
   //    For DC's
-  int RenderObjectToDC(wxDC *pdc, ObjRazRules *rzRules, bool bCSShowFlag = true, bool bSY_LHShowFlag = true, bool bBUOYShowFlag = true, bool bLDESCRShowFlag = true, bool bAIShowFlag = true, bool bSlvisShowFlag = true);
+  int RenderObjectToDC(wxDC *pdc, ObjRazRules *rzRules);
   int RenderObjectToDCText(wxDC *pdc, ObjRazRules *rzRules);
   int RenderAreaToDC(wxDC *pdc, ObjRazRules *rzRules, render_canvas_parms *pb_spec);
 
@@ -408,7 +408,7 @@ private:
   void InitializeNatsurHash();
   bool PreloadOBJLFromCSV(const wxString &csv_file);
 
-  int DoRenderObject(wxDC *pdcin, ObjRazRules *rzRules, bool bCSShowFlag = true, bool bSY_LHShowFlag = true, bool bBUOYShowFlag = true, bool bLDESCRShowFlag = true, bool bAIShowFlag = true, bool bSlvisShowFlag = true);
+  int DoRenderObject(wxDC *pdcin, ObjRazRules *rzRules);
   int DoRenderObjectTextOnly(wxDC *pdcin, ObjRazRules *rzRules);
 
   //    Area Renderers
@@ -426,7 +426,7 @@ private:
   //    Object Renderers
   int RenderTX(ObjRazRules *rzRules, Rules *rules);
   int RenderTE(ObjRazRules *rzRules, Rules *rules);
-  int RenderSY(ObjRazRules *rzRules, Rules *rules, bool bCSFlag, bool bLHShowFlag = true, bool bBUOYShowFlag = true, bool bAIShowFlag = true);
+  int RenderSY(ObjRazRules *rzRules, Rules *rules);
   int RenderLS(ObjRazRules *rzRules, Rules *rules);
   int RenderLC(ObjRazRules *rzRules, Rules *rules);
   int RenderMPS(ObjRazRules *rzRules, Rules *rules);

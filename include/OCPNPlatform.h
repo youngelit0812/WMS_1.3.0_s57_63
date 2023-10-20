@@ -122,10 +122,7 @@ public:
   //      Per-Platform file/directory support
   //--------------------------------------------------------------------------
 
-    MyConfig *GetConfigObject();
-  int DoFileSelectorDialog(wxWindow *parent, wxString *file_spec,
-                           wxString Title, wxString initDir,
-                           wxString suggestedName, wxString wildcard);  
+    MyConfig *GetConfigObject();  
 
   //--------------------------------------------------------------------------
   //      Per-Platform Utility support
@@ -147,6 +144,13 @@ public:
   wxString ChangeLocale(wxString &newLocaleID, wxLocale *presentLocale,
                         wxLocale **newLocale);
 #endif
+
+  //--------------------------------------------------------------------------
+  //      Per-Platform OpenGL support
+  //--------------------------------------------------------------------------
+  bool BuildGLCaps(void *pbuf);
+  bool IsGLCapable();
+
 private:
   wxString m_SData_Dir;
 

@@ -288,23 +288,14 @@ public:
   int GetApplicationMemoryUse(void);
 
   void OnEraseBackground(wxEraseEvent &event);
-  void OnMaximize(wxMaximizeEvent &event);
-  void OnCloseWindow(wxCloseEvent &event);
+  void OnMaximize(wxMaximizeEvent &event);  
   void OnExit(wxCommandEvent &event);
   void OnSize(wxSizeEvent &event);
-  void OnMove(wxMoveEvent &event);
-  void OnInitTimer(wxTimerEvent &event);
+  void OnMove(wxMoveEvent &event);  
   void OnFrameTimer1(wxTimerEvent &event);
-  bool DoChartUpdate(void);
-  void OnEvtTHREADMSG(OCPN_ThreadMessageEvent &event);
-  void OnEvtOCPN_NMEA(OCPN_DataStreamEvent &event);
-  void OnEvtOCPN_SignalK(OCPN_SignalKEvent &event);
-  void OnEvtOCPN_SIGNALK_Test(OCPN_SignalKEvent &event);
-  void OnEvtPlugInMessage(OCPN_MsgEvent &event);
-  void OnMemFootTimer(wxTimerEvent &event);
-  void OnRecaptureTimer(wxTimerEvent &event);
-  void OnSENCEvtThread(OCPN_BUILDSENC_ThreadEvent &event);
-  void OnIconize(wxIconizeEvent &event);
+  bool DoChartUpdate(void);  
+  void OnMemFootTimer(wxTimerEvent &event);  
+  void OnSENCEvtThread(OCPN_BUILDSENC_ThreadEvent &event);  
   void OnBellsFinished(wxCommandEvent &event);
 
 #ifdef wxHAS_POWER_EVENTS
@@ -316,9 +307,7 @@ public:
 
   void RefreshCanvasOther(ChartCanvas *ccThis);
   void UpdateAllFonts(void);
-  void PositionConsole(void);
-  void OnToolLeftClick(wxCommandEvent &event);
-  void ClearRouteTool();
+  void PositionConsole(void);  
   void DoStackUp(ChartCanvas *cc);
   void DoStackDown(ChartCanvas *cc);
   void selectChartDisplay(int type, int family);
@@ -336,18 +325,13 @@ public:
   ChartCanvas *GetPrimaryCanvas();
   ChartCanvas *GetFocusCanvas();
 
-  void DoStackDelta(ChartCanvas *cc, int direction);
-  void DoSettings(void);
+  void DoStackDelta(ChartCanvas *cc, int direction);  
   void SwitchKBFocus(ChartCanvas *pCanvas);
   ChartCanvas *GetCanvasUnderMouse();
   int GetCanvasIndexUnderMouse();
 
   bool DropMarker(bool atOwnShip = true);
 
-  void TriggerResize(wxSize sz);
-  void OnResizeTimer(wxTimerEvent &event);
-
-  void TriggerRecaptureTimer();
   bool SetGlobalToolbarViz(bool viz);
 
   void MouseEvent(wxMouseEvent &event);
@@ -356,26 +340,20 @@ public:
   //     CHART_FAMILY_DONTCARE); void SelectdbChart(int dbindex); void
   //     SelectQuiltRefChart(int selected_index); void SelectQuiltRefdbChart(int
   //     db_index, bool b_autoscale = true);
-  void CenterView(ChartCanvas *cc, const LLBBox &bbox);
-
   void JumpToPosition(ChartCanvas *cc, double lat, double lon, double scale);
-
-  void ProcessCanvasResize(void);
 
   void BuildMenuBar(void);
   void ApplyGlobalSettings(bool bnewtoolbar);
   void RegisterGlobalMenuItems();
   void UpdateGlobalMenuItems();
-  void UpdateGlobalMenuItems(ChartCanvas *cc);
-  int DoOptionsDialog();
+  void UpdateGlobalMenuItems(ChartCanvas *cc);  
   bool ProcessOptionsDialog(int resultFlags, ArrayOfCDI *pNewDirArray);
   void DoPrint(void);
   void StopSockets(void);
   void ResumeSockets(void);
   void ToggleDataQuality(ChartCanvas *cc);
   void TogglebFollow(ChartCanvas *cc);
-  void ToggleFullScreen();
-  void ToggleChartBar(ChartCanvas *cc);
+  void ToggleFullScreen();  
   void SetbFollow(ChartCanvas *cc);
   void ClearbFollow(ChartCanvas *cc);
   void ToggleChartOutlines(ChartCanvas *cc);
@@ -392,9 +370,7 @@ public:
   void SetENCDisplayCategory(ChartCanvas *cc, enum _DisCat nset);
   void ToggleNavobjects(ChartCanvas *cc);
 
-  Track *TrackOff(bool do_add_point = false);
-  void TrackDailyRestart(void);
-  bool ShouldRestartTrack();
+  void TrackDailyRestart(void);  
   void ToggleColorScheme();
   void SetMenubarItemState(int item_id, bool state);
   void SetMasterToolbarItemState(int tool_id, bool state);
@@ -405,17 +381,7 @@ public:
                          wxString rolloverSVGfile, wxString toggledSVGfile);
   void ToggleQuiltMode(ChartCanvas *cc);
   void UpdateControlBar(ChartCanvas *cc);
-
-  void ShowTides(bool bShow);
-  void ShowCurrents(bool bShow);
-
-  void SubmergeAllCanvasToolbars(void);
-  void SurfaceAllCanvasToolbars(void);
-  void ToggleAllToolbars(bool b_smooth = false);
-  void SetAllToolbarScale(void);
-  void SetGPSCompassScale(void);
-  void InvalidateAllCanvasUndo();
-
+  
   void RefreshGroupIndices(void);
 
   double GetBestVPScale(ChartBase *pchart);
@@ -428,18 +394,13 @@ public:
 
   void ChartsRefresh();
 
-  bool CheckGroup(int igroup);
-  double GetMag(double a);
-  double GetMag(double a, double lat, double lon);
+  bool CheckGroup(int igroup);  
   bool SendJSON_WMM_Var_Request(double lat, double lon, wxDateTime date);
 
   void DestroyPersistentDialogs();
   void TouchAISActive(void);
   void UpdateAISTool(void);
-
-  void ActivateAISMOBRoute(AisTargetData *ptarget);
-  void UpdateAISMOBRoute(AisTargetData *ptarget);
-
+  
   wxStatusBar *m_pStatusBar;
   wxMenuBar *m_pMenuBar;
   int nBlinkerTick;

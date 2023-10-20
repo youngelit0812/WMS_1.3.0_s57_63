@@ -1,28 +1,3 @@
-/***************************************************************************
- *
- * Project:  OpenCPN
- * Purpose:  OpenCPN Main wxWidgets Program
- * Author:   David Register
- *
- ***************************************************************************
- *   Copyright (C) 2010 by David S. Register                               *
- *                                                                         *
- *   This program is free software; you can redistribute it and/or modify  *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation; either version 2 of the License, or     *
- *   (at your option) any later version.                                   *
- *                                                                         *
- *   This program is distributed in the hope that it will be useful,       *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
- *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program; if not, write to the                         *
- *   Free Software Foundation, Inc.,                                       *
- *   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301,  USA.         *
- **************************************************************************/
-
 #include <wx/artprov.h>
 #include <wx/dialog.h>
 #include <wx/sizer.h>
@@ -33,11 +8,6 @@
 #include "FontMgr.h"
 #include "OCPNPlatform.h"
 #include "ocpn_plugin.h"
-
-#ifdef __ANDROID__
-#include "androidUTIL.h"
-#include "qdebug.h"
-#endif
 
 extern bool g_bresponsive;
 extern OCPNPlatform* g_Platform;
@@ -52,7 +22,8 @@ wxFont* GetOCPNScaledFont(wxString item, int default_size) {
     double scaled_font_size = dFont->GetPointSize();
 
     {
-      double points_per_mm = g_Platform->GetDisplayDPmm();
+      double points_per_mm =
+          g_Platform->getFontPointsperPixel() * g_Platform->GetDisplayDPmm();
       double min_scaled_font_size =
           3 * points_per_mm;  // smaller than 3 mm is unreadable
       int nscaled_font_size =
@@ -80,7 +51,8 @@ wxFont GetOCPNGUIScaledFont(wxString item) {
     double postmult = exp(g_GUIScaleFactor * (0.693 / 5.0));  //  exp(2)
     double scaled_font_size = dFont->GetPointSize() * postmult;
 
-    double points_per_mm = g_Platform->GetDisplayDPmm();
+    double points_per_mm =
+        g_Platform->getFontPointsperPixel() * g_Platform->GetDisplayDPmm();
     double min_scaled_font_size =
         3 * points_per_mm;  // smaller than 3 mm is unreadable
     int nscaled_font_size =

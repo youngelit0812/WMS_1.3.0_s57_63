@@ -37,6 +37,7 @@
 #include "Osenc.h"
 #include "chcanv.h"
 #include "SencManager.h"
+#include "gui_lib.h"
 #include "logger.h"
 #include "Quilt.h"
 #include "ocpn_frame.h"
@@ -47,6 +48,11 @@
 #include <crtdbg.h>
 #define DEBUG_NEW new (_NORMAL_BLOCK, __FILE__, __LINE__)
 #define new DEBUG_NEW
+#endif
+
+#ifdef ocpnUSE_GL
+#include "glChartCanvas.h"
+#include "linmath.h"
 #endif
 
 #include <algorithm>  // for std::sort
@@ -78,6 +84,7 @@ extern bool g_bGDAL_Debug;
 extern bool g_bDebugS57;
 extern MyFrame *gFrame;
 extern bool g_b_overzoom_x;
+extern bool g_b_EnableVBO;
 extern OCPNPlatform *g_Platform;
 extern SENCThreadManager *g_SencThreadManager;
 
@@ -1340,10 +1347,149 @@ void s57chart::AssembleLineGeometry(void) {
     delete pcs;
   }
   m_vc_hash.clear();
+
+#ifdef ocpnUSE_GL
+  if (g_b_EnableVBO) {
+    if (grow_buffer) {
+      if (m_LineVBO_name > 0){
+          glDeleteBuffers(1, (GLuint *)&m_LineVBO_name);
+          m_LineVBO_name = -1;
+      }
+    }
+  }
+#endif
+
+
  }
 
 void s57chart::BuildLineVBO(void) {
+#ifdef ocpnUSE_GL
+  if (!g_b_EnableVBO) return;
 
+  if (m_LineVBO_name == -1) {
+    //      Create the VBO
+    GLuint vboId;
+    glGenBuffers(1, &vboId);
+
+    // bind VBO in order to use
+    glBindBuffer(GL_ARRAY_BUFFER, vboId);
+
+    // upload data to VBO
+    // Choice:  Line VBO only, or full VBO with areas.
+
+#if 1
+#ifndef USE_ANDROID_GLES2
+    glEnableClientState(GL_VERTEX_ARRAY);  // activate vertex coords array
+#endif
+    glBufferData(GL_ARRAY_BUFFER, m_vbo_byte_length, m_line_vertex_buffer,
+                  GL_STATIC_DRAW);
+
+#else
+    // get the size of VBO data block needed for all AREA objects
+    ObjRazRules *top, *crnt;
+    int vbo_area_size_bytes = 0;
+    for (int i = 0; i < PRIO_NUM; ++i) {
+      if (ps52plib->m_nBoundaryStyle == SYMBOLIZED_BOUNDARIES)
+        top = razRules[i][4];  // Area Symbolized Boundaries
+      else
+        top = razRules[i][3];  // Area Plain Boundaries
+
+      while (top != NULL) {
+        crnt = top;
+        top = top->next;  // next object
+
+        //  Get the vertex data for this object
+        PolyTriGroup *ppg_vbo = crnt->obj->pPolyTessGeo->Get_PolyTriGroup_head();
+        //add the byte length
+        vbo_area_size_bytes += ppg_vbo->single_buffer_size;
+      }
+    }
+
+    glGetError();     //clear it
+
+    // Allocate the VBO
+    glBufferData(GL_ARRAY_BUFFER, m_vbo_byte_length + vbo_area_size_bytes,
+                 NULL, GL_STATIC_DRAW);
+
+    GLenum err = glGetError();
+          if (err) {
+            wxString msg;
+            msg.Printf(_T("S57 VBO Error 1: %d"), err);
+            wxLogMessage(msg);
+            printf("S57 VBO Error 1: %d", err);
+          }
+
+    // Upload the line vertex data
+    glBufferSubData(GL_ARRAY_BUFFER, 0, m_vbo_byte_length, m_line_vertex_buffer);
+
+    err = glGetError();
+          if (err) {
+            wxString msg;
+            msg.Printf(_T("S57 VBO Error 2: %d"), err);
+            wxLogMessage(msg);
+            printf("S57 VBO Error 2: %d", err);
+          }
+
+
+    // Get the Area Object vertices, and add to the VBO, one by one
+    int vbo_load_offset = m_vbo_byte_length;
+
+    for (int i = 0; i < PRIO_NUM; ++i) {
+      if (ps52plib->m_nBoundaryStyle == SYMBOLIZED_BOUNDARIES)
+        top = razRules[i][4];  // Area Symbolized Boundaries
+      else
+        top = razRules[i][3];  // Area Plain Boundaries
+
+      while (top != NULL) {
+        crnt = top;
+        top = top->next;  // next object
+
+        //  Get the vertex data for this object
+        PolyTriGroup *ppg_vbo = crnt->obj->pPolyTessGeo->Get_PolyTriGroup_head();
+
+        // append  data to VBO
+        glBufferSubData(GL_ARRAY_BUFFER, vbo_load_offset,
+                        ppg_vbo->single_buffer_size,
+                        ppg_vbo->single_buffer);
+        // store the VBO offset in the object
+        crnt->obj->vboAreaOffset = vbo_load_offset;
+        vbo_load_offset += ppg_vbo->single_buffer_size;
+      }
+    }
+
+    err = glGetError();
+          if (err) {
+            wxString msg;
+            msg.Printf(_T("S57 VBO Error 3: %d"), err);
+            wxLogMessage(msg);
+            printf("S57 VBO Error 3: %d", err);
+          }
+
+#endif
+
+#ifndef USE_ANDROID_GLES2
+    glDisableClientState(GL_VERTEX_ARRAY);  // deactivate vertex array
+#endif
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+    //  Loop and populate all the objects
+    //  with the name of the line/area vertex VBO
+    for (int i = 0; i < PRIO_NUM; ++i) {
+      for (int j = 0; j < LUPNAME_NUM; j++) {
+        ObjRazRules *top = razRules[i][j];
+        while (top != NULL) {
+          S57Obj *obj = top->obj;
+          obj->auxParm2 = vboId;
+          top = top->next;
+        }
+      }
+    }
+
+    m_LineVBO_name = vboId;
+    m_this_chart_context->vboID = vboId;
+  }
+
+#endif
 }
 
 /*              RectRegion:
@@ -1395,6 +1541,17 @@ bool s57chart::RenderViewOnGLTextOnly(const wxGLContext &glc,
                                       const ViewPort &VPoint) {
   if (!m_RAZBuilt) return false;
 
+#ifdef ocpnUSE_GL
+
+  if (!ps52plib) return false;
+
+  SetVPParms(VPoint);
+  PrepareForRender((ViewPort *)&VPoint, ps52plib);
+
+  glChartCanvas::DisableClipRegion();
+  DoRenderOnGLText(glc, VPoint);
+
+#endif
   return true;
 }
 
@@ -1404,16 +1561,288 @@ bool s57chart::DoRenderRegionViewOnGL(const wxGLContext &glc,
                                       const LLRegion &Region, bool b_overlay) {
   if (!m_RAZBuilt) return false;
 
+#ifdef ocpnUSE_GL
+
+  if (!ps52plib) return false;
+
+  if (g_bDebugS57) printf("\n");
+
+  SetVPParms(VPoint);
+
+ PrepareForRender((ViewPort *)&VPoint, ps52plib);
+
+  if (m_plib_state_hash != ps52plib->GetStateHash()) {
+    m_bLinePrioritySet = false;  // need to reset line priorities
+    UpdateLUPs(this);            // and update the LUPs
+    ClearRenderedTextCache();    // and reset the text renderer,
+                               // for the case where depth(height) units change
+    ResetPointBBoxes(m_last_vp, VPoint);
+    SetSafetyContour();
+
+    m_plib_state_hash = ps52plib->GetStateHash();
+  }
+
+  if (VPoint.view_scale_ppm != m_last_vp.view_scale_ppm) {
+    ResetPointBBoxes(m_last_vp, VPoint);
+  }
+
+  BuildLineVBO();
+  SetLinePriorities();
+
+  //        Clear the text declutter list
+  ps52plib->ClearTextList();
+
+  ViewPort vp = VPoint;
+
+// printf("\n");
+  // region always has either 1 or 2 rectangles (full screen or panning
+  // rectangles)
+  for (OCPNRegionIterator upd(RectRegion); upd.HaveRects(); upd.NextRect()) {
+    wxRect upr = upd.GetRect();
+    //printf("updRect: %d %d %d %d\n",upr.x, upr.y, upr.width, upr.height);
+
+    LLRegion chart_region = vp.GetLLRegion(upd.GetRect());
+    chart_region.Intersect(Region);
+
+    if (!chart_region.Empty()) {
+      // TODO  I think this needs nore work for alternate Projections...
+      //  cm93 vpoint crossing Greenwich, panning east, was rendering areas
+      //  incorrectly.
+      ViewPort cvp = glChartCanvas::ClippedViewport(VPoint, chart_region);
+//  printf("CVP:  %g %g       %g %g\n",
+//         cvp.GetBBox().GetMinLat(),
+//         cvp.GetBBox().GetMaxLat(),
+//         cvp.GetBBox().GetMinLon(),
+//         cvp.GetBBox().GetMaxLon());
+
+      if (CHART_TYPE_CM93 == GetChartType()) {
+        // for now I will revert to the faster rectangle clipping now that
+        // rendering order is resolved
+        //                glChartCanvas::SetClipRegion(cvp, chart_region);
+        glChartCanvas::SetClipRect(cvp, upd.GetRect(), false);
+        //ps52plib->m_last_clip_rect = upd.GetRect();
+      } else {
+#ifdef OPT_USE_ANDROID_GLES2
+
+        // GLES2 will be faster if we setup and use a smaller viewport for each
+        // rectangle render. This is because when using shaders, clip operations
+        // (e.g. scissor, stencil) happen after the fragment shader executes.
+        // However, with a smaller viewport, the fragment shader will not be
+        // invoked if the vertices are all outside the vieport.
+
+        wxRect r = upd.GetRect();
+        ViewPort *vp = &cvp;
+        glViewport(r.x, vp->pix_height - (r.y + r.height), r.width, r.height);
+
+        // mat4x4 m;
+        // mat4x4_identity(m);
+
+        mat4x4 I, Q;
+        mat4x4_identity(I);
+
+        float yp = vp->pix_height - (r.y + r.height);
+        // Translate
+        I[3][0] = (-r.x - (float)r.width / 2) * (2.0 / (float)r.width);
+        I[3][1] = (r.y + (float)r.height / 2) * (2.0 / (float)r.height);
+
+        // Scale
+        I[0][0] *= 2.0 / (float)r.width;
+        I[1][1] *= -2.0 / (float)r.height;
+
+        // Rotate
+        float angle = 0;
+        mat4x4_rotate_Z(Q, I, angle);
+
+        mat4x4_dup((float(*)[4])vp->vp_transform, Q);
+
+#else
+        ps52plib->SetReducedBBox(cvp.GetBBox());
+        glChartCanvas::SetClipRect(cvp, upd.GetRect(), false);
+
+#endif
+      }
+
+      DoRenderOnGL(glc, cvp);
+
+      glChartCanvas::DisableClipRegion();
+    }
+  }
+
+  //      Update last_vp to reflect current state
+  m_last_vp = VPoint;
+
+  //      CALLGRIND_STOP_INSTRUMENTATION
+
+#endif
   return true;
 }
 
 
 bool s57chart::DoRenderOnGL(const wxGLContext &glc, const ViewPort &VPoint) {
+#ifdef ocpnUSE_GL
+
+  int i;
+  ObjRazRules *top;
+  ObjRazRules *crnt;
+  ViewPort tvp = VPoint;  // undo const  TODO fix this in PLIB
+
+#if 1
+
+  //      Render the areas quickly
+  // bind VBO in order to use
+
+  for (i = 0; i < PRIO_NUM; ++i) {
+    if (ps52plib->m_nBoundaryStyle == SYMBOLIZED_BOUNDARIES)
+      top = razRules[i][4];  // Area Symbolized Boundaries
+    else
+      top = razRules[i][3];  // Area Plain Boundaries
+
+    while (top != NULL) {
+      crnt = top;
+      top = top->next;  // next object
+      crnt->sm_transform_parms = &vp_transform;
+      ps52plib->RenderAreaToGL(glc, crnt);
+    }
+  }
+
+#else
+  //      Render the areas quickly
+  for (i = 0; i < PRIO_NUM; ++i) {
+    if (PI_GetPLIBBoundaryStyle() == SYMBOLIZED_BOUNDARIES)
+      top = razRules[i][4];  // Area Symbolized Boundaries
+    else
+      top = razRules[i][3];  // Area Plain Boundaries
+
+    while (top != NULL) {
+      crnt = top;
+      top = top->next;  // next object
+      crnt->sm_transform_parms = &vp_transform;
+
+      // This may be a deferred tesselation
+      // Don't pre-process the geometry unless the object is to be actually
+      // rendered
+      if (!crnt->obj->pPolyTessGeo->IsOk()) {
+        if (ps52plib->ObjectRenderCheckRules(crnt, &tvp, true)) {
+          if (!crnt->obj->pPolyTessGeo->m_pxgeom)
+            crnt->obj->pPolyTessGeo->m_pxgeom = buildExtendedGeom(crnt->obj);
+        }
+      }
+      ps52plib->RenderAreaToGL(glc, crnt, &tvp);
+    }
+  }
+#endif
+  // qDebug() << "Done areas" << sw.GetTime();
+
+  //    Render the lines and points
+  for (i = 0; i < PRIO_NUM; ++i) {
+    if (ps52plib->m_nBoundaryStyle == SYMBOLIZED_BOUNDARIES)
+      top = razRules[i][4];  // Area Symbolized Boundaries
+    else
+      top = razRules[i][3];  // Area Plain Boundaries
+    while (top != NULL) {
+      crnt = top;
+      top = top->next;  // next object
+      crnt->sm_transform_parms = &vp_transform;
+      ps52plib->RenderObjectToGL(glc, crnt);
+    }
+  }
+  // qDebug() << "Done Boundaries" << sw.GetTime();
+
+  for (i = 0; i < PRIO_NUM; ++i) {
+    top = razRules[i][2];  // LINES
+    while (top != NULL) {
+      crnt = top;
+      top = top->next;
+      crnt->sm_transform_parms = &vp_transform;
+      ps52plib->RenderObjectToGL(glc, crnt);
+    }
+  }
+
+  // qDebug() << "Done Lines" << sw.GetTime();
+
+  for (i = 0; i < PRIO_NUM; ++i) {
+    if (ps52plib->m_nSymbolStyle == SIMPLIFIED)
+      top = razRules[i][0];  // SIMPLIFIED Points
+    else
+      top = razRules[i][1];  // Paper Chart Points Points
+
+    while (top != NULL) {
+      crnt = top;
+      top = top->next;
+      crnt->sm_transform_parms = &vp_transform;
+      ps52plib->RenderObjectToGL(glc, crnt);
+    }
+  }
+  // qDebug() << "Done Points" << sw.GetTime();
+
+#endif  //#ifdef ocpnUSE_GL
+
   return true;
 }
 
 bool s57chart::DoRenderOnGLText(const wxGLContext &glc,
                                 const ViewPort &VPoint) {
+#ifdef ocpnUSE_GL
+
+  int i;
+  ObjRazRules *top;
+  ObjRazRules *crnt;
+  ViewPort tvp = VPoint;  // undo const  TODO fix this in PLIB
+
+#if 0
+    //      Render the areas quickly
+    for( i = 0; i < PRIO_NUM; ++i ) {
+        if( ps52plib->m_nBoundaryStyle == SYMBOLIZED_BOUNDARIES )
+            top = razRules[i][4]; // Area Symbolized Boundaries
+        else
+            top = razRules[i][3];           // Area Plain Boundaries
+
+            while( top != NULL ) {
+                crnt = top;
+                top = top->next;               // next object
+                crnt->sm_transform_parms = &vp_transform;
+///                ps52plib->RenderAreaToGL( glc, crnt, &tvp );
+            }
+    }
+#endif
+
+  //    Render the lines and points
+  for (i = 0; i < PRIO_NUM; ++i) {
+    if (ps52plib->m_nBoundaryStyle == SYMBOLIZED_BOUNDARIES)
+      top = razRules[i][4];  // Area Symbolized Boundaries
+    else
+      top = razRules[i][3];  // Area Plain Boundaries
+
+    while (top != NULL) {
+      crnt = top;
+      top = top->next;  // next object
+      crnt->sm_transform_parms = &vp_transform;
+      ps52plib->RenderObjectToGLText(glc, crnt);
+    }
+
+    top = razRules[i][2];  // LINES
+    while (top != NULL) {
+      crnt = top;
+      top = top->next;
+      crnt->sm_transform_parms = &vp_transform;
+      ps52plib->RenderObjectToGLText(glc, crnt);
+    }
+
+    if (ps52plib->m_nSymbolStyle == SIMPLIFIED)
+      top = razRules[i][0];  // SIMPLIFIED Points
+    else
+      top = razRules[i][1];  // Paper Chart Points Points
+
+    while (top != NULL) {
+      crnt = top;
+      top = top->next;
+      crnt->sm_transform_parms = &vp_transform;
+      ps52plib->RenderObjectToGLText(glc, crnt);
+    }
+  }
+
+#endif  //#ifdef ocpnUSE_GL
+
   return true;
 }
 
@@ -1952,7 +2381,7 @@ bool s57chart::DCRenderLPB(wxMemoryDC &dcinput, const ViewPort &vp, wxRect *rect
 			crnt = top;
 			top = top->next;  // next object
 			crnt->sm_transform_parms = &vp_transform;
-			ps52plib->RenderObjectToDC(&dcinput, crnt, bCSShowFlag, bLHShowFlag, bBUOYShowFlag, bLDESCRShowFlag, bAIShowFlag, bSlvisShowFlag);
+			ps52plib->RenderObjectToDC(&dcinput, crnt);
 		}
 
 		top = razRules[i][2];  // LINES
@@ -1960,7 +2389,7 @@ bool s57chart::DCRenderLPB(wxMemoryDC &dcinput, const ViewPort &vp, wxRect *rect
 			crnt = top;
 			top = top->next;
 			crnt->sm_transform_parms = &vp_transform;
-			ps52plib->RenderObjectToDC(&dcinput, crnt, bCSShowFlag, bLHShowFlag, bBUOYShowFlag, bLDESCRShowFlag, bAIShowFlag, bSlvisShowFlag);
+			ps52plib->RenderObjectToDC(&dcinput, crnt);
 		}
 
 		if (ps52plib->m_nSymbolStyle == SIMPLIFIED)
@@ -1972,7 +2401,7 @@ bool s57chart::DCRenderLPB(wxMemoryDC &dcinput, const ViewPort &vp, wxRect *rect
 			crnt = top;
 			top = top->next;
 			crnt->sm_transform_parms = &vp_transform;
-			ps52plib->RenderObjectToDC(&dcinput, crnt, bCSShowFlag, bLHShowFlag, bBUOYShowFlag, bLDESCRShowFlag, bAIShowFlag, bSlvisShowFlag);
+			ps52plib->RenderObjectToDC(&dcinput, crnt);
 		}
 
 		//      Destroy Clipper

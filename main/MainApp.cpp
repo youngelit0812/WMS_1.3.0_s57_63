@@ -56,6 +56,8 @@
 #include "config_vars.h"
 #include "conn_params.h"
 #include "dychart.h"
+
+#include "CanvasConfig.h"
 #include "chartdb.h"
 #include "chcanv.h"
 #include "navutil.h"
@@ -222,6 +224,8 @@ bool g_bShowStatusBar;
 bool g_bUIexpert;
 bool g_bFullscreen;
 
+bool g_bShowCompassWin;
+
 OCPN_AUIManager* g_pauimgr;
 wxAuiDefaultDockArt* g_pauidockart;
 
@@ -232,6 +236,8 @@ s52plib* ps52plib;
 s57RegistrarMgr* m_pRegistrarMan;
 ChartDB* ChartData;
 SENCThreadManager* g_SencThreadManager;
+
+arrayofCanvasConfigPtr g_canvasConfigArray;
 
 wxString g_vs;
 bool g_bFirstRun;
@@ -585,7 +591,6 @@ float g_toolbar_scalefactor;
 
 float g_compass_scalefactor;
 bool g_bShowMenuBar;
-bool g_bShowCompassWin;
 
 bool g_benable_rotate;
 
@@ -634,6 +639,8 @@ int g_memUsed;
 
 wxString g_lastAppliedTemplateGUID;
 bool b_inCloseWindow;
+
+extern wxGLContext* g_pGLcontext;  // shared common context
 
 extern ColorScheme GetColorScheme();
 
@@ -918,14 +925,14 @@ MainApp::MainApp()
 
 bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart) {
 	if (!wxApp::OnInit()) return false;
-		g_unit_test_2 = 0;
+		/*g_unit_test_2 = 0;
 		g_bportable = true;
 		g_start_fullscreen = false;
 		g_bdisable_opengl = false;
 		g_rebuild_gl_cache = false;
 		g_parse_all_enc = false;
-		g_unit_test_1 = 0;		
-
+		g_unit_test_1 = 0;		*/
+	
 	GpxDocument::SeedRandom();
 	last_own_ship_sog_cog_calc_ts = wxInvalidDateTime;
 
@@ -949,14 +956,23 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart) {
   //  Perform first stage initialization
   OCPNPlatform::Initialize_1();
 
-	setlocale(LC_NUMERIC, "C");
+  wxDateTime x = wxDateTime::UNow();
+  long seed = x.GetMillisecond();
+  seed *= x.GetTicks();
+  srand(seed);
 
+  setlocale(LC_NUMERIC, "C");
 	g_start_time = wxDateTime::Now();
 
 	AnchorPointMinDist = 5.0;
 	malloc_max = 0;
 
 	GetMemoryStatus(&g_mem_total, &g_mem_initial);
+
+	wxFont temp_font(10, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, FALSE, wxString(_T("")), wxFONTENCODING_SYSTEM);
+	temp_font.SetDefaultEncoding(wxFONTENCODING_SYSTEM);
+
+	if (!g_Platform->InitializeLogFile()) return false;
 
 	wxPlatformInfo platforminfo = wxPlatformInfo::Get();
 
@@ -969,6 +985,11 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart) {
 	::wxInitAllImageHandlers();
 
 	g_Platform->GetSharedDataDir();
+
+#ifdef __WXQT__
+	//  Now we can configure the Qt StyleSheets, if present
+	prepareAndroidStyleSheets();
+#endif
 
 	pInit_Chart_Dir = new wxString();
 	g_pGroupArray = new ChartGroupArray;
@@ -1067,8 +1088,10 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart) {
 	}
 #endif
 #endif
-#endif
+#else
 	g_bdisable_opengl = true;
+#endif
+	
 	if (g_bdisable_opengl) g_bopengl = false;
 
 #if defined(__UNIX__) && !defined(__WXOSX__)
@@ -1210,6 +1233,9 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart) {
 
 	g_pauimgr->SetManagedWindow(gFrame);
 	gFrame->CreateCanvasLayout();
+	char* strGLSTR = (char*)glGetString(GL_RENDERER);
+	printf("gl : %s", strGLSTR);
+
 	gFrame->SetChartUpdatePeriod();
 
 	gFrame->Enable();
@@ -1253,8 +1279,23 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart) {
 
 	//  Apply the inital Group Array structure to the chart data base
 	ChartData->ApplyGroupArray(g_pGroupArray);
+#ifdef ocpnUSE_GL
+	extern ocpnGLOptions g_GLOptions;
 
-	//      All set to go.....
+	if (g_rebuild_gl_cache && g_bopengl && g_GLOptions.m_bTextureCompression &&
+		g_GLOptions.m_bTextureCompressionCaching) {
+		gFrame->ReloadAllVP();  //  Get a nice chart background loaded
+
+		//      Turn off the toolbar as a clear signal that the system is busy right
+		//      now.
+		// Note: I commented this out because the toolbar never comes back for me
+		// and is unusable until I restart opencpn without generating the cache
+		//        if( g_MainToolbar )
+		//            g_MainToolbar->Hide();
+
+		if (g_glTextureManager) g_glTextureManager->BuildCompressedCache();
+	}
+#endif
 
 	// Process command line option to rebuild cache
 	if ((gps_watchdog_timeout_ticks > 60) || (gps_watchdog_timeout_ticks <= 0))
@@ -1278,7 +1319,19 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart) {
 
 	gFrame->GetPrimaryCanvas()->Enable();
 	gFrame->GetPrimaryCanvas()->SetFocus();
-	   	//  
+#ifdef ocpnUSE_GL
+	if (!g_bdisable_opengl) {
+		glChartCanvas* pgl =
+			(glChartCanvas*)gFrame->GetPrimaryCanvas()->GetglCanvas();
+		if (pgl &&
+			(pgl->GetRendererString().Find(_T("UniChrome")) != wxNOT_FOUND)) {
+			gFrame->m_defer_size = gFrame->GetSize();
+			gFrame->SetSize(gFrame->m_defer_size.x - 10, gFrame->m_defer_size.y);
+			g_pauimgr->Update();
+			gFrame->m_bdefer_resize = true;
+		}
+	}
+#endif	   	//  
 	gFrame->Raise();
 	gFrame->GetPrimaryCanvas()->Enable();
 	gFrame->GetPrimaryCanvas()->SetFocus();
@@ -1299,6 +1352,9 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart) {
 
 	pConfig->UpdateSettings();
 	g_pauimgr->Update();	
+
+	strGLSTR = (char*)glGetString(GL_RENDERER);
+	printf("gl 1: %s", strGLSTR);
 
 	printf("Wait for minutes to prepare... \n");
 	gFrame->UpdateDB_Canvas();
@@ -1430,11 +1486,14 @@ bool MainApp::UpdateFrameCanvas(std::string& sBBox, int nWidth, int nHeight, std
 	if (nLayerIndex >= 0) vnLayers.push_back(nLayerIndex);
 
 	gFrame->ResizeFrameWH(nWidth, nHeight);
-	ChartCanvas* pCC = gFrame->GetPrimaryCanvas();	
+	ChartCanvas* pCC = gFrame->GetPrimaryCanvas();
+	pCC->ResetGLContext();
 	gFrame->CenterView(pCC, llbBox, nWidth, nHeight);
 	gFrame->DoChartUpdate();
 	gFrame->ChartsRefresh();
 
+	char *strGLSTR = (char*)glGetString(GL_RENDERER);
+	printf("gl 2: %s", strGLSTR);
 	pCC->m_b_paint_enable = true;
 	pCC->DrawCanvasData(llbBox, nWidth, nHeight, vnLayers, sIMGFilePath, bPNGFlag);
 

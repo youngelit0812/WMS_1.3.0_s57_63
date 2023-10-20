@@ -100,6 +100,7 @@ public:
   ViewPort BuildExpandedVP(int width, int height);
 
   void SetBoxes(void);  
+  void PixelScale(float factor);
   void SetOldBBox(LLBBox& llBBox) {
 	  vpOldBBox.Set(llBBox.GetMinLat(), llBBox.GetMinLon(), llBBox.GetMaxLat(), llBBox.GetMaxLon());
   }

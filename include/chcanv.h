@@ -22,6 +22,7 @@
 class wxGLContext;
 class GSHHSChart;
 class IDX_entry;
+class ocpnCompass;
 class TimedPopupWin;
 
 typedef enum LAYERINDS {
@@ -108,9 +109,14 @@ enum { NORTH_UP_MODE, COURSE_UP_MODE, HEAD_UP_MODE };
 // ChartCanvas
 //----------------------------------------------------------------------------
 class ChartCanvas : public wxWindow {
+  friend class glChartCanvas;
+
 public:
   ChartCanvas(wxFrame *frame, int canvasIndex);
   ~ChartCanvas();
+
+  void SetupGlCanvas();
+  void ResetGLContext();
 
   //    Methods
   void PaintCleanup();  
@@ -274,6 +280,7 @@ public:
   void SetUpMode(int mode);
   void ToggleLookahead();  
 
+  ocpnCompass* GetCompass() { return m_Compass; }
   wxColour GetFogColor() { return m_fog_color; }
 
   void ShowChartInfoWindow(int x, int dbIndex);
@@ -331,9 +338,12 @@ public:
 #endif /* HAVE_WX_GESTURE_EVENTS */
 
   void DrawBlinkObjects(void);
-
   void InvalidateGL();
-  
+
+#ifdef ocpnUSE_GL
+  glChartCanvas *GetglCanvas() { return m_glcc; }
+#endif
+
   void JaggyCircle(ocpnDC &dc, wxPen pen, int x, int y, int radius);
 
   bool CheckEdgePan(int x, int y, bool bdragging, int margin, int delta);
@@ -682,6 +692,10 @@ public:
   bool m_bzooming, m_bzooming_to_cursor;
   IDX_entry *m_pIDXCandidate;
 
+  //#ifdef ocpnUSE_GL
+  glChartCanvas *m_glcc;
+  //#endif
+
   // Smooth movement member variables
   wxPoint m_pan_drag;
   int m_panx, m_pany, m_modkeys;
@@ -718,6 +732,7 @@ public:
   wxMenu *m_piano_ctx_menu;
   int menu_selected_dbIndex, menu_selected_index;
 
+  ocpnCompass* m_Compass;
   bool m_bShowGPS;
 
   wxRect m_mainlast_tb_rect;
@@ -752,6 +767,7 @@ public:
 
   wxString m_alertString;
   wxRect m_scaleBarRect;  
+  bool m_bShowCompassWin;
   bool m_pianoFrozen;
 
   double m_sector_glat, m_sector_glon;
