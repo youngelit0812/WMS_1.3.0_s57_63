@@ -36,6 +36,7 @@
 #endif
 
 #include "chartdbs.h"
+#include "pluginmanager.h"  // FIXME: Refactor
 
 #define __OCPN__OPTIONS_USE_LISTBOOK__
 
@@ -279,12 +280,11 @@ public:
 
   void SetConfigPtr(MyConfig *p) { m_pConfig = p; }
   void OnDebugcheckbox1Click(wxCommandEvent &event);
-  void OnButtonaddClick(wxCommandEvent &event);
   void OnButtondeleteClick(wxCommandEvent &event);
   void OnButtonParseENC(wxCommandEvent &event);
   void OnButtoncompressClick(wxCommandEvent &event);
+  void OnButtonmigrateClick(wxCommandEvent &event);
   void OnButtonEcdisHelp(wxCommandEvent &event);
-  void OnApplyClick(wxCommandEvent &event);
   void OnXidOkClick(wxCommandEvent &event);
   void OnCancelClick(wxCommandEvent &event);
   void OnChooseFont(wxCommandEvent &event);
@@ -298,6 +298,7 @@ public:
   void OnChooseFontColor(wxCommandEvent &event);
 #endif
   void OnGLClicked(wxCommandEvent &event);
+  void OnOpenGLOptions(wxCommandEvent &event);
   void OnDisplayCategoryRadioButton(wxCommandEvent &event);
   void OnButtonClearClick(wxCommandEvent &event);
   void OnButtonSelectClick(wxCommandEvent &event);
@@ -312,9 +313,12 @@ public:
   void OnButtonSelectSound(wxCommandEvent &event);
   void OnButtonTestSound(wxCommandEvent &event);
 
+  void OnShowGpsWindowCheckboxClick(wxCommandEvent &event);
+  void OnZTCCheckboxClick(wxCommandEvent &event);
   void OnRadarringSelect(wxCommandEvent &event);
   void OnWaypointRangeRingSelect(wxCommandEvent &event);
   void OnShipTypeSelect(wxCommandEvent &event);
+  void OnButtonGroups(wxCommandEvent &event);
   void OnInsertTideDataLocation(wxCommandEvent &event);
   void OnRemoveTideDataLocation(wxCommandEvent &event);
   void OnCharHook(wxKeyEvent &event);
@@ -370,7 +374,7 @@ public:
 
   // For general options
   wxScrolledWindow *pDisplayPanel;
-  wxCheckBox *pShowStatusBar, *pShowMenuBar, *pShowChartBar, *pShowCompassWin;
+  wxCheckBox *pShowChartBar, *pShowCompassWin;
   wxCheckBox *pPrintShowIcon, *pCDOOutlines, *pSDepthUnits, *pSDisplayGrid;
   wxCheckBox *pAutoAnchorMark, *pCDOQuilting, *pCBRaster, *pCBVector;
   wxCheckBox *pCBCM93, *pCBLookAhead, *pSkewComp, *pOpenGL, *pSmoothPanZoom;
@@ -387,6 +391,7 @@ public:
       *m_pSlider_Ship_Factor, *m_pSlider_Text_Factor, *m_pSlider_ENCText_Factor;
   wxSlider *m_pMouse_Zoom_Slider;
   wxSlider *m_pSlider_Zoom_Vector;
+  wxSlider *m_pSlider_CM93_Zoom;
   // LIVE ETA OPTION
   wxCheckBox *pSLiveETA;
   wxTextCtrl *pSDefaultBoatSpeed;
@@ -473,7 +478,8 @@ public:
   wxCheckBox *m_pCheck_use_Wpl, *m_pCheck_ShowAllCPA;
   wxTextCtrl *m_pText_CPA_Max, *m_pText_CPA_Warn, *m_pText_CPA_WarnT;
   wxTextCtrl *m_pText_Mark_Lost, *m_pText_Remove_Lost, *m_pText_COG_Predictor;
-  wxTextCtrl *m_pText_Moored_Speed, *m_pText_Scale_Priority;
+  wxTextCtrl *m_pText_Track_Length, *m_pText_Moored_Speed,
+      *m_pText_Scale_Priority;
   wxTextCtrl *m_pText_ACK_Timeout, *m_pText_Show_Target_Name_Scale;
   wxTextCtrl *m_pText_RealtPred_Speed;
 
@@ -564,9 +570,7 @@ public:
 
 private:
   void Init(void);
-  void CreatePanel_MMSI(size_t parent, int border_size, int group_item_spacing);
-  void CreatePanel_AIS(size_t parent, int border_size, int group_item_spacing);  
-  void CreatePanel_NMEA(size_t parent, int border_size, int group_item_spacing);
+  void CreatePanel_AIS(size_t parent, int border_size, int group_item_spacing);
   void CreatePanel_ChartsLoad(size_t parent, int border_size,
                               int group_item_spacing);
   void CreatePanel_VectorCharts(size_t parent, int border_size,
@@ -582,8 +586,6 @@ private:
                           int group_item_spacing);
   void CreatePanel_Configs(size_t parent, int border_size,
                            int group_item_spacing);
-  void CreatePanel_Routes(size_t parent, int border_size,
-                          int group_item_spacing);
 
   void OnAlertEnableButtonClick(wxCommandEvent &event);
   void OnAlertAudioEnableButtonClick(wxCommandEvent &event);
@@ -596,7 +598,6 @@ private:
   ChartGroupsUI *groupsPanel;
   wxImageList *m_topImgList;
 
-  //wxScrolledWindow *m_pNMEAForm;
   void resetMarStdList(bool bsetConfig, bool bsetStd);
 
   int m_screenConfig;
@@ -693,7 +694,7 @@ private:
   wxTreeCtrl *m_pActiveChartsTree, *lastSelectedCtl;
   wxTreeItemId lastDeletedItem;
   wxNotebook *m_GroupNB;
-  wxFont* iFont;
+  wxFont *iFont;
   wxFont *dialogFont;
 
   ArrayOfCDI m_db_dirs;
@@ -707,6 +708,38 @@ private:
   DECLARE_EVENT_TABLE()
 };
 
+#ifdef ocpnUSE_GL
+class OpenGLOptionsDlg : private Uncopyable, public wxDialog {
+public:
+  explicit OpenGLOptionsDlg(wxWindow *parent);
+  bool GetAcceleratedPanning(void) const;
+  bool GetTextureCompression(void) const;
+  bool GetPolygonSmoothing(void) const;
+  bool GetLineSmoothing(void) const;
+  bool GetShowFPS(void) const;
+  bool GetSoftwareGL(void) const;
+  bool GetTextureCompressionCaching(void) const;
+  bool GetRebuildCache(void) const;
+  int GetTextureMemorySize(void) const;
+
+private:
+  void Populate(void);
+  void OnButtonRebuild(wxCommandEvent &event);
+  void OnButtonClear(wxCommandEvent &event);
+  wxString GetTextureCacheSize(void);
+
+  wxCheckBox *m_cbUseAcceleratedPanning, *m_cbTextureCompression;
+  wxCheckBox *m_cbTextureCompressionCaching, *m_cbShowFPS, *m_cbSoftwareGL,
+      *m_cbPolygonSmoothing, *m_cbLineSmoothing;
+  wxSpinCtrl *m_sTextureDimension, *m_sTextureMemorySize;
+  wxStaticText *m_cacheSize, *m_memorySize;
+
+  bool m_brebuild_cache;
+
+  DECLARE_EVENT_TABLE()
+};
+#endif
+
 #define ID_MMSI_PROPS_LIST 10073
 
 enum {
@@ -718,6 +751,12 @@ enum {
   mlFollower,
   mlShipName
 };  // MMSIListCtrl Columns;
+
+#define ID_MMSIEDIT_OK 8191
+#define ID_MMSIEDIT_CANCEL 8192
+#define ID_MMSI_CTL 8193
+#define ID_DEF_MENU_MMSI_EDIT 8194
+#define ID_DEF_MENU_MMSI_DELETE 8195
 
 class ConfigCreateDialog : private Uncopyable, public wxDialog {
 public:

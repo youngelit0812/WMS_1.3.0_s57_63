@@ -120,6 +120,22 @@ class AisTargetData;
 
 bool isSingleChart(ChartBase *chart);
 
+class OCPN_ThreadMessageEvent : public wxEvent {
+public:
+  OCPN_ThreadMessageEvent(wxEventType commandType = wxEVT_NULL, int id = 0);
+  ~OCPN_ThreadMessageEvent();
+
+  // accessors
+  void SetSString(std::string string) { m_string = string; }
+  std::string GetSString() { return m_string; }
+
+  // required for sending with wxPostEvent()
+  wxEvent *Clone() const;
+
+private:
+  std::string m_string;
+};
+
 class MyFrame : public wxFrame {
   friend class SignalKEventHandler;
 
@@ -130,17 +146,22 @@ public:
   ~MyFrame();
 
   int GetApplicationMemoryUse(void);
+  void UpdateDB_Canvas();
 
   void OnMaximize(wxMaximizeEvent &event);
   void OnCloseWindow(wxCloseEvent &event);
   void OnExit(wxCommandEvent &event);
   void OnSize(wxSizeEvent &event);
-  void OnMove(wxMoveEvent &event);
-  void OnFrameTimer1(wxTimerEvent &event);
+  void OnMove(wxMoveEvent &event);  
   bool DoChartUpdate(void);
+  void OnEvtTHREADMSG(OCPN_ThreadMessageEvent &event);
+  void OnEvtOCPN_NMEA(OCPN_DataStreamEvent &event);
+  void OnEvtOCPN_SignalK(OCPN_SignalKEvent &event);
+  void OnEvtOCPN_SIGNALK_Test(OCPN_SignalKEvent &event);  
   void OnMemFootTimer(wxTimerEvent &event);  
-  void OnSENCEvtThread(OCPN_BUILDSENC_ThreadEvent &event);
+  void OnSENCEvtThread(OCPN_BUILDSENC_ThreadEvent &event);  
   void OnBellsFinished(wxCommandEvent &event);
+  void ResizeFrameWH(int nWidth, int nHeight);
 
 #ifdef wxHAS_POWER_EVENTS
   void OnSuspending(wxPowerEvent &event);
@@ -164,8 +185,6 @@ public:
 
   void SetUpMode(ChartCanvas *cc, int mode);
 
-  wxMenuBar *GetMainMenuBar() { return m_pMenuBar; }
-
   ChartCanvas *GetPrimaryCanvas();
   ChartCanvas *GetFocusCanvas();
 
@@ -179,16 +198,14 @@ public:
   bool SetGlobalToolbarViz(bool viz);
 
   void MouseEvent(wxMouseEvent &event);
-  void CenterView(ChartCanvas *cc, const LLBBox &bbox, int nWidth, int nHeight);
+  void CenterView(ChartCanvas *cc, const LLBBox &RBBox, int nWidth, int nHeight);
 
   void JumpToPosition(ChartCanvas *cc, double lat, double lon, double scale);
 
-  void ResizeFrameWH(int nWidth, int nHeight);
+  void ProcessCanvasResize(void);
+
   void ApplyGlobalSettings(bool bnewtoolbar);
-  void BuildMenuBar(void);  
-  void RegisterGlobalMenuItems();
-  void UpdateGlobalMenuItems();
-  void UpdateGlobalMenuItems(ChartCanvas *cc);
+  int DoOptionsDialog();
   bool ProcessOptionsDialog(int resultFlags, ArrayOfCDI *pNewDirArray);
   void DoPrint(void);    
   void ToggleDataQuality(ChartCanvas *cc);
@@ -206,14 +223,11 @@ public:
   void ToggleAISMinimizeTargets(ChartCanvas *cc);
 
   void ToggleTestPause(void);
-  void TrackOn(void);
   void SetENCDisplayCategory(ChartCanvas *cc, enum _DisCat nset);
   void ToggleNavobjects(ChartCanvas *cc);
 
-  void TrackDailyRestart(void);
-  
+  bool ShouldRestartTrack();
   void ToggleColorScheme();
-  void SetMenubarItemState(int item_id, bool state);
   void SetMasterToolbarItemState(int tool_id, bool state);
 
   void SetToolbarItemBitmaps(int tool_id, wxBitmap *bitmap,
@@ -235,23 +249,19 @@ public:
 
   void ChartsRefresh();
 
-  bool CheckGroup(int igroup);  
+  bool CheckGroup(int igroup);
+  double GetMag(double a);
+  double GetMag(double a, double lat, double lon);
   bool SendJSON_WMM_Var_Request(double lat, double lon, wxDateTime date);
 
-  void UpdateDB_Canvas();
-
-  wxStatusBar *m_pStatusBar;
-  wxMenuBar *m_pMenuBar;
   int nBlinkerTick;
   bool m_bTimeIsSet;
   bool m_bDateIsSet;
 
-  wxTimer InitTimer;
   int m_iInitCount;
   bool m_initializing;
 
-  wxTimer FrameTCTimer;
-  wxTimer FrameTimer1;
+  wxTimer FrameTCTimer;  
   wxTimer FrameCOGTimer;
   wxTimer MemFootTimer;
   wxTimer m_resizeTimer;
@@ -281,7 +291,9 @@ public:
   void SetCanvasSizes(wxSize frameSize);
   void ResizeManually(int nWidth, int nHeight);
 
-  void RequestNewMasterToolbar(bool bforcenew = true);  
+  ocpnToolBarSimple *CreateMasterToolbar();
+  void RequestNewMasterToolbar(bool bforcenew = true);
+  bool CheckAndAddPlugInTool();
   bool AddDefaultPositionPlugInTools();
 
   void NotifyChildrenResize(void);
@@ -294,7 +306,7 @@ public:
   void ODoSetSize(void);
   void DoCOGSet(void);
 
-  void ApplyGlobalColorSchemetoStatusBar(void);
+  void FilterCogSog(void);
 
   bool ScrubGroupArray();
   wxString GetGroupName(int igroup);
@@ -304,8 +316,6 @@ public:
   bool GetMasterToolItemShow(int toolid);
   void OnToolbarAnimateTimer(wxTimerEvent &event);
   bool CollapseGlobalToolbar();
-
-  int m_StatusBarFieldCount;
 
   wxDateTime m_MMEAeventTime;
   unsigned long m_ulLastNMEATicktime;
@@ -339,7 +349,7 @@ public:
   time_t m_last_track_rotation_ts;
   wxRect m_mainlast_tb_rect;
   wxTimer ToolbarAnimateTimer;
-  int m_nMasterToolCountShown;  
+  int m_nMasterToolCountShown;
   bool m_b_new_data;
 
   DECLARE_EVENT_TABLE()

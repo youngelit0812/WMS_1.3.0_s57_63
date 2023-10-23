@@ -35,7 +35,6 @@ extern OCPNPlatform* g_Platform;
 
 BEGIN_EVENT_TABLE(ChInfoWin, wxPanel)
 EVT_PAINT(ChInfoWin::OnPaint)
-EVT_ERASE_BACKGROUND(ChInfoWin::OnEraseBackground)
 EVT_MOUSE_EVENTS(ChInfoWin::MouseEvent)
 END_EVENT_TABLE()
 
@@ -57,8 +56,6 @@ ChInfoWin::ChInfoWin(wxWindow* parent) {
 }
 
 ChInfoWin::~ChInfoWin() { delete m_pInfoTextCtl; }
-
-void ChInfoWin::OnEraseBackground(wxEraseEvent& event) {}
 
 void ChInfoWin::MouseEvent(wxMouseEvent& event) {  
 }

@@ -100,20 +100,21 @@ public:
     return ChartDatabase::Write(filename);
   }
 
-	int BuildChartStack(ChartStack* cstk, float lat, float lon, int groupIndex);
-	int BuildChartStack(ChartStack* cstk, float lat, float lon, int db_add,
-		int groupIndex);
-	bool EqualStacks(ChartStack*, ChartStack*);
-	bool CopyStack(ChartStack* pa, ChartStack* pb);
-	wxString GetFullPath(ChartStack* ps, int stackindex);
-	int GetStackChartScale(ChartStack* ps, int stackindex, char* buf, int nbuf);
-	int GetCSPlyPoint(ChartStack* ps, int stackindex, int plyindex, float* lat,
-		float* lon);
-	ChartTypeEnum GetCSChartType(ChartStack* ps, int stackindex);
-	ChartFamilyEnum GetCSChartFamily(ChartStack* ps, int stackindex);
-	ChartBase* OpenStackChartConditional(ChartStack* ps, int start_index,
-		bool bLargest, ChartTypeEnum New_Type,
-		ChartFamilyEnum New_Family_Fallback);
+  int BuildChartStack(ChartStack *cstk, float lat, float lon, int groupIndex);
+  int BuildChartStack(ChartStack *cstk, float lat, float lon, int db_add,
+                      int groupIndex);
+  bool EqualStacks(ChartStack *, ChartStack *);
+  bool CopyStack(ChartStack *pa, ChartStack *pb);
+  wxString GetFullPath(ChartStack *ps, int stackindex);
+  int GetStackChartScale(ChartStack *ps, int stackindex, char *buf, int nbuf);
+  int GetCSPlyPoint(ChartStack *ps, int stackindex, int plyindex, float *lat,
+                    float *lon);
+  ChartTypeEnum GetCSChartType(ChartStack *ps, int stackindex);
+  ChartFamilyEnum GetCSChartFamily(ChartStack *ps, int stackindex);
+  bool SearchForChartDir(const wxString &dir);
+  ChartBase *OpenStackChartConditional(ChartStack *ps, int start_index,
+                                       bool bLargest, ChartTypeEnum New_Type,
+                                       ChartFamilyEnum New_Family_Fallback);
 
   wxArrayPtrVoid *GetChartCache(void) { return pChartCache; }
   std::vector<int> GetCSArray(ChartStack *ps);
@@ -138,13 +139,12 @@ public:
   void PurgeCache();
   void PurgeCachePlugins();
   bool DeleteCacheChart(ChartBase *pChart);
-  
+
   void LockCache(bool bl) { m_b_locked = bl; }
   void LockCache() { m_b_locked = true; }
   void UnLockCache() { m_b_locked = false; }
   bool IsCacheLocked() { return m_b_locked; }
   wxXmlDocument GetXMLDescription(int dbIndex, bool b_getGeom);
-  CacheEntry *FindOldestDeleteCandidate(bool blog);
 
   bool LockCacheChart(int index);
   bool IsChartLocked(int index);
@@ -163,12 +163,18 @@ protected:
 	virtual ChartBase* GetChart(const wxChar* theFilePath, ChartClassDescriptor& chart_desc) const;
 
 public:
-	InitReturn CreateChartTableEntry(wxString full_name, ChartTableEntry* pEntry);
-	bool CreateS57SENCChartTableEntry(wxString full_name, ChartTableEntry* pEntry, Extent* pext);
-	bool CheckPositionWithinChart(int index, float lat, float lon);
-	ChartBase* OpenChartUsingCache(int dbindex, ChartInitFlag init_flag);
-	void DeleteCacheEntry(int i, bool bDelTexture = false, const wxString& msg = wxEmptyString);
-	void DeleteCacheEntry(CacheEntry* pce, bool bDelTexture = false, const wxString& msg = wxEmptyString);
+  InitReturn CreateChartTableEntry(wxString full_name, ChartTableEntry *pEntry);
+
+  int SearchDirAndAddSENC(wxString &dir, bool bshow_prog, bool bupdate);
+  bool CreateS57SENCChartTableEntry(wxString full_name, ChartTableEntry *pEntry,
+                                    Extent *pext);
+  bool CheckPositionWithinChart(int index, float lat, float lon);
+  ChartBase *OpenChartUsingCache(int dbindex, ChartInitFlag init_flag);
+  CacheEntry *FindOldestDeleteCandidate(bool blog);
+  void DeleteCacheEntry(int i, bool bDelTexture = false,
+                        const wxString &msg = wxEmptyString);
+  void DeleteCacheEntry(CacheEntry *pce, bool bDelTexture = false,
+                        const wxString &msg = wxEmptyString);
 
   wxArrayPtrVoid *pChartCache;
   int m_ticks;

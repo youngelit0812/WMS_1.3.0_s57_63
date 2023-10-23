@@ -19,6 +19,10 @@
 #include "ocpn_plugin.h"
 #include "ocpn_frame.h"
 
+#ifdef ocpnUSE_GL
+#include "glChartCanvas.h"
+#endif
+
 #include <wx/arrimpl.cpp>
 WX_DEFINE_OBJARRAY(RectArray);
 
@@ -438,7 +442,10 @@ void Piano::DrawGLSL(int off) {
 
   glEnable(GL_TEXTURE_2D);
 
-  glEnable(GL_BLEND);  
+  glEnable(GL_BLEND);
+  m_parentCanvas->GetglCanvas()->RenderTextures(
+    m_parentCanvas->GetglCanvas()->m_gldc,
+    coords, texcoords, vc / 2, m_parentCanvas->GetpVP());
   glDisable(GL_BLEND);
 
   glDisable(GL_BLEND);
@@ -498,6 +505,10 @@ void Piano::DrawGLSL(int off) {
     glEnable(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, m_tex);
     glEnable(GL_BLEND);
+
+    m_parentCanvas->GetglCanvas()->RenderTextures(
+      m_parentCanvas->GetglCanvas()->m_gldc,
+      coords, texcoords, vc / 2, m_parentCanvas->GetpVP());
   }
 
   glDisable(GL_BLEND);

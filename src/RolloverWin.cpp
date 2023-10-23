@@ -44,6 +44,11 @@
 #include "ocpn_frame.h"
 #include "OCPNPlatform.h"
 
+#ifdef ocpnUSE_GL
+#include "glChartCanvas.h"
+#include "chcanv.h"
+#endif
+
 extern bool g_bopengl;
 #ifdef ocpnUSE_GL
 extern GLenum g_texture_rectangle_format;

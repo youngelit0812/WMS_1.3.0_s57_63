@@ -388,6 +388,14 @@ bool JobTicket::DoJob() {
   rect.width = dim;
   rect.height = dim;
   for (int y = 0; y < ny_tex; y++) {
+    if (pthread && pthread->m_pMessageTarget) {
+      OCPN_CompressionThreadEvent Nevent(wxEVT_OCPN_COMPRESSIONTHREAD, 0);
+      Nevent.nstat = y;
+      Nevent.nstat_max = ny_tex;
+      Nevent.type = 1;
+      Nevent.SetTicket(this);
+      pthread->m_pMessageTarget->AddPendingEvent(Nevent);
+    }
 
     rect.x = 0;
     for (int x = 0; x < nx_tex; x++) {
@@ -606,6 +614,44 @@ OCPN_CompressionThreadEvent::OCPN_CompressionThreadEvent(
 
 OCPN_CompressionThreadEvent::~OCPN_CompressionThreadEvent() {}
 
+wxEvent *OCPN_CompressionThreadEvent::Clone() const {
+  OCPN_CompressionThreadEvent *newevent =
+      new OCPN_CompressionThreadEvent(*this);
+  newevent->m_ticket = this->m_ticket;
+  newevent->type = this->type;
+  newevent->nstat = this->nstat;
+  newevent->nstat_max = this->nstat_max;
+  /*
+      newevent->m_ticket = new JobTicket;
+
+      newevent->m_ticket->pFact = this->m_ticket->pFact;
+      newevent->m_ticket->rect = this->m_ticket->rect;
+      newevent->m_ticket->level_min_request = this->m_ticket->level_min_request;
+      newevent->m_ticket->ident = this->m_ticket->ident;
+      newevent->m_ticket->b_throttle = this->m_ticket->b_throttle;
+      newevent->m_ticket->pthread = this->m_ticket->pthread;
+      newevent->m_ticket->level0_bits = this->m_ticket->level0_bits;
+      newevent->m_ticket->m_ChartPath = this->m_ticket->m_ChartPath;
+      newevent->m_ticket->b_abort = this->m_ticket->b_abort;
+      newevent->m_ticket->b_isaborted = this->m_ticket->b_isaborted;
+      newevent->m_ticket->bpost_zip_compress =
+     this->m_ticket->bpost_zip_compress; newevent->m_ticket->state =
+     this->m_ticket->state; newevent->m_ticket->tx = this->m_ticket->tx;
+      newevent->m_ticket->nx = this->m_ticket->nx;
+      newevent->m_ticket->ty = this->m_ticket->ty;
+      newevent->m_ticket->ny = this->m_ticket->ny;
+      for(int i = 0 ; i < 10 ; i++){
+          newevent->m_ticket->comp_bits_array[i] =
+     this->m_ticket->comp_bits_array[i];
+          newevent->m_ticket->compcomp_bits_array[i] =
+     this->m_ticket->compcomp_bits_array[i];
+          newevent->m_ticket->compcomp_size_array[i] =
+     this->m_ticket->compcomp_size_array[i];
+      }
+  */
+  return newevent;
+}
+
 CompressionPoolThread::CompressionPoolThread(JobTicket *ticket,
                                              wxEvtHandler *message_target) {
   m_pMessageTarget = message_target;
@@ -631,6 +677,10 @@ void *CompressionPoolThread::Entry() {
     if (!m_ticket->DoJob()) m_ticket->b_isaborted = true;
 
     if (m_pMessageTarget) {
+      OCPN_CompressionThreadEvent Nevent(wxEVT_OCPN_COMPRESSIONTHREAD, 0);
+      Nevent.SetTicket(m_ticket);
+      Nevent.type = 0;
+      m_pMessageTarget->QueueEvent(Nevent.Clone());
       // from here m_ticket is undefined (if deleted in event handler)
     }
 
@@ -640,11 +690,11 @@ void *CompressionPoolThread::Entry() {
 #ifdef __MSVC__
   catch (SE_Exception e) {
     if (m_pMessageTarget) {
-      /*OCPN_CompressionThreadEvent Nevent(wxEVT_OCPN_COMPRESSIONTHREAD, 0);
+      OCPN_CompressionThreadEvent Nevent(wxEVT_OCPN_COMPRESSIONTHREAD, 0);
       m_ticket->b_isaborted = true;
       Nevent.SetTicket(m_ticket);
       Nevent.type = 0;
-      m_pMessageTarget->QueueEvent(Nevent.Clone());*/
+      m_pMessageTarget->QueueEvent(Nevent.Clone());
     }
 
     return 0;
@@ -977,10 +1027,10 @@ bool glTextureManager::ScheduleJob(glTexFactory *client, const wxRect &rect,
 
     pt->DoJob();
 
-    /*OCPN_CompressionThreadEvent Nevent(wxEVT_OCPN_COMPRESSIONTHREAD, 0);
+    OCPN_CompressionThreadEvent Nevent(wxEVT_OCPN_COMPRESSIONTHREAD, 0);
     Nevent.type = 0;
     Nevent.SetTicket(pt);
-    ProcessEventLocally(Nevent);*/
+    ProcessEventLocally(Nevent);
     // from here m_ticket is undefined (if deleted in event handler)
   }
   return true;
@@ -1399,6 +1449,7 @@ void glTextureManager::BuildCompressedCache() {
                                             wxFONTSTYLE_NORMAL,
                                             wxFONTWEIGHT_NORMAL);
 
+  m_progDialog->SetFont(*sFont);
 
   //  Should we use "compact" screen layout?
   wxScreenDC sdc;

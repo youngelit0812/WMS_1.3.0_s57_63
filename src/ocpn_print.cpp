@@ -25,6 +25,7 @@
 #include "config.h"
 
 #include "chcanv.h"
+#include "glChartCanvas.h"
 #include "ocpn_frame.h"
 #include "ocpn_print.h"
 

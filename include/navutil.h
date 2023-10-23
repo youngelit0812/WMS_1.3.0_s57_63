@@ -12,11 +12,9 @@
 #endif
 
 #include "bbox.h"
-#include "chcanv.h"
+//#include "chcanv.h"
 #include "chartdbs.h"
-// nclude "RoutePoint.h"
 #include "vector2D.h"
-
 #include "ocpndc.h"
 #include "navutil_base.h"
 
@@ -32,6 +30,10 @@ extern double fromUsrTemp(double usr_temp, int unit = -1);
 extern wxString getUsrTempUnit(int unit = -1);
 extern wxString formatAngle(double angle);
 
+extern void AlphaBlending(ocpnDC &dc, int x, int y, int size_x, int size_y,
+                          float radius, wxColour color,
+                          unsigned char transparency);
+
 // Central dimmer...
 void DimeControl(wxWindow *ctrl);
 void DimeControl(wxWindow *ctrl, wxColour col, wxColour col1,
@@ -39,15 +41,12 @@ void DimeControl(wxWindow *ctrl, wxColour col, wxColour col1,
                  wxColour udkrd, wxColour gridline);
 
 
-class Route;
-
+class NavObjectCollection;
 class wxGenericProgressDialog;
 class ocpnDC;
-
-
-
+class NavObjectCollection1;
+class NavObjectChanges;
 class canvasConfig;
-
 
 //----------------------------------------------------------------------------
 //    Static XML Helpers
@@ -67,9 +66,9 @@ class canvasConfig;
 // *CreateGPXRte ( Route *pRoute ); GpxTrkElement *CreateGPXTrk ( Route *pRoute
 // );
 
-
-
-void ExportGPX(wxWindow *parent, bool bviz_only = false, bool blayer = false);
+void UI_ImportGPX(wxWindow *parent, bool islayer = false,
+                  wxString dirpath = _T(""), bool isdirectory = true,
+                  bool isPersistent = false);
 
 class MouseZoom {
 public:
@@ -96,8 +95,8 @@ public:
 
   int LoadMyConfig(std::string&);
   void LoadS57Config();
-  void LoadNavObjects();
-  
+  void LoadNavObjects();  
+
   virtual void CreateConfigGroups(ChartGroupArray *pGroupArray);
   virtual void DestroyConfigGroups(void);
   virtual void LoadConfigGroups(ChartGroupArray *pGroupArray);
@@ -110,7 +109,9 @@ public:
 
   virtual bool UpdateChartDirs(ArrayOfCDI &dirarray);
   virtual bool LoadChartDirArray(ArrayOfCDI &ChartDirArray);
-  virtual void UpdateSettings();  
+  virtual void UpdateSettings();
+  virtual void UpdateNavObj(bool bRecreate = false);
+  virtual void UpdateNavObjOnly();
   virtual bool IsChangesFileDirty();
 
   bool LoadLayers(wxString &path);
@@ -121,6 +122,8 @@ public:
   wxString m_sNavObjSetFile;
   wxString m_sNavObjSetChangesFile;
   std::string m_sENCDirPath;
+  NavObjectChanges *m_pNavObjectChangesSet;
+  NavObjectCollection1 *m_pNavObjectInputSet;
 };
 
 void SwitchInlandEcdisMode(bool Switch);

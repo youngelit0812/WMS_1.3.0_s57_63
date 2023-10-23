@@ -43,7 +43,6 @@
 
 #include "priority_gui.h"
 #include "ocpn_app.h"
-#include "comm_bridge.h"
 #include "ocpn_frame.h"
 #include "ocpn_plugin.h"
 
@@ -138,8 +137,7 @@ PriorityDlg::PriorityDlg(wxWindow* parent)
 
   // Get the current status
   MyApp& app = wxGetApp();
-  m_map = app.m_comm_bridge.GetPriorityMaps();
-
+  
   Populate();
 
   int n_lines = wxMax(m_prioTree->GetCount(), 15);
@@ -178,8 +176,7 @@ void PriorityDlg::AddLeaves(const std::vector<std::string> &map_list,
     return;
 
   // Get the current Priority container for this branch
-  MyApp& app = wxGetApp();
-  PriorityContainer pc = app.m_comm_bridge.GetPriorityContainer(map_name);
+  MyApp& app = wxGetApp();  
 
   wxString priority_string(map_list[map_index].c_str());
   wxStringTokenizer tk(priority_string, "|");
@@ -199,11 +196,7 @@ void PriorityDlg::AddLeaves(const std::vector<std::string> &map_list,
 
     PriorityEntry *pe = new PriorityEntry(map_index, index);
     wxTreeItemId id_tk = m_prioTree->AppendItem(leaf_parent, item_string, -1, -1, pe);
-
-    //  Set bold text on item currently active (usually 0)
-    if ( (size_t)(pc.active_priority) == index)
-      m_prioTree->SetItemBold(id_tk);
-
+    
     index++;
   }
 }
@@ -371,17 +364,12 @@ void PriorityDlg::ProcessMove(wxTreeItemId id, int dir){
 
   // Update the priority mechanism
   MyApp& app = wxGetApp();
-  app.m_comm_bridge.UpdateAndApplyMaps(m_map);
-
-  // And reload the tree GUI
-  m_map = app.m_comm_bridge.GetPriorityMaps();
+  
   Populate();
 }
 
 void PriorityDlg::OnRefreshClick(wxCommandEvent& event) {
-  // Reload the tree GUI
-  MyApp& app = wxGetApp();
-  m_map = app.m_comm_bridge.GetPriorityMaps();
+  // Reload the tree GUI  
   Populate();
 }
 
@@ -393,15 +381,7 @@ void PriorityDlg::OnClearClick(wxCommandEvent& event) {
   m_map[4].clear();
 
   m_selmap_index = m_selIndex = 0;
-
-  // Update the priority mechanism
-  MyApp& app = wxGetApp();
-  app.m_comm_bridge.UpdateAndApplyMaps(m_map);
-
-  // And reload the tree GUI
-  m_map = app.m_comm_bridge.GetPriorityMaps();
   Populate();
-
 }
 
 void PriorityDlg::AdjustSatPriority() {

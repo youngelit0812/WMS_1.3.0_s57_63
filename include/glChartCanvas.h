@@ -68,6 +68,9 @@ class ChartBaseBSB;
 
 class glChartCanvas : public wxGLCanvas {
 public:
+  void DrawGLCanvasData(std::string& sIMGFilePath, bool bPNGFlag);
+  void GenerateImageFile(std::string& sIMGFilePath, bool bPNGFlag);
+
   static bool CanClipViewport(const ViewPort &vp);
   static ViewPort ClippedViewport(const ViewPort &vp, const LLRegion &region);
 
@@ -105,7 +108,6 @@ public:
   int GetGLCanvasWidth() { return m_glcanvas_width; }
   int GetGLCanvasHeight() { return m_glcanvas_height; }
 
-  void DrawGLCanvasData(std::string& sIMGFilePath, bool bPNGFlag);
   void Render();
   void OnActivate(wxActivateEvent &event);
   void OnSize(wxSizeEvent &event);
@@ -127,10 +129,6 @@ public:
   void GridDraw();
   void FlushFBO(void);
 
-  void DrawDynamicRoutesTracksAndWaypoints(ViewPort &vp);
-  void DrawStaticRoutesTracksAndWaypoints(ViewPort &vp);
-
-  void RenderAllChartOutlines(ocpnDC &dc, ViewPort &VP);
   void RenderChartOutline(ocpnDC &dc, int dbIndex, ViewPort &VP);
 
   void DrawEmboss(ocpnDC &dc, emboss_data *emboss);  
@@ -165,9 +163,8 @@ protected:
 
   void configureShaders(ViewPort &vp);
 
-  void ComputeRenderQuiltViewGLRegion( ViewPort &vp, OCPNRegion &Region );
   void RenderCharts(ocpnDC &dc, const OCPNRegion &rect_region);
-  void RenderNoDTA(ViewPort &vp, const LLRegion &region, int transparency = 255);  
+  void RenderNoDTA(ViewPort &vp, const LLRegion &region, int transparency = 255);
   void RenderWorldChart(ocpnDC &dc, ViewPort &vp, wxRect &rect,
                         bool &world_view);
 
@@ -181,9 +178,7 @@ protected:
   void DrawGLCurrentsInBBox(ocpnDC &dc, LLBBox &BBox);
 
   void ZoomProject(float offset_x, float offset_y, float swidth, float sheight);
-
-  void GenerateImageFile(wxDC*, std::string&, bool);
-
+  
   wxGLContext *m_pcontext;
 
   int max_texture_dimension;

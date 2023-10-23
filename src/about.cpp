@@ -527,10 +527,6 @@ void about::OnNBPageChange(wxNotebookEvent& event) {
       sizes[i + 2] = points + i + (i > 0 ? i : 0);
     }
     wxString face = dFont->GetFaceName();
-
-    /// License page
-    g_Platform->ShowBusySpinner();
-
     // The HTML Header
     wxString licenseText = wxString::Format(
         _T( "<html><body bgcolor=#%02x%02x%02x><font color=#%02x%02x%02x>" ),
@@ -545,24 +541,6 @@ void about::OnNBPageChange(wxNotebookEvent& event) {
         licenseText.Append(str + _T("<br>"));
       license_filea.Close();
     }
-
-    wxString suppLicense = g_Platform->GetSupplementalLicenseString();
-
-    wxStringTokenizer st(suppLicense, _T("\n"), wxTOKEN_DEFAULT);
-    while (st.HasMoreTokens()) {
-      wxString s1 = st.GetNextToken();
-      licenseText.Append(s1 + _T("<br>"));
-    }
-
-    // The HTML Footer
-    licenseText.Append(_T("</font></body></html>"));
-
-    pLicenseHTMLCtl->SetPage(licenseText);
-
-    g_Platform->HideBusySpinner();
-
-    SetColorScheme();
-    m_blicensePageSet = true;
   }
 }
 

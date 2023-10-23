@@ -1609,58 +1609,9 @@ bool s57chart::DoRenderRegionViewOnGL(const wxGLContext &glc,
       //  cm93 vpoint crossing Greenwich, panning east, was rendering areas
       //  incorrectly.
       ViewPort cvp = glChartCanvas::ClippedViewport(VPoint, chart_region);
-//  printf("CVP:  %g %g       %g %g\n",
-//         cvp.GetBBox().GetMinLat(),
-//         cvp.GetBBox().GetMaxLat(),
-//         cvp.GetBBox().GetMinLon(),
-//         cvp.GetBBox().GetMaxLon());
 
-      if (CHART_TYPE_CM93 == GetChartType()) {
-        // for now I will revert to the faster rectangle clipping now that
-        // rendering order is resolved
-        //                glChartCanvas::SetClipRegion(cvp, chart_region);
-        glChartCanvas::SetClipRect(cvp, upd.GetRect(), false);
-        //ps52plib->m_last_clip_rect = upd.GetRect();
-      } else {
-#ifdef OPT_USE_ANDROID_GLES2
-
-        // GLES2 will be faster if we setup and use a smaller viewport for each
-        // rectangle render. This is because when using shaders, clip operations
-        // (e.g. scissor, stencil) happen after the fragment shader executes.
-        // However, with a smaller viewport, the fragment shader will not be
-        // invoked if the vertices are all outside the vieport.
-
-        wxRect r = upd.GetRect();
-        ViewPort *vp = &cvp;
-        glViewport(r.x, vp->pix_height - (r.y + r.height), r.width, r.height);
-
-        // mat4x4 m;
-        // mat4x4_identity(m);
-
-        mat4x4 I, Q;
-        mat4x4_identity(I);
-
-        float yp = vp->pix_height - (r.y + r.height);
-        // Translate
-        I[3][0] = (-r.x - (float)r.width / 2) * (2.0 / (float)r.width);
-        I[3][1] = (r.y + (float)r.height / 2) * (2.0 / (float)r.height);
-
-        // Scale
-        I[0][0] *= 2.0 / (float)r.width;
-        I[1][1] *= -2.0 / (float)r.height;
-
-        // Rotate
-        float angle = 0;
-        mat4x4_rotate_Z(Q, I, angle);
-
-        mat4x4_dup((float(*)[4])vp->vp_transform, Q);
-
-#else
-        ps52plib->SetReducedBBox(cvp.GetBBox());
-        glChartCanvas::SetClipRect(cvp, upd.GetRect(), false);
-
-#endif
-      }
+      ps52plib->SetReducedBBox(cvp.GetBBox());
+      glChartCanvas::SetClipRect(cvp, upd.GetRect(), false);      
 
       DoRenderOnGL(glc, cvp);
 

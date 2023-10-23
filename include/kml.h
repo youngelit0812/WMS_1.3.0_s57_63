@@ -55,39 +55,17 @@ class Kml {
 public:
   Kml();
   ~Kml();
-  KmlPastebufferType ParsePasteBuffer();
-  Route* GetParsedRoute() { return parsedRoute; }
-  RoutePoint* GetParsedRoutePoint() { return parsedRoutePoint; }
-
-  static wxString MakeKmlFromRoute(Route* route, bool insertSeqNames = false);
-  static wxString MakeKmlFromWaypoint(RoutePoint* routepoint);
-  static void CopyWaypointToClipboard(RoutePoint* routepoint);
-  static void CopyRouteToClipboard(Route* route);
-
+  KmlPastebufferType ParsePasteBuffer();      
+  
 private:
   KmlPastebufferType ParseOnePlacemarkPoint(TiXmlNode* node, wxString& name);
   KmlPastebufferType ParseTrack(TiXmlNode* node, wxString& name);
   int ParseCoordinates(TiXmlNode* node, dPointList& points);
-  static TiXmlElement* StandardHead(TiXmlDocument& xmlDoc, wxString name);
-  static std::string PointPlacemark(TiXmlElement* document,
-                                    RoutePoint* routepoint);
+  static TiXmlElement* StandardHead(TiXmlDocument& xmlDoc, wxString name);  
 
-  wxString kmlText;
-  RoutePoint* parsedRoutePoint;
-  Route* parsedRoute;
+  wxString kmlText;  
   static bool insertQtVlmExtendedData;
   static int seqCounter;
-};
-
-//---------------------------------------------------------------------------
-
-class KmlFormatDialog : public wxDialog {
-private:
-  std::vector<wxRadioButton*> choices;
-
-public:
-  KmlFormatDialog(wxWindow* parent);
-  int GetSelectedFormat();
 };
 
 #endif

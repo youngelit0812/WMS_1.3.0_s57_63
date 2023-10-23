@@ -43,7 +43,6 @@ public:
   void FitToChars(int char_width, int char_height);
   wxSize GetWinSize(void) { return m_size; }
   void OnPaint(wxPaintEvent& event);
-  void OnEraseBackground(wxEraseEvent& event);
 
   wxStaticText* m_pInfoTextCtl;
   int dbIndex;

@@ -32,7 +32,6 @@
 #include <wx/dynarray.h>
 #include <wx/gdicmn.h>
 #include <wx/string.h>
-#include <wx/hashmap.h>
 
 #include "ocpn_types.h"
 //#include "tinyxml.h"

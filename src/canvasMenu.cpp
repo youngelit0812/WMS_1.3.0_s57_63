@@ -39,18 +39,8 @@
 #include <wx/menu.h>
 
 #include "FontMgr.h"
-#include "MarkInfo.h"
 #include "Quilt.h"
-#include "route.h"
-#include "RoutePropDlgImpl.h"
-#include "SendToGpsDlg.h"
-#include "SendToPeerDlg.h"
 #include "TCWin.h"
-#include "track.h"
-#include "TrackPropDlg.h"
-#include "ais.h"
-#include "ais_decoder.h"
-#include "ais_target_data.h"
 #include "canvasMenu.h"
 #include "chartdb.h"
 #include "chcanv.h"
@@ -61,38 +51,23 @@
 #include "georef.h"
 #include "kml.h"
 #include "navutil.h"
-#include "nav_object_database.h"
 #include "ocpn_frame.h"
 #include "own_ship.h"
 #include "pluginmanager.h"
-#include "route_gui.h"
-#include "route_point_gui.h"
-#include "routeman.h"
-#include "routeman_gui.h"
-#include "routemanagerdialog.h"
 #include "s52plib.h"
 #include "s57chart.h"  // for ArrayOfS57Obj
 #include "styles.h"
 #include "tcmgr.h"
 #include "tide_time.h"
-#include "track_gui.h"
-#include "undo.h"
-#include "peer_client.h"
 #include "mDNS_query.h"
 #include "OCPNPlatform.h"
-
-#ifdef __OCPN__ANDROID__
-#include "androidUTIL.h"
-#endif
 
 // ----------------------------------------------------------------------------
 // Useful Prototypes
 // ----------------------------------------------------------------------------
-extern AisDecoder *g_pAIS;
 extern bool g_bCPAWarn;
 extern bool g_bShowAreaNotices;
 extern bool bGPSValid;
-extern Routeman *g_pRouteMan;
 extern bool g_bskew_comp;
 extern double vLat, vLon;
 extern MyFrame *gFrame;
@@ -100,29 +75,17 @@ extern ChartGroupArray *g_pGroupArray;
 extern PlugInManager *g_pi_manager;
 extern int g_nAWMax;
 extern int g_nAWDefault;
-extern RoutePoint *pAnchorWatchPoint1;
-extern RoutePoint *pAnchorWatchPoint2;
 extern wxString g_AW1GUID;
 extern wxString g_AW2GUID;
 extern int g_click_stop;
-extern RouteManagerDialog *pRouteManagerDialog;
-extern MarkInfoDlg *g_pMarkInfoDialog;
-extern RoutePropDlgImpl *pRoutePropDialog;
-extern ActiveTrack *g_pActiveTrack;
 extern bool g_bConfirmObjectDelete;
-extern WayPointman *pWayPointMan;
 extern MyConfig *pConfig;
-extern Select *pSelect;
 extern OCPNPlatform* g_Platform;
 
-//extern CM93OffsetDialog *g_pCM93OffsetDialog;
+extern CM93OffsetDialog *g_pCM93OffsetDialog;
 
-extern GoToPositionDialog *pGoToPositionDialog;
-extern RouteList *pRouteList;
 extern wxString g_default_wp_icon;
-extern bool g_btouch;
 extern bool g_bBasicMenus;
-extern TrackPropDlg *pTrackPropDialog;
 extern double gHdt;
 extern bool g_FlushNavobjChanges;
 extern ColorScheme global_color_scheme;
@@ -226,16 +189,11 @@ wxFont CanvasMenuHandler::m_scaledFont;
 
 // Define a constructor for my canvas
 CanvasMenuHandler::CanvasMenuHandler(ChartCanvas *parentCanvas,
-                                     Route *selectedRoute, Track *selectedTrack,
-                                     RoutePoint *selectedPoint,
                                      int selectedAIS_MMSI,
                                      void *selectedTCIndex)
 
 {
-  parent = parentCanvas;
-  m_pSelectedRoute = selectedRoute;
-  m_pSelectedTrack = selectedTrack;
-  m_pFoundRoutePoint = selectedPoint;
+  parent = parentCanvas;  
   m_FoundAIS_MMSI = selectedAIS_MMSI;
   m_pIDXCandidate = selectedTCIndex;
   if (!m_scaledFont.IsOk()){
@@ -275,7 +233,6 @@ void CanvasMenuHandler::MenuPrepend1(wxMenu *menu, int id, wxString label) {
 
   PrepareMenuItem( item );
 
-  if (g_btouch) menu->InsertSeparator(0);
   menu->Prepend(item);
 }
 
@@ -293,7 +250,6 @@ void CanvasMenuHandler::MenuAppend1(wxMenu *menu, int id, wxString label) {
   PrepareMenuItem( item );
 
   menu->Append(item);
-  if (g_btouch) menu->AppendSeparator();
 }
 
 void CanvasMenuHandler::SetMenuItemFont1(wxMenuItem *item) {
@@ -329,59 +285,7 @@ void CanvasMenuHandler::CanvasPopupMenu(int x, int y, int seltype) {
 
   popx = x;
   popy = y;
-  
-  if (seltype == SELTYPE_ROUTECREATE) {
-    MenuAppend1(contextMenu, ID_RC_MENU_FINISH,
-                _menuText(_("End Route"), _T("Esc")));
-  }
-
-  bool ais_areanotice = false;
-  if (g_pAIS && parent->GetShowAIS() && g_bShowAreaNotices) {
-    float vp_scale = parent->GetVPScale();
-
-    for (const auto &target : g_pAIS->GetAreaNoticeSourcesList()) {
-      auto target_data = target.second;
-      if (!target_data->area_notices.empty()) {
-        for (auto &ani : target_data->area_notices) {
-          Ais8_001_22 &area_notice = ani.second;
-          BoundingBox bbox;
-
-          for (Ais8_001_22_SubAreaList::iterator sa =
-                   area_notice.sub_areas.begin();
-               sa != area_notice.sub_areas.end(); ++sa) {
-            switch (sa->shape) {
-              case AIS8_001_22_SHAPE_CIRCLE: {
-                wxPoint target_point;
-                parent->GetCanvasPointPix(sa->latitude, sa->longitude,
-                                          &target_point);
-                bbox.Expand(target_point);
-                if (sa->radius_m > 0.0) bbox.EnLarge(sa->radius_m * vp_scale);
-                break;
-              }
-              case AIS8_001_22_SHAPE_POLYGON:
-              case AIS8_001_22_SHAPE_POLYLINE: {
-                double lat = sa->latitude;
-                double lon = sa->longitude;
-                for (int i = 0; i < 4; ++i) {
-                  ll_gc_ll(lat, lon, sa->angles[i], sa->dists_m[i] / 1852.0,
-                           &lat, &lon);
-                  wxPoint target_point;
-                  parent->GetCanvasPointPix(lat, lon, &target_point);
-                  bbox.Expand(target_point);
-                }
-              }
-            }
-          }
-
-          if (bbox.PointInBox(x, y)) {
-            ais_areanotice = true;
-            break;
-          }
-        }
-      }
-    }
-  }
-
+   
   int nChartStack = 0;
   if (parent->GetpCurrentStack())
     nChartStack = parent->GetpCurrentStack()->nEntry;
@@ -396,8 +300,7 @@ void CanvasMenuHandler::CanvasPopupMenu(int x, int y, int seltype) {
     }
 
     if ((parent->m_singleChart &&
-         (parent->m_singleChart->GetChartFamily() == CHART_FAMILY_VECTOR)) ||
-        ais_areanotice) {
+         (parent->m_singleChart->GetChartFamily() == CHART_FAMILY_VECTOR))) {
       MenuAppend1(contextMenu, ID_DEF_MENU_QUERY,
                   _("Object Query") + _T( "..." ));
     }
@@ -405,8 +308,7 @@ void CanvasMenuHandler::CanvasPopupMenu(int x, int y, int seltype) {
   } else {
     ChartBase *pChartTest =
         parent->m_pQuilt->GetChartAtPix(parent->GetVP(), wxPoint(x, y));
-    if ((pChartTest && (pChartTest->GetChartFamily() == CHART_FAMILY_VECTOR)) ||
-        ais_areanotice) {
+    if ((pChartTest && (pChartTest->GetChartFamily() == CHART_FAMILY_VECTOR))) {
       MenuAppend1(contextMenu, ID_DEF_MENU_QUERY,
                   _("Object Query") + _T( "..." ));
     } else {
@@ -420,26 +322,6 @@ void CanvasMenuHandler::CanvasPopupMenu(int x, int y, int seltype) {
 #endif
     }
   }
-
-  if (!g_bBasicMenus || (seltype != SELTYPE_ROUTECREATE)) {
-    bool b_dm_add = true;
-    if (g_btouch && parent->IsMeasureActive())
-      b_dm_add = false;
-
-    if (b_dm_add) {
-      MenuAppend1(contextMenu, ID_DEF_MENU_DROP_WP,
-                _menuText(_("Drop Mark"), _T("Ctrl-M")));
-      MenuAppend1(contextMenu, ID_DEF_MENU_NEW_RT,
-                _menuText(_("New Route..."), _T("Ctrl-R")));
-    }
-
-    if (!bGPSValid)
-      MenuAppend1(contextMenu, ID_DEF_MENU_MOVE_BOAT_HERE, _("Move Boat Here"));
-  }
-
-  if (!g_bBasicMenus &&
-      (!(g_pRouteMan->GetpActiveRoute() || (seltype & SELTYPE_MARKPOINT))))
-    MenuAppend1(contextMenu, ID_DEF_MENU_GOTO_HERE, _("Navigate To Here"));
 
   if (!g_bBasicMenus)
     MenuAppend1(contextMenu, ID_DEF_MENU_GOTOPOSITION,
@@ -465,23 +347,12 @@ void CanvasMenuHandler::CanvasPopupMenu(int x, int y, int seltype) {
 
   if (!g_bBasicMenus) {
     bool full_toggle_added = false;
-#ifndef __OCPN__ANDROID__
-    if (g_btouch) {
-      MenuAppend1(contextMenu, ID_DEF_MENU_TOGGLE_FULL,
-                  _("Toggle Full Screen"));
-      full_toggle_added = true;
-    }
 
     if (!full_toggle_added) {
       // if(gFrame->IsFullScreen())
       MenuAppend1(contextMenu, ID_DEF_MENU_TOGGLE_FULL,
                   _("Toggle Full Screen"));
     }
-#endif
-
-    if (g_pRouteMan->IsAnyRouteActive() &&
-        g_pRouteMan->GetCurrentXTEToActivePoint() > 0.)
-      MenuAppend1(contextMenu, ID_DEF_ZERO_XTE, _("Zero XTE"));
 
     Kml *kml = new Kml;
     int pasteBuffer = kml->ParsePasteBuffer();
@@ -535,9 +406,7 @@ void CanvasMenuHandler::CanvasPopupMenu(int x, int y, int seltype) {
 #endif
 
   //  ChartGroup SubMenu
-  wxMenuItem *subItemChart =
-      contextMenu->AppendSubMenu(subMenuChart, _("Chart Groups"));
-  if (g_btouch) contextMenu->AppendSeparator();
+  wxMenuItem *subItemChart = contextMenu->AppendSubMenu(subMenuChart, _("Chart Groups"));
 
   SetMenuItemFont1(subItemChart);
 
@@ -565,278 +434,8 @@ void CanvasMenuHandler::CanvasPopupMenu(int x, int y, int seltype) {
   //  This is the default context menu
   menuFocus = contextMenu;
 
-  wxString name;
-  if (!g_bBasicMenus || (seltype != SELTYPE_ROUTECREATE)) {
-    if (g_pAIS) {
-      if (parent->GetShowAIS() && (seltype & SELTYPE_AISTARGET)) {
-        auto myptarget = g_pAIS->Get_Target_Data_From_MMSI(m_FoundAIS_MMSI);
-        if (!g_bBasicMenus && myptarget) {
-          name = myptarget->GetFullName();
-          if (name.IsEmpty()) name.Printf(_T("%d"), m_FoundAIS_MMSI);
-          name.Prepend(_T(" ( ")).Append(_T(" )"));
-        } else
-          name = wxEmptyString;
-        menuAIS = new wxMenu(_("AIS") + name);
-        MenuAppend1(menuAIS, ID_DEF_MENU_AIS_QUERY, _("Target Query..."));
-        if (myptarget && myptarget->bCPA_Valid &&
-            (myptarget->n_alert_state != AIS_ALERT_SET)) {
-          if (myptarget->b_show_AIS_CPA)
-            MenuAppend1(menuAIS, ID_DEF_MENU_AIS_CPA, _("Hide Target CPA"));
-          else
-            MenuAppend1(menuAIS, ID_DEF_MENU_AIS_CPA, _("Show Target CPA"));
-        }
-        MenuAppend1(menuAIS, ID_DEF_MENU_AISTARGETLIST, _("Target List..."));
-        if (1 /*g_bAISShowTracks*/) {
-          if (myptarget && myptarget->b_show_track)
-            MenuAppend1(menuAIS, ID_DEF_MENU_AISSHOWTRACK,
-                        _("Hide Target Track"));
-          else
-            MenuAppend1(menuAIS, ID_DEF_MENU_AISSHOWTRACK,
-                        _("Show Target Track"));
-        }
+  wxString name;  
 
-        MenuAppend1(menuAIS, ID_DEF_MENU_COPY_MMSI, _("Copy Target MMSI"));
-        menuAIS->AppendSeparator();
-
-        if (!parent->GetVP().b_quilt) {
-          if ((parent->m_singleChart &&
-               (parent->m_singleChart->GetChartFamily() ==
-                CHART_FAMILY_VECTOR))) {
-            MenuAppend1(menuAIS, ID_DEF_MENU_QUERY, _("Object Query..."));
-          }
-
-        } else {
-          ChartBase *pChartTest =
-              parent->m_pQuilt->GetChartAtPix(parent->GetVP(), wxPoint(x, y));
-          if ((pChartTest &&
-               (pChartTest->GetChartFamily() == CHART_FAMILY_VECTOR))) {
-            MenuAppend1(menuAIS, ID_DEF_MENU_QUERY, _("Object Query..."));
-          }
-        }
-
-        menuFocus = menuAIS;
-      } else {
-        MenuAppend1(contextMenu, ID_DEF_MENU_AISTARGETLIST,
-                    _("AIS target list") + _T("..."));
-
-        wxString nextCPAstatus = g_bCPAWarn ? _("Hide") : _("Show");
-        MenuAppend1(contextMenu, ID_DEF_MENU_AIS_CPAWARNING,
-                    _menuText(nextCPAstatus + " " + _("CPA alarm "), "W"));
-      }
-    }
-  }
-
-  if (seltype & SELTYPE_ROUTESEGMENT) {
-    if (!g_bBasicMenus && m_pSelectedRoute) {
-      name = m_pSelectedRoute->m_RouteNameString;
-      if (name.IsEmpty()) name = _("Unnamed Route");
-      name.Prepend(_T(" ( ")).Append(_T(" )"));
-    } else
-      name = wxEmptyString;
-    bool blay = false;
-    if (m_pSelectedRoute && m_pSelectedRoute->m_bIsInLayer) blay = true;
-
-    if (blay) {
-      menuRoute = new wxMenu(_("Layer Route") + name);
-      MenuAppend1(menuRoute, ID_RT_MENU_PROPERTIES,
-                  _("Properties") + _T( "..." ));
-      if (m_pSelectedRoute) {
-        if (m_pSelectedRoute->IsActive()) {
-          int indexActive = m_pSelectedRoute->GetIndexOf(
-              m_pSelectedRoute->m_pRouteActivePoint);
-          if ((indexActive + 1) <= m_pSelectedRoute->GetnPoints()) {
-            MenuAppend1(menuRoute, ID_RT_MENU_ACTNXTPOINT,
-                        _("Activate Next Waypoint"));
-          }
-          MenuAppend1(menuRoute, ID_RT_MENU_DEACTIVATE, _("Deactivate"));
-          MenuAppend1(menuRoute, ID_DEF_ZERO_XTE, _("Zero XTE"));
-        } else {
-          MenuAppend1(menuRoute, ID_RT_MENU_ACTIVATE, _("Activate"));
-        }
-      }
-    } else {
-      menuRoute = new wxMenu(_("Route") + name);
-      MenuAppend1(menuRoute, ID_RT_MENU_PROPERTIES,
-                  _("Properties") + _T( "..." ));
-      if (m_pSelectedRoute) {
-        if (m_pSelectedRoute->IsActive()) {
-          int indexActive = m_pSelectedRoute->GetIndexOf(
-              m_pSelectedRoute->m_pRouteActivePoint);
-          if ((indexActive + 1) <= m_pSelectedRoute->GetnPoints()) {
-            MenuAppend1(menuRoute, ID_RT_MENU_ACTNXTPOINT,
-                        _("Activate Next Waypoint"));
-          }
-          MenuAppend1(menuRoute, ID_RT_MENU_DEACTIVATE, _("Deactivate"));
-          MenuAppend1(menuRoute, ID_DEF_ZERO_XTE, _("Zero XTE"));
-        } else {
-          MenuAppend1(menuRoute, ID_RT_MENU_ACTIVATE, _("Activate"));
-        }
-      }
-      MenuAppend1(menuRoute, ID_RT_MENU_INSERT, _("Insert Waypoint"));
-      MenuAppend1(menuRoute, ID_RT_MENU_APPEND, _("Append Waypoint"));
-      if (!(seltype & SELTYPE_ROUTEPOINT) && m_pSelectedRoute) {
-        m_SelectedIdx = m_pSelectedRoute->GetIndexOf(m_pFoundRoutePoint);
-        if (m_SelectedIdx > 1 &&
-            m_SelectedIdx < m_pSelectedRoute->GetnPoints() - 1)
-          MenuAppend1(menuRoute, ID_RT_MENU_SPLIT_LEG, _("Split around Leg"));
-      }
-      MenuAppend1(menuRoute, ID_RT_MENU_COPY, _("Copy as KML") + _T( "..." ));
-      MenuAppend1(menuRoute, ID_RT_MENU_DELETE, _("Delete") + _T( "..." ));
-      MenuAppend1(menuRoute, ID_RT_MENU_REVERSE, _("Reverse..."));
-      if (m_pSelectedRoute) {
-        if (m_pSelectedRoute->AreWaypointNamesVisible())
-          MenuAppend1(menuRoute, ID_RT_MENU_SHOWNAMES,
-                      _("Hide Waypoint Names"));
-        else
-          MenuAppend1(menuRoute, ID_RT_MENU_SHOWNAMES,
-                      _("Show Waypoint Names"));
-      }
-      MenuAppend1(menuRoute, ID_RT_MENU_RESEQUENCE,
-                  _("Resequence Waypoints..."));
-
-      wxString itemstp = SYMBOL_STP_TITLE; // Send to Peer
-      MenuAppend1(menuRoute, ID_RT_MENU_SENDTOPEER, itemstp);
-
-    }
-    // Eventually set this menu as the "focused context menu"
-    if (menuFocus != menuAIS) menuFocus = menuRoute;
-  }
-
-  if (seltype & SELTYPE_TRACKSEGMENT) {
-    name = wxEmptyString;
-    if (!g_bBasicMenus && m_pSelectedTrack)
-      name = _T(" ( ") + m_pSelectedTrack->GetName(true) + _T(" )");
-    else
-      name = wxEmptyString;
-    bool blay = false;
-    if (m_pSelectedTrack && m_pSelectedTrack->m_bIsInLayer) blay = true;
-
-    if (blay) {
-      menuTrack = new wxMenu(_("Layer Track") + name);
-      MenuAppend1(menuTrack, ID_TK_MENU_PROPERTIES,
-                  _("Properties") + _T( "..." ));
-    } else {
-      menuTrack = new wxMenu(_("Track") + name);
-      MenuAppend1(menuTrack, ID_TK_MENU_PROPERTIES,
-                  _("Properties") + _T( "..." ));
-      MenuAppend1(menuTrack, ID_TK_MENU_COPY, _("Copy as KML"));
-      MenuAppend1(menuTrack, ID_TK_MENU_DELETE, _("Delete") + _T( "..." ));
-    }
-
-    wxString itemstp = SYMBOL_STP_TITLE; // Send to Peer
-    MenuAppend1(menuTrack, ID_TK_MENU_SENDTOPEER, itemstp);
-
-    // Eventually set this menu as the "focused context menu"
-    if (menuFocus != menuAIS) menuFocus = menuTrack;
-  }
-
-  if (seltype & SELTYPE_ROUTEPOINT) {
-    if (!g_bBasicMenus && m_pFoundRoutePoint) {
-      name = m_pFoundRoutePoint->GetName();
-      if (name.IsEmpty()) name = _("Unnamed Waypoint");
-      name.Prepend(_T(" ( ")).Append(_T(" )"));
-    } else
-      name = wxEmptyString;
-    bool blay = false;
-    if (m_pFoundRoutePoint && m_pFoundRoutePoint->m_bIsInLayer) blay = true;
-
-    if (blay) {
-      menuWaypoint = new wxMenu(_("Layer Waypoint") + name);
-      MenuAppend1(menuWaypoint, ID_WP_MENU_PROPERTIES,
-                  _("Properties") + _T( "..." ));
-
-      if (m_pSelectedRoute && m_pSelectedRoute->IsActive())
-        MenuAppend1(menuWaypoint, ID_RT_MENU_ACTPOINT, _("Activate"));
-    } else {
-      menuWaypoint = new wxMenu(_("Waypoint") + name);
-      MenuAppend1(menuWaypoint, ID_WP_MENU_PROPERTIES,
-                  _("Properties") + _T( "..." ));
-      if (m_pSelectedRoute && m_pSelectedRoute->IsActive()) {
-        if (m_pSelectedRoute->m_pRouteActivePoint != m_pFoundRoutePoint)
-          MenuAppend1(menuWaypoint, ID_RT_MENU_ACTPOINT, _("Activate"));
-      }
-
-      if (m_pSelectedRoute && m_pSelectedRoute->IsActive()) {
-        if (m_pSelectedRoute->m_pRouteActivePoint == m_pFoundRoutePoint) {
-          int indexActive = m_pSelectedRoute->GetIndexOf(
-              m_pSelectedRoute->m_pRouteActivePoint);
-          if ((indexActive + 1) <= m_pSelectedRoute->GetnPoints())
-            MenuAppend1(menuWaypoint, ID_RT_MENU_ACTNXTPOINT,
-                        _("Activate Next Waypoint"));
-        }
-      }
-      if (m_pSelectedRoute && m_pSelectedRoute->GetnPoints() > 2) {
-        MenuAppend1(menuWaypoint, ID_RT_MENU_REMPOINT, _("Remove from Route"));
-
-        m_SelectedIdx = m_pSelectedRoute->GetIndexOf(m_pFoundRoutePoint);
-        if (m_SelectedIdx > 1 && m_SelectedIdx < m_pSelectedRoute->GetnPoints())
-          MenuAppend1(menuWaypoint, ID_RT_MENU_SPLIT_WPT,
-                      _("Split Route at Waypoint"));
-      }
-
-      MenuAppend1(menuWaypoint, ID_WPT_MENU_COPY, _("Copy as KML"));
-
-      if (m_pFoundRoutePoint && m_pFoundRoutePoint->GetIconName() != _T("mob"))
-        MenuAppend1(menuWaypoint, ID_RT_MENU_DELPOINT, _("Delete"));
-
-      MenuAppend1(menuWaypoint, ID_WPT_MENU_SENDTOPEER, SYMBOL_STP_TITLE); //Send to Peer
-    }
-
-    // Eventually set this menu as the "focused context menu"
-    if (menuFocus != menuAIS) menuFocus = menuWaypoint;
-  }
-
-  if (seltype & SELTYPE_MARKPOINT) {
-    if (!g_bBasicMenus && m_pFoundRoutePoint) {
-      name = m_pFoundRoutePoint->GetName();
-      if (name.IsEmpty()) name = _("Unnamed Waypoint");
-      name.Prepend(_T(" ( ")).Append(_T(" )"));
-    } else
-      name = wxEmptyString;
-    bool blay = false;
-    if (m_pFoundRoutePoint && m_pFoundRoutePoint->m_bIsInLayer) blay = true;
-
-    if (blay) {
-      menuWaypoint = new wxMenu(_("Layer Waypoint") + name);
-      MenuAppend1(menuWaypoint, ID_WP_MENU_PROPERTIES,
-                  _("Properties") + _T( "..." ));
-    } else {
-      menuWaypoint = new wxMenu(_("Waypoint") + name);
-      MenuAppend1(menuWaypoint, ID_WP_MENU_PROPERTIES,
-                  _("Properties") + _T( "..." ));
-
-      if (!g_pRouteMan->GetpActiveRoute())
-        MenuAppend1(menuWaypoint, ID_WP_MENU_GOTO, _("Navigate To This"));
-
-      MenuAppend1(menuWaypoint, ID_WPT_MENU_COPY, _("Copy as KML"));
-
-      if (m_pFoundRoutePoint && m_pFoundRoutePoint->GetIconName() != _T("mob"))
-        MenuAppend1(menuWaypoint, ID_WP_MENU_DELPOINT, _("Delete"));
-
-      MenuAppend1(menuWaypoint, ID_WPT_MENU_SENDTOPEER, SYMBOL_STP_TITLE); //Send to Peer
-      
-      if ((m_pFoundRoutePoint == pAnchorWatchPoint1) ||
-          (m_pFoundRoutePoint == pAnchorWatchPoint2))
-        MenuAppend1(menuWaypoint, ID_WP_MENU_CLEAR_ANCHORWATCH,
-                    _("Clear Anchor Watch"));
-      else {
-        if (m_pFoundRoutePoint && !(m_pFoundRoutePoint->m_bIsInLayer) &&
-            ((NULL == pAnchorWatchPoint1) || (NULL == pAnchorWatchPoint2))) {
-          double dist;
-          double brg;
-          DistanceBearingMercator(m_pFoundRoutePoint->m_lat,
-                                  m_pFoundRoutePoint->m_lon, gLat, gLon, &brg,
-                                  &dist);
-          if (dist * 1852. <= g_nAWMax)
-            MenuAppend1(menuWaypoint, ID_WP_MENU_SET_ANCHORWATCH,
-                        _("Set Anchor Watch"));
-        }
-      }
-    }
-    // Eventually set this menu as the "focused context menu"
-    if (menuFocus != menuAIS) menuFocus = menuWaypoint;
-  }
-  /*add the relevant submenus*/
   enum { WPMENU = 1, TKMENU = 2, RTMENU = 4, MMMENU = 8 };
   int sub_menu = 0;
   if (!g_bBasicMenus && menuFocus != contextMenu) {
@@ -880,18 +479,6 @@ void CanvasMenuHandler::CanvasPopupMenu(int x, int y, int seltype) {
   //  Add the Tide/Current selections if the item was not activated by shortcut
   //  in right-click handlers
   bool bsep = false;
-  if (seltype & SELTYPE_TIDEPOINT) {
-    menuFocus->AppendSeparator();
-    bsep = true;
-    MenuAppend1(menuFocus, ID_DEF_MENU_TIDEINFO, _("Show Tide Information"));
-  }
-
-  if (seltype & SELTYPE_CURRENTPOINT) {
-    if (!bsep) menuFocus->AppendSeparator();
-    MenuAppend1(menuFocus, ID_DEF_MENU_CURRENTINFO,
-                _("Show Current Information"));
-  }
-
   // Give the plugins a chance to update their menu items
   g_pi_manager->PrepareAllPluginContextMenus();
 
@@ -1004,8 +591,6 @@ void CanvasMenuHandler::CanvasPopupMenu(int x, int y, int seltype) {
 }
 
 void CanvasMenuHandler::PopupMenuHandler(wxCommandEvent &event) {
-  RoutePoint *pLast;
-
   wxPoint r;
   double zlat, zlon;
 
@@ -1041,7 +626,7 @@ void CanvasMenuHandler::PopupMenuHandler(wxCommandEvent &event) {
       parent->Refresh(false);
       break;
 
-    case ID_REDO:      
+    case ID_REDO:
       parent->InvalidateGL();
       parent->Refresh(false);
       break;
@@ -1049,56 +634,13 @@ void CanvasMenuHandler::PopupMenuHandler(wxCommandEvent &event) {
     case ID_DEF_MENU_MOVE_BOAT_HERE:
       gLat = zlat;
       gLon = zlon;
-      gFrame->UpdateStatusBar();
       break;
 
-    case ID_DEF_MENU_GOTO_HERE: {
-      RoutePoint *pWP_dest = new RoutePoint(zlat, zlon, g_default_wp_icon,
-                                            wxEmptyString, wxEmptyString);
-      pSelect->AddSelectableRoutePoint(zlat, zlon, pWP_dest);
-
-      RoutePoint *pWP_src = new RoutePoint(gLat, gLon, g_default_wp_icon,
-                                           wxEmptyString, wxEmptyString);
-      pSelect->AddSelectableRoutePoint(gLat, gLon, pWP_src);
-
-      Route *temp_route = new Route();
-      pRouteList->Append(temp_route);
-
-      temp_route->AddPoint(pWP_src);
-      temp_route->AddPoint(pWP_dest);
-
-      pSelect->AddSelectableRouteSegment(gLat, gLon, zlat, zlon, pWP_src,
-                                         pWP_dest, temp_route);
-
-      temp_route->m_RouteNameString = _("Temporary GOTO Route");
-      temp_route->m_RouteStartString = _("Here");
-      ;
-      temp_route->m_RouteEndString = _("There");
-
-      temp_route->m_bDeleteOnArrival = true;
-
-      if (g_pRouteMan->GetpActiveRoute()) g_pRouteMan->DeactivateRoute();
-
-      g_pRouteMan->ActivateRoute(temp_route, pWP_dest);
-
+    case ID_DEF_MENU_GOTO_HERE: {     
       break;
     }
 
-    case ID_DEF_MENU_DROP_WP: {
-      RoutePoint *pWP = new RoutePoint(zlat, zlon, g_default_wp_icon,
-                                       wxEmptyString, wxEmptyString);
-      pWP->m_bIsolatedMark = true;  // This is an isolated mark
-      pSelect->AddSelectableRoutePoint(zlat, zlon, pWP);
-      
-      if (!RoutePointGui(*pWP).IsVisibleSelectable(this->parent))
-        RoutePointGui(*pWP).ShowScaleWarningMessage(parent);
-
-      if (RouteManagerDialog::getInstanceFlag()) {
-        if (pRouteManagerDialog && pRouteManagerDialog->IsShown()) {
-          pRouteManagerDialog->UpdateWptListCtrl();
-        }
-      }
-
+    case ID_DEF_MENU_DROP_WP: {      
       gFrame->RefreshAllCanvas(false);
       gFrame->InvalidateAllGL();
       g_FlushNavobjChanges = true;
@@ -1106,7 +648,6 @@ void CanvasMenuHandler::PopupMenuHandler(wxCommandEvent &event) {
     }
 
     case ID_DEF_MENU_NEW_RT: {
-      //parent->StartRoute();
       break;
     }
 
@@ -1118,36 +659,7 @@ void CanvasMenuHandler::PopupMenuHandler(wxCommandEvent &event) {
       parent->ToggleCPAWarn();
       break;
 
-    case ID_WP_MENU_GOTO: {
-      RoutePoint *pWP_src = new RoutePoint(gLat, gLon, g_default_wp_icon,
-                                           wxEmptyString, wxEmptyString);
-      pSelect->AddSelectableRoutePoint(gLat, gLon, pWP_src);
-
-      Route *temp_route = new Route();
-      pRouteList->Append(temp_route);
-
-      temp_route->AddPoint(pWP_src);
-      temp_route->AddPoint(m_pFoundRoutePoint);
-      m_pFoundRoutePoint->SetShared(true);
-
-      pSelect->AddSelectableRouteSegment(gLat, gLon, m_pFoundRoutePoint->m_lat,
-                                         m_pFoundRoutePoint->m_lon, pWP_src,
-                                         m_pFoundRoutePoint, temp_route);
-
-      wxString name = m_pFoundRoutePoint->GetName();
-      if (name.IsEmpty()) name = _("(Unnamed Waypoint)");
-      wxString rteName = _("Go to ");
-      rteName.Append(name);
-      temp_route->m_RouteNameString = rteName;
-      temp_route->m_RouteStartString = _("Here");
-      ;
-      temp_route->m_RouteEndString = name;
-      temp_route->m_bDeleteOnArrival = true;
-
-      if (g_pRouteMan->GetpActiveRoute()) g_pRouteMan->DeactivateRoute();
-
-      g_pRouteMan->ActivateRoute(temp_route, m_pFoundRoutePoint);
-
+    case ID_WP_MENU_GOTO: {      
       break;
     }
 
@@ -1167,73 +679,18 @@ void CanvasMenuHandler::PopupMenuHandler(wxCommandEvent &event) {
       gFrame->ToggleFullScreen();
       break;
 
-    case ID_DEF_MENU_GOTOPOSITION:
-      if (NULL == pGoToPositionDialog)  // There is one global instance of the
-                                        // Go To Position Dialog
-        pGoToPositionDialog = new GoToPositionDialog(parent);
-      pGoToPositionDialog->SetCanvas(parent);
-      pGoToPositionDialog->CheckPasteBufferForPosition();
-      pGoToPositionDialog->Show();
+    case ID_DEF_MENU_GOTOPOSITION:      
       break;
 
-    case ID_WP_MENU_DELPOINT: {
-      if (m_pFoundRoutePoint == pAnchorWatchPoint1) {
-        pAnchorWatchPoint1 = NULL;
-        g_AW1GUID.Clear();
-      } else if (m_pFoundRoutePoint == pAnchorWatchPoint2) {
-        pAnchorWatchPoint2 = NULL;
-        g_AW2GUID.Clear();
-      }
-
-      if (m_pFoundRoutePoint && !(m_pFoundRoutePoint->m_bIsInLayer) &&
-          (m_pFoundRoutePoint->GetIconName() != _T("mob"))) {
-        // If the WP belongs to an invisible route, we come here instead of to
-        // ID_RT_MENU_DELPOINT
-        //  Check it, and if so then remove the point from its routes
-        wxArrayPtrVoid *proute_array =
-            g_pRouteMan->GetRouteArrayContaining(m_pFoundRoutePoint);
-        if (proute_array) {
-          pWayPointMan->DestroyWaypoint(m_pFoundRoutePoint);
-        } else {                    
-          pSelect->DeleteSelectablePoint(m_pFoundRoutePoint,
-                                         SELTYPE_ROUTEPOINT);
-          if (NULL != pWayPointMan)
-            pWayPointMan->RemoveRoutePoint(m_pFoundRoutePoint);          
-        }
-
-        if (g_pMarkInfoDialog) {
-          g_pMarkInfoDialog->SetRoutePoint(NULL);
-          g_pMarkInfoDialog->UpdateProperties();
-        }
-
-        if(RouteManagerDialog::getInstanceFlag()){
-          if (pRouteManagerDialog) {
-            if (pRouteManagerDialog->IsShown())
-              pRouteManagerDialog->UpdateWptListCtrl();
-          }
-        }
-
-        gFrame->RefreshAllCanvas(false);
-        gFrame->InvalidateAllGL();
-      }
+    case ID_WP_MENU_DELPOINT: {      
       break;
     }
     case ID_WP_MENU_PROPERTIES:
-      //parent->ShowMarkPropertiesDialog(m_pFoundRoutePoint);
       break;
 
     case ID_WP_MENU_CLEAR_ANCHORWATCH:
     {
-      wxString guid = wxEmptyString;
-      if (pAnchorWatchPoint1 == m_pFoundRoutePoint) {
-        pAnchorWatchPoint1 = NULL;
-        guid = g_AW1GUID;
-        g_AW1GUID.Clear();
-      } else if (pAnchorWatchPoint2 == m_pFoundRoutePoint) {
-        pAnchorWatchPoint2 = NULL;
-        guid = g_AW2GUID;
-        g_AW2GUID.Clear();
-      }
+      wxString guid = wxEmptyString;      
       if(!guid.IsEmpty()) {
         wxJSONValue v;
         v[_T("GUID")] = guid;
@@ -1246,27 +703,7 @@ void CanvasMenuHandler::PopupMenuHandler(wxCommandEvent &event) {
     case ID_WP_MENU_SET_ANCHORWATCH:
     {
       wxString guid = wxEmptyString;
-      if (pAnchorWatchPoint1 == NULL) {
-        pAnchorWatchPoint1 = m_pFoundRoutePoint;
-        g_AW1GUID = pAnchorWatchPoint1->m_GUID;
-        guid = g_AW1GUID;
-        wxString nn;
-        nn = m_pFoundRoutePoint->GetName();
-        if (nn.IsNull()) {
-          nn.Printf(_T("%d m"), g_nAWDefault);
-          m_pFoundRoutePoint->SetName(nn);
-        }
-      } else if (pAnchorWatchPoint2 == NULL) {
-        pAnchorWatchPoint2 = m_pFoundRoutePoint;
-        g_AW2GUID = pAnchorWatchPoint2->m_GUID;
-        guid = g_AW2GUID;
-        wxString nn;
-        nn = m_pFoundRoutePoint->GetName();
-        if (nn.IsNull()) {
-          nn.Printf(_T("%d m"), g_nAWDefault);
-          m_pFoundRoutePoint->SetName(nn);
-        }
-      }
+      
       if(!guid.IsEmpty()) {
         wxJSONValue v;
         v[_T("GUID")] = guid;
@@ -1277,18 +714,15 @@ void CanvasMenuHandler::PopupMenuHandler(wxCommandEvent &event) {
     }
 
     case ID_DEF_MENU_ACTIVATE_MEASURE:
-      //parent->StartMeasureRoute();
       break;
 
     case ID_DEF_MENU_DEACTIVATE_MEASURE:
-      //parent->CancelMeasureRoute();
-      gFrame->SurfaceAllCanvasToolbars();
       parent->InvalidateGL();
       parent->Refresh(false);
       break;
 
     case ID_DEF_MENU_CM93OFFSET_DIALOG: {
-      /*if (NULL == g_pCM93OffsetDialog) {
+      if (NULL == g_pCM93OffsetDialog) {
         g_pCM93OffsetDialog = new CM93OffsetDialog(parent->parent_frame);
       }
 
@@ -1302,27 +736,22 @@ void CanvasMenuHandler::PopupMenuHandler(wxCommandEvent &event) {
         g_pCM93OffsetDialog->SetCM93Chart(pch);
         g_pCM93OffsetDialog->Show();
         g_pCM93OffsetDialog->UpdateMCOVRList(parent->GetVP());
-      }*/
+      }
 
       break;
     }
     case ID_DEF_MENU_QUERY: {
-      //parent->ShowObjectQueryWindow(popx, popy, zlat, zlon);
       break;
     }
     case ID_DEF_MENU_AIS_QUERY: {      
       break;
     }
 
-    case ID_DEF_MENU_AIS_CPA: {
-      auto myptarget = g_pAIS->Get_Target_Data_From_MMSI(m_FoundAIS_MMSI);
-      if (myptarget) myptarget->Toggle_AIS_CPA();
+    case ID_DEF_MENU_AIS_CPA: {      
       break;
     }
 
-    case ID_DEF_MENU_AISSHOWTRACK: {
-      auto myptarget = g_pAIS->Get_Target_Data_From_MMSI(m_FoundAIS_MMSI);
-      if (myptarget) myptarget->ToggleShowTrack();
+    case ID_DEF_MENU_AISSHOWTRACK: {      
       break;
     }
 
@@ -1355,53 +784,17 @@ void CanvasMenuHandler::PopupMenuHandler(wxCommandEvent &event) {
     case ID_DEF_MENU_TIDEINFO: {
       break;
     }
-    case ID_RT_MENU_REVERSE: {
-      if (m_pSelectedRoute->m_bIsInLayer) break;
-
-      int ask_return =
-          OCPNMessageBox(parent, g_pRouteMan->GetRouteReverseMessage(),
-                         _("Rename Waypoints?"), wxYES_NO | wxCANCEL);
-
-      if (ask_return != wxID_CANCEL) {
-        pSelect->DeleteAllSelectableRouteSegments(m_pSelectedRoute);
-        m_pSelectedRoute->Reverse(ask_return == wxID_YES);
-        pSelect->AddAllSelectableRouteSegments(m_pSelectedRoute);
-
-        if (pRoutePropDialog && (pRoutePropDialog->IsShown())) {
-          pRoutePropDialog->SetRouteAndUpdate(m_pSelectedRoute);
-          // pNew->UpdateProperties();
-        }
-        gFrame->InvalidateAllGL();
-        gFrame->RefreshAllCanvas();
-      }
+    case ID_RT_MENU_REVERSE: {      
       break;
     }
 
     case ID_RT_MENU_SHOWNAMES: {
-      if (m_pSelectedRoute) {
-        m_pSelectedRoute->ShowWaypointNames(
-            !m_pSelectedRoute->AreWaypointNamesVisible());
-      }
-
+      
       break;
     }
 
     case ID_RT_MENU_RESEQUENCE: {
-      if (m_pSelectedRoute) {
-        if (m_pSelectedRoute->m_bIsInLayer) break;
-
-        int ask_return =
-            OCPNMessageBox(parent, g_pRouteMan->GetRouteResequenceMessage(),
-                           _("Rename Waypoints?"), wxYES_NO | wxCANCEL);
-
-        if (ask_return != wxID_CANCEL) {
-          m_pSelectedRoute->RenameRoutePoints();
-        }
-
-        gFrame->InvalidateAllGL();
-        gFrame->RefreshAllCanvas();
-      }
-
+      
       break;
     }
 
@@ -1414,25 +807,7 @@ void CanvasMenuHandler::PopupMenuHandler(wxCommandEvent &event) {
             (long)wxYES_NO | wxCANCEL | wxYES_DEFAULT);
       }
 
-      if (dlg_return == wxID_YES) {
-        if (g_pRouteMan->GetpActiveRoute() == m_pSelectedRoute)
-          g_pRouteMan->DeactivateRoute();
-
-        if (m_pSelectedRoute->m_bIsInLayer) break;
-
-        if (!g_pRouteMan->DeleteRoute(m_pSelectedRoute,
-                                      NavObjectChanges::getInstance())) break;
-
-        if(RouteManagerDialog::getInstanceFlag()){
-          if (pRouteManagerDialog && pRouteManagerDialog->IsShown())
-            pRouteManagerDialog->UpdateRouteListCtrl();
-        }
-
-        if (g_pMarkInfoDialog && g_pMarkInfoDialog->IsShown()) {
-          g_pMarkInfoDialog->ValidateMark();
-          g_pMarkInfoDialog->UpdateProperties();
-        }
-
+      if (dlg_return == wxID_YES) {        
         gFrame->InvalidateAllGL();
         gFrame->RefreshAllCanvas();
       }
@@ -1440,275 +815,72 @@ void CanvasMenuHandler::PopupMenuHandler(wxCommandEvent &event) {
     }
 
     case ID_RT_MENU_ACTIVATE: {
-      if (g_pRouteMan->GetpActiveRoute()) g_pRouteMan->DeactivateRoute();
-
-      //  If this is an auto-created MOB route, always select the second point
-      //  (the MOB)
-      // as the destination.
-      RoutePoint *best_point;
-      if (m_pSelectedRoute) {
-        if (wxNOT_FOUND ==
-            m_pSelectedRoute->m_RouteNameString.Find(_T("MOB"))) {
-          best_point = g_pRouteMan->FindBestActivatePoint(
-              m_pSelectedRoute, gLat, gLon, gCog, gSog);
-        } else
-          best_point = m_pSelectedRoute->GetPoint(2);
-
-        g_pRouteMan->ActivateRoute(m_pSelectedRoute, best_point);
-        m_pSelectedRoute->m_bRtIsSelected = false;
-      }
-
+      
       break;
     }
 
     case ID_RT_MENU_DEACTIVATE:
-      g_pRouteMan->DeactivateRoute();
-      m_pSelectedRoute->m_bRtIsSelected = false;
-
+      
       break;
 
     case ID_RT_MENU_INSERT: {
-      if (m_pSelectedRoute->m_bIsInLayer) break;
-      bool rename = false;
-      m_pSelectedRoute->InsertPointAfter(m_pFoundRoutePoint, zlat, zlon,
-                                         rename);
-
-      pSelect->DeleteAllSelectableRoutePoints(m_pSelectedRoute);
-      pSelect->DeleteAllSelectableRouteSegments(m_pSelectedRoute);
-
-      pSelect->AddAllSelectableRouteSegments(m_pSelectedRoute);
-      pSelect->AddAllSelectableRoutePoints(m_pSelectedRoute);
-
-      if (pRoutePropDialog && (pRoutePropDialog->IsShown())) {
-        pRoutePropDialog->SetRouteAndUpdate(m_pSelectedRoute, true);
-      }
-
+      
       break;
     }
 
     case ID_RT_MENU_APPEND:
-
-      if (m_pSelectedRoute->m_bIsInLayer) break;
-
-      
-      parent->m_routeState = m_pSelectedRoute->GetnPoints() + 1;      
-      pLast = m_pSelectedRoute->GetLastPoint();
-
-      parent->m_prev_rlat = pLast->m_lat;
-      parent->m_prev_rlon = pLast->m_lon;      
-
-      parent->m_bAppendingRoute = true;
-
-      parent->SetCursor(*parent->pCursorPencil);
-#ifdef __OCPN__ANDROID__
-      androidSetRouteAnnunciator(true);
-#endif
-
-      //parent->HideGlobalToolbar();
-
       break;
 
     case ID_RT_MENU_SPLIT_LEG:  // split route around a leg
       splitMode++;
       dupFirstWpt = false;
     case ID_RT_MENU_SPLIT_WPT:  // split route at a wpt
-
-      showRPD = (pRoutePropDialog && pRoutePropDialog->IsShown());
-
-      m_pHead = new Route();
-      m_pTail = new Route();
-      m_pHead->CloneRoute(m_pSelectedRoute, 1, m_SelectedIdx, _("_A"));
-      m_pTail->CloneRoute(m_pSelectedRoute, m_SelectedIdx + splitMode,
-                          m_pSelectedRoute->GetnPoints(), _("_B"), dupFirstWpt);
-      pRouteList->Append(m_pHead);
-      pRouteList->Append(m_pTail);
-      pSelect->DeleteAllSelectableRoutePoints(m_pSelectedRoute);
-      pSelect->DeleteAllSelectableRouteSegments(m_pSelectedRoute);
-      g_pRouteMan->DeleteRoute(m_pSelectedRoute,
-                               NavObjectChanges::getInstance());
-      pSelect->AddAllSelectableRouteSegments(m_pTail);
-      pSelect->AddAllSelectableRoutePoints(m_pTail);
-      pSelect->AddAllSelectableRouteSegments(m_pHead);
-      pSelect->AddAllSelectableRoutePoints(m_pHead);
-
-      if (showRPD) {
-        pRoutePropDialog->SetRouteAndUpdate(m_pHead);
-        pRoutePropDialog->Show();
-      }
-      if (RouteManagerDialog::getInstanceFlag() && pRouteManagerDialog &&
-          (pRouteManagerDialog->IsShown()))
-        pRouteManagerDialog->UpdateRouteListCtrl();
       break;
 
-    case ID_RT_MENU_COPY:
-      if (m_pSelectedRoute) Kml::CopyRouteToClipboard(m_pSelectedRoute);
+    case ID_RT_MENU_COPY:      
       break;
 
     case ID_TK_MENU_COPY:
       break;
 
     case ID_WPT_MENU_COPY:
-      if (m_pFoundRoutePoint) Kml::CopyWaypointToClipboard(m_pFoundRoutePoint);
       break;
 
     case ID_WPT_MENU_SENDTOGPS:
-      if (m_pFoundRoutePoint) {
-        if (parent->m_active_upload_port.Length())
-          RoutePointGui(*m_pFoundRoutePoint).SendToGPS(
-              parent->m_active_upload_port.BeforeFirst(' '), NULL);
-        else {
-          SendToGpsDlg dlg;
-          dlg.SetWaypoint(m_pFoundRoutePoint);
-          wxFont fo = GetOCPNGUIScaledFont(_T("Dialog"));
-          dlg.SetFont(fo);
-
-          dlg.Create(NULL, -1, _("Send to GPS") + _T( "..." ), _T(""));
-          dlg.ShowModal();
-        }
-      }
       break;
 
-    case ID_WPT_MENU_SENDTONEWGPS:
-      if (m_pFoundRoutePoint) {
-        SendToGpsDlg dlg;
-        dlg.SetWaypoint(m_pFoundRoutePoint);
-
-        dlg.Create(NULL, -1, _("Send to GPS") + _T( "..." ), _T(""));
-        dlg.ShowModal();
-      }
+    case ID_WPT_MENU_SENDTONEWGPS:      
       break;
 
-    case ID_WPT_MENU_SENDTOPEER:
-       if (m_pFoundRoutePoint) {
-
-        SendToPeerDlg dlg;
-        dlg.SetWaypoint(m_pFoundRoutePoint);
-
-        // Perform initial scan, if necessary
-
-        // Check for stale cache...
-        bool bDNScacheStale = true;
-        wxDateTime tnow = wxDateTime::Now();
-        if (g_DNS_cache_time.IsValid()){
-          wxTimeSpan delta = tnow.Subtract(g_DNS_cache_time);
-          if (delta.GetMinutes() < 5)
-            bDNScacheStale = false;
-        }
-
-         if ((g_DNS_cache.size() == 0) || bDNScacheStale)
-           dlg.SetScanOnCreate(true);
-
-        dlg.SetScanTime(5);     // seconds
-        dlg.Create(NULL, -1, _("Send Waypoint to OpenCPN Peer") + _T( "..." ), _T(""));
-        dlg.ShowModal();
-      }
+    case ID_WPT_MENU_SENDTOPEER:       
+      break;
+    case ID_RT_MENU_SENDTOGPS:      
       break;
 
-
-
-    case ID_RT_MENU_SENDTOGPS:
-      if (m_pSelectedRoute) {
-        if (parent->m_active_upload_port.Length())
-          RouteGui(*m_pSelectedRoute).SendToGPS(
-              parent->m_active_upload_port.BeforeFirst(' '), true, NULL);
-        else {
-          SendToGpsDlg dlg;
-          dlg.SetRoute(m_pSelectedRoute);
-
-          dlg.Create(NULL, -1, _("Send to GPS") + _T( "..." ), _T(""));
-          dlg.ShowModal();
-        }
-      }
+    case ID_RT_MENU_SENDTONEWGPS:      
       break;
 
-    case ID_RT_MENU_SENDTONEWGPS:
-      if (m_pSelectedRoute) {
-        SendToGpsDlg dlg;
-        dlg.SetRoute(m_pSelectedRoute);
-
-        dlg.Create(NULL, -1, _("Send to GPS") + _T( "..." ), _T(""));
-        dlg.ShowModal();
-      }
+     case ID_RT_MENU_SENDTOPEER:      
       break;
 
-     case ID_RT_MENU_SENDTOPEER:
-      if (m_pSelectedRoute) {
-
-        SendToPeerDlg dlg;
-        dlg.SetRoute(m_pSelectedRoute);
-
-        // Perform initial scan, if necessary
-
-        // Check for stale cache...
-        bool bDNScacheStale = true;
-        wxDateTime tnow = wxDateTime::Now();
-        if (g_DNS_cache_time.IsValid()){
-          wxTimeSpan delta = tnow.Subtract(g_DNS_cache_time);
-          if (delta.GetMinutes() < 5)
-            bDNScacheStale = false;
-        }
-
-         if ((g_DNS_cache.size() == 0) || bDNScacheStale)
-           dlg.SetScanOnCreate(true);
-
-        dlg.SetScanTime(5);     // seconds
-        dlg.Create(NULL, -1, _("Send Route to OpenCPN Peer") + _T( "..." ), _T(""));
-        dlg.ShowModal();
-      }
+    case ID_PASTE_WAYPOINT:      
       break;
 
-    case ID_PASTE_WAYPOINT:
+    case ID_PASTE_ROUTE:      
       break;
 
-    case ID_PASTE_ROUTE:
+    case ID_PASTE_TRACK:      
       break;
 
-    case ID_PASTE_TRACK:
-      break;
-
-    case ID_RT_MENU_DELPOINT:
-      if (m_pSelectedRoute) {
-        if (m_pSelectedRoute->m_bIsInLayer) break;
-
-        pWayPointMan->DestroyWaypoint(m_pFoundRoutePoint);
-
-        if (pRoutePropDialog && (pRoutePropDialog->IsShown())) {
-          //    Selected route may have been deleted as one-point route, so
-          //    check it
-          if (g_pRouteMan->IsRouteValid(m_pSelectedRoute)) {
-            pRoutePropDialog->SetRouteAndUpdate(m_pSelectedRoute, true);
-          } else
-            pRoutePropDialog->Hide();
-        }
-
-        if(RouteManagerDialog::getInstanceFlag()){
-          if (pRouteManagerDialog && pRouteManagerDialog->IsShown()) {
-            pRouteManagerDialog->UpdateWptListCtrl();
-            pRouteManagerDialog->UpdateRouteListCtrl();
-          }
-        }
-
-        gFrame->InvalidateAllGL();
-        gFrame->RefreshAllCanvas(true);
-      }
+    case ID_RT_MENU_DELPOINT:      
 
       break;
 
     case ID_RT_MENU_REMPOINT:
-      if (m_pSelectedRoute) {
-        if (m_pSelectedRoute->m_bIsInLayer) break;
-        g_pRouteMan->RemovePointFromRoute(m_pFoundRoutePoint, m_pSelectedRoute,
-                                          parent->m_routeState);
-        gFrame->InvalidateAllGL();
-        gFrame->RefreshAllCanvas();
-      }
+
       break;
 
-    case ID_RT_MENU_ACTPOINT:
-      if (g_pRouteMan->GetpActiveRoute() == m_pSelectedRoute) {
-        g_pRouteMan->ActivateRoutePoint(m_pSelectedRoute, m_pFoundRoutePoint);
-        m_pSelectedRoute->m_bRtIsSelected = false;
-      }
+    case ID_RT_MENU_ACTPOINT:      
 
       break;
 
@@ -1716,20 +888,13 @@ void CanvasMenuHandler::PopupMenuHandler(wxCommandEvent &event) {
       break;
 
     case ID_RT_MENU_ACTNXTPOINT:
-      if (g_pRouteMan->GetpActiveRoute() == m_pSelectedRoute) {
-        g_pRouteMan->ActivateNextPoint(m_pSelectedRoute, true);
-        m_pSelectedRoute->m_bRtIsSelected = false;
-      }
-
       break;
 
     case ID_RT_MENU_PROPERTIES: {
-      //parent->ShowRoutePropertiesDialog(_("Route Properties"), m_pSelectedRoute);
       break;
     }
 
     case ID_TK_MENU_PROPERTIES: {
-      //parent->ShowTrackPropertiesDialog(m_pSelectedTrack);
       break;
     }
 
@@ -1743,53 +908,14 @@ void CanvasMenuHandler::PopupMenuHandler(wxCommandEvent &event) {
       }
 
       if (dlg_return == wxID_YES) {        
-        g_pAIS->DeletePersistentTrack(m_pSelectedTrack);        
-
-        RoutemanGui(*g_pRouteMan).DeleteTrack(m_pSelectedTrack);
-
-        if (TrackPropDlg::getInstanceFlag() && pTrackPropDialog &&
-            (pTrackPropDialog->IsShown()) &&
-            (m_pSelectedTrack == pTrackPropDialog->GetTrack())) {
-          pTrackPropDialog->Hide();
-        }
-
-        if (RoutePropDlgImpl::getInstanceFlag() && pRouteManagerDialog &&
-            pRouteManagerDialog->IsShown()) {
-          pRouteManagerDialog->UpdateTrkListCtrl();
-          pRouteManagerDialog->UpdateRouteListCtrl();
-        }
         gFrame->InvalidateAllGL();
         gFrame->RefreshAllCanvas();
       }
       break;
     }
 
-    case ID_TK_MENU_SENDTOPEER:
-      if (m_pSelectedTrack) {
-
-        SendToPeerDlg dlg;
-        dlg.SetTrack(m_pSelectedTrack);
-
-        // Perform initial scan, if necessary
-
-        // Check for stale cache...
-        bool bDNScacheStale = true;
-        wxDateTime tnow = wxDateTime::Now();
-        if (g_DNS_cache_time.IsValid()){
-          wxTimeSpan delta = tnow.Subtract(g_DNS_cache_time);
-          if (delta.GetMinutes() < 5)
-            bDNScacheStale = false;
-        }
-
-         if ((g_DNS_cache.size() == 0) || bDNScacheStale)
-           dlg.SetScanOnCreate(true);
-
-        dlg.SetScanTime(5);     // seconds
-        dlg.Create(NULL, -1, _("Send Track to OpenCPN Peer") + _T( "..." ), _T(""));
-        dlg.ShowModal();
-      }
+    case ID_TK_MENU_SENDTOPEER:      
       break;
-
 
     case ID_RC_MENU_SCALE_IN:
       parent->parent_frame->DoStackDown(parent);
@@ -1816,14 +942,11 @@ void CanvasMenuHandler::PopupMenuHandler(wxCommandEvent &event) {
       break;
 
     case ID_RC_MENU_FINISH:
-      //parent->FinishRoute();
-      gFrame->SurfaceAllCanvasToolbars();
       parent->Refresh(false);
       g_FlushNavobjChanges = true;
       break;
 
-    case ID_DEF_ZERO_XTE:
-      g_pRouteMan->ZeroCurrentXTEToActivePoint();
+    case ID_DEF_ZERO_XTE:      
       break;
 
     default: {

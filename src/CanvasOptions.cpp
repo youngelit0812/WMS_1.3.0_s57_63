@@ -340,8 +340,6 @@ CanvasOptions::CanvasOptions(wxWindow* parent)
   topsizer->Fit(this);
 }
 
-void CanvasOptions::OnEraseBackground(wxEraseEvent& event) {}
-
 void CanvasOptions::OnClose(wxCloseEvent& event) {
   //     SetReturnCode(wxID_CANCEL);
   //     EndModal( wxID_CANCEL );
@@ -555,7 +553,6 @@ void CanvasOptions::UpdateCanvasOptions(void) {
 
   if (pCBLookAhead->GetValue() != parentCanvas->GetLookahead()) {
     parentCanvas->ToggleLookahead();
-    parentCanvas->UpdateFollowButtonState();
     b_needReLoad = true;
   }
 

@@ -207,7 +207,6 @@ void OCPNMessageDialog::OnClose(wxCloseEvent& event) {
 }
 
 BEGIN_EVENT_TABLE(TimedMessageBox, wxEvtHandler)
-EVT_TIMER(-1, TimedMessageBox::OnTimer)
 END_EVENT_TABLE()
 
 TimedMessageBox::TimedMessageBox(wxWindow* parent, const wxString& message,
@@ -233,10 +232,6 @@ TimedMessageBox::TimedMessageBox(wxWindow* parent, const wxString& message,
 }
 
 TimedMessageBox::~TimedMessageBox() {}
-
-void TimedMessageBox::OnTimer(wxTimerEvent& evt) {
-  if (dlg) dlg->EndModal(wxID_CANCEL);
-}
 
 BEGIN_EVENT_TABLE(OCPN_TimedHTMLMessageDialog, wxDialog)
 EVT_BUTTON(wxID_YES, OCPN_TimedHTMLMessageDialog::OnYes)

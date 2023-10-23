@@ -429,6 +429,7 @@ void ocpnDC::DrawGLThickLine(float x1, float y1, float x2, float y2, wxPen pen,
 
 #endif
 }
+
 void ocpnDC::DrawLine(wxCoord x1, wxCoord y1, wxCoord x2, wxCoord y2,
                       bool b_hiqual) {
   if (dc) dc->DrawLine(x1, y1, x2, y2);

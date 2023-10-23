@@ -410,7 +410,6 @@ public:
 
   void OnClose(wxCloseEvent &event);
   void OnWindowCreate(wxWindowCreateEvent &event);
-  void OnToolLeftClick(wxCommandEvent &event);
   virtual void OnKeyDown(wxKeyEvent &event);
   virtual void OnKeyUp(wxKeyEvent &event);
   void MouseEvent(wxMouseEvent &event);

@@ -23,6 +23,7 @@
 
 #include "mbtiles.h"
 #include "chcanv.h"
+#include "glChartCanvas.h"
 #include "ocpn_frame.h"
 #include "shaders.h"
 
@@ -1028,7 +1029,10 @@ bool ChartMBTiles::RenderRegionViewOnGL(const wxGLContext &glc,
   if ((m_LonMax - m_LonMin) > 180) {  // big chart
     LLRegion validRegion = m_minZoomRegion;
     validRegion.Intersect(screenLLRegion);
+    glChartCanvas::SetClipRegion(vp, validRegion);
   }
+  else
+    glChartCanvas::SetClipRegion(vp, m_minZoomRegion);
 
   /* setup opengl parameters */
   glEnable(GL_TEXTURE_2D);
@@ -1205,6 +1209,8 @@ bool ChartMBTiles::RenderRegionViewOnGL(const wxGLContext &glc,
   glDisable(GL_TEXTURE_2D);
 
   m_zoomScaleFactor = 2.0 * OSM_zoomMPP[maxrenZoom] * VPoint.view_scale_ppm;
+
+  glChartCanvas::DisableClipRegion();
 
   return true;
 }

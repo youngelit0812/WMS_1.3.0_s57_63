@@ -751,8 +751,7 @@ if(NOT CPPSERVER_MODULE)
     add_executable(WMSServer ${EXAMPLE_HEADER_FILES} ${EXAMPLE_INLINE_FILES} "main/https_server.cpp")
     target_include_directories(WMSServer
       PUBLIC
-      prebuilt/include
-      # cache/buildwin/include/glew
+      prebuilt/include      
       include
       buildwin/crashrpt
       cache/buildwin/include
@@ -789,10 +788,18 @@ if(NOT CPPSERVER_MODULE)
 
     target_sources(WMSServer
       PUBLIC   
-      ${PROJECT_SOURCE_DIR}/src/api_shim.cpp
+      ${PROJECT_SOURCE_DIR}/src/about.cpp
+      ${PROJECT_SOURCE_DIR}/src/AboutFrame.cpp
+      ${PROJECT_SOURCE_DIR}/src/AboutFrameImpl.cpp      
       ${PROJECT_SOURCE_DIR}/src/base_platform.cpp
       ${PROJECT_SOURCE_DIR}/src/bbox.cpp
-      ${PROJECT_SOURCE_DIR}/src/CanvasConfig.cpp
+      ${PROJECT_SOURCE_DIR}/src/CanvasConfig.cpp      
+      ${PROJECT_SOURCE_DIR}/src/CanvasMenu.cpp
+      ${PROJECT_SOURCE_DIR}/src/CanvasOptions.cpp
+      ${PROJECT_SOURCE_DIR}/src/cat_settings.cpp
+      ${PROJECT_SOURCE_DIR}/src/catalog_handler.cpp
+      ${PROJECT_SOURCE_DIR}/src/catalog_mgr.cpp
+      ${PROJECT_SOURCE_DIR}/src/catalog_parser.cpp
       ${PROJECT_SOURCE_DIR}/src/certificates.cpp
       ${PROJECT_SOURCE_DIR}/src/chartdata_input_stream.cpp
       ${PROJECT_SOURCE_DIR}/src/chartdb.cpp
@@ -800,23 +807,27 @@ if(NOT CPPSERVER_MODULE)
       ${PROJECT_SOURCE_DIR}/src/chartimg.cpp
       ${PROJECT_SOURCE_DIR}/src/chcanv.cpp
       ${PROJECT_SOURCE_DIR}/src/ChInfoWin.cpp
+      ${PROJECT_SOURCE_DIR}/src/cm93.cpp
       ${PROJECT_SOURCE_DIR}/src/color_handler.cpp
       ${PROJECT_SOURCE_DIR}/src/comm_vars.cpp
       ${PROJECT_SOURCE_DIR}/src/compass.cpp
+      ${PROJECT_SOURCE_DIR}/src/concanv.cpp
       ${PROJECT_SOURCE_DIR}/src/config_vars.cpp
       ${PROJECT_SOURCE_DIR}/src/ConfigMgr.cpp
       ${PROJECT_SOURCE_DIR}/src/cutil.cpp
+      ${PROJECT_SOURCE_DIR}/src/DetailSlider.cpp
+      ${PROJECT_SOURCE_DIR}/src/download_mgr.cpp
+      ${PROJECT_SOURCE_DIR}/src/downloader.cpp
       ${PROJECT_SOURCE_DIR}/src/FlexHash.cpp
       ${PROJECT_SOURCE_DIR}/src/FontDesc.cpp
       ${PROJECT_SOURCE_DIR}/src/FontMgr.cpp
       ${PROJECT_SOURCE_DIR}/src/geodesic.cpp
-      ${PROJECT_SOURCE_DIR}/src/georef.cpp
-      # ${PROJECT_SOURCE_DIR}/src/glChartCanvas.cpp
-      # ${PROJECT_SOURCE_DIR}/src/glTexCache.cpp
-      # ${PROJECT_SOURCE_DIR}/src/glTextureDescriptor.cpp
-      # ${PROJECT_SOURCE_DIR}/src/glTextureManager.cpp
+      ${PROJECT_SOURCE_DIR}/src/georef.cpp      
       ${PROJECT_SOURCE_DIR}/src/gshhs.cpp    
-      ${PROJECT_SOURCE_DIR}/src/IDX_entry.cpp
+      ${PROJECT_SOURCE_DIR}/src/gui_lib.cpp
+      ${PROJECT_SOURCE_DIR}/src/hyperlink.cpp
+      ${PROJECT_SOURCE_DIR}/src/IDX_entry.cpp      
+      ${PROJECT_SOURCE_DIR}/src/kml.cpp
       ${PROJECT_SOURCE_DIR}/src/Layer.cpp
       ${PROJECT_SOURCE_DIR}/src/line_clip.cpp
       ${PROJECT_SOURCE_DIR}/src/LLRegion.cpp
@@ -825,10 +836,12 @@ if(NOT CPPSERVER_MODULE)
       ${PROJECT_SOURCE_DIR}/main/MainApp.cpp
       ${PROJECT_SOURCE_DIR}/src/navutil.cpp
       ${PROJECT_SOURCE_DIR}/src/navutil_base.cpp
+      ${PROJECT_SOURCE_DIR}/src/NMEALogWindow.cpp
       ${PROJECT_SOURCE_DIR}/src/OCPN_AUIManager.cpp
       ${PROJECT_SOURCE_DIR}/src/ocpn_frame.cpp
       ${PROJECT_SOURCE_DIR}/src/ocpn_pixel.cpp
       ${PROJECT_SOURCE_DIR}/src/ocpn_plugin.cpp
+      ${PROJECT_SOURCE_DIR}/src/ocpn_print.cpp
       ${PROJECT_SOURCE_DIR}/src/ocpn_utils.cpp
       ${PROJECT_SOURCE_DIR}/src/ocpndc.cpp
       ${PROJECT_SOURCE_DIR}/src/OCPNPlatform.cpp
@@ -839,15 +852,23 @@ if(NOT CPPSERVER_MODULE)
       ${PROJECT_SOURCE_DIR}/src/Osenc.cpp
       ${PROJECT_SOURCE_DIR}/src/own_ship.cpp
       ${PROJECT_SOURCE_DIR}/src/piano.cpp      
-      ${PROJECT_SOURCE_DIR}/src/poly_math.cpp
+      ${PROJECT_SOURCE_DIR}/src/pluginmanager.cpp
+      ${PROJECT_SOURCE_DIR}/src/plugin_blacklist.cpp
+      ${PROJECT_SOURCE_DIR}/src/plugin_cache.cpp
+      ${PROJECT_SOURCE_DIR}/src/plugin_handler.cpp
+      ${PROJECT_SOURCE_DIR}/src/plugin_loader.cpp
+      ${PROJECT_SOURCE_DIR}/src/plugin_paths.cpp
+      ${PROJECT_SOURCE_DIR}/src/poly_math.cpp      
       ${PROJECT_SOURCE_DIR}/src/Quilt.cpp
+      ${PROJECT_SOURCE_DIR}/src/RolloverWin.cpp
       ${PROJECT_SOURCE_DIR}/src/s57chart.cpp
       ${PROJECT_SOURCE_DIR}/src/s57classregistrar.cpp
       ${PROJECT_SOURCE_DIR}/src/s57featuredefns.cpp
       ${PROJECT_SOURCE_DIR}/src/s57obj.cpp
       ${PROJECT_SOURCE_DIR}/src/s57reader.cpp
-      ${PROJECT_SOURCE_DIR}/src/s57RegistrarMgr.cpp
-      ${PROJECT_SOURCE_DIR}/src/select_item.cpp
+      ${PROJECT_SOURCE_DIR}/src/s57RegistrarMgr.cpp      
+      ${PROJECT_SOURCE_DIR}/src/safe_mode.cpp
+      ${PROJECT_SOURCE_DIR}/src/semantic_vers.cpp
       ${PROJECT_SOURCE_DIR}/src/SencManager.cpp
       ${PROJECT_SOURCE_DIR}/src/shaders.cpp
       ${PROJECT_SOURCE_DIR}/src/Station_Data.cpp
@@ -858,8 +879,12 @@ if(NOT CPPSERVER_MODULE)
       ${PROJECT_SOURCE_DIR}/src/TCDS_Ascii_Harmonic.cpp
       ${PROJECT_SOURCE_DIR}/src/TCDS_Binary_Harmonic.cpp
       ${PROJECT_SOURCE_DIR}/src/tcmgr.cpp
+      ${PROJECT_SOURCE_DIR}/src/TCWin.cpp
       ${PROJECT_SOURCE_DIR}/src/thumbwin.cpp
+      ${PROJECT_SOURCE_DIR}/src/TTYScroll.cpp
+      ${PROJECT_SOURCE_DIR}/src/TTYWindow.cpp
       ${PROJECT_SOURCE_DIR}/src/viewport.cpp
+      ${PROJECT_SOURCE_DIR}/src/update_mgr.cpp
       ${PROJECT_SOURCE_DIR}/libs/glu/libtess/dict.c
       ${PROJECT_SOURCE_DIR}/libs/glu/libutil/error.c
       ${PROJECT_SOURCE_DIR}/libs/glu/libtess/geom.c
@@ -886,6 +911,7 @@ if(NOT CPPSERVER_MODULE)
       ${PROJECT_SOURCE_DIR}/include/chartimg.h
       ${PROJECT_SOURCE_DIR}/include/chcanv.h
       ${PROJECT_SOURCE_DIR}/include/ChInfoWin.h
+      ${PROJECT_SOURCE_DIR}/include/cm93.h
       ${PROJECT_SOURCE_DIR}/include/color_handler.h
       ${PROJECT_SOURCE_DIR}/include/color_types.h
       ${PROJECT_SOURCE_DIR}/include/comm_vars.h
@@ -898,12 +924,10 @@ if(NOT CPPSERVER_MODULE)
       ${PROJECT_SOURCE_DIR}/include/FontMgr.h
       ${PROJECT_SOURCE_DIR}/include/geodesic.h
       ${PROJECT_SOURCE_DIR}/include/georef.h
-      # ${PROJECT_SOURCE_DIR}/include/glChartCanvas.h
-      # ${PROJECT_SOURCE_DIR}/include/glTexCache.h
-      # ${PROJECT_SOURCE_DIR}/include/glTextureDescriptor.h
-      # ${PROJECT_SOURCE_DIR}/include/glTextureManager.h
+      ${PROJECT_SOURCE_DIR}/include/gui_lib.h      
       ${PROJECT_SOURCE_DIR}/include/gshhs.h
       ${PROJECT_SOURCE_DIR}/include/IDX_entry.h
+      ${PROJECT_SOURCE_DIR}/include/kml.h
       ${PROJECT_SOURCE_DIR}/include/Layer.h
       ${PROJECT_SOURCE_DIR}/include/line_clip.h
       ${PROJECT_SOURCE_DIR}/include/linmath.h
@@ -919,15 +943,22 @@ if(NOT CPPSERVER_MODULE)
       ${PROJECT_SOURCE_DIR}/include/ocpn_types.h
       ${PROJECT_SOURCE_DIR}/include/ocpn_utils.h
       ${PROJECT_SOURCE_DIR}/include/ocpndc.h
-      ${PROJECT_SOURCE_DIR}/include/OCPNPlatform.h
+      ${PROJECT_SOURCE_DIR}/include/OCPNPlatform.h      
       ${PROJECT_SOURCE_DIR}/include/OCPNRegion.h
       ${PROJECT_SOURCE_DIR}/include/ogr_s57.h
       ${PROJECT_SOURCE_DIR}/include/options.h
       ${PROJECT_SOURCE_DIR}/include/Osenc.h
       ${PROJECT_SOURCE_DIR}/include/own_ship.h
-      ${PROJECT_SOURCE_DIR}/include/piano.h      
+      ${PROJECT_SOURCE_DIR}/include/piano.h
+      ${PROJECT_SOURCE_DIR}/include/pluginmanager.h
+      ${PROJECT_SOURCE_DIR}/include/plugin_blacklist.h
+      ${PROJECT_SOURCE_DIR}/include/plugin_cache.h
+      ${PROJECT_SOURCE_DIR}/include/plugin_handler.h
+      ${PROJECT_SOURCE_DIR}/include/plugin_loader.h
+      ${PROJECT_SOURCE_DIR}/include/plugin_paths.h
       ${PROJECT_SOURCE_DIR}/include/poly_math.h      
       ${PROJECT_SOURCE_DIR}/include/Quilt.h
+      ${PROJECT_SOURCE_DIR}/include/RolloverWin.h
       ${PROJECT_SOURCE_DIR}/include/s57.h
       ${PROJECT_SOURCE_DIR}/include/s57chart.h
       ${PROJECT_SOURCE_DIR}/include/S57ClassRegistrar.h
@@ -935,6 +966,8 @@ if(NOT CPPSERVER_MODULE)
       ${PROJECT_SOURCE_DIR}/include/S57ObjectDesc.h
       ${PROJECT_SOURCE_DIR}/include/s57RegistrarMgr.h
       ${PROJECT_SOURCE_DIR}/include/S57Sector.h
+      ${PROJECT_SOURCE_DIR}/include/safe_mode.h
+      ${PROJECT_SOURCE_DIR}/include/semantic_vers.h
       ${PROJECT_SOURCE_DIR}/include/SencManager.h
       ${PROJECT_SOURCE_DIR}/include/shaders.h
       ${PROJECT_SOURCE_DIR}/include/Station_Data.h
@@ -945,14 +978,17 @@ if(NOT CPPSERVER_MODULE)
       ${PROJECT_SOURCE_DIR}/include/TCDS_Ascii_Harmonic.h
       ${PROJECT_SOURCE_DIR}/include/TCDS_Binary_Harmonic.h
       ${PROJECT_SOURCE_DIR}/include/tcmgr.h
+      ${PROJECT_SOURCE_DIR}/include/TCWin.h
       ${PROJECT_SOURCE_DIR}/include/thumbwin.h
+      ${PROJECT_SOURCE_DIR}/include/TTYScroll.h
+      ${PROJECT_SOURCE_DIR}/include/TTYWindow.h
       ${PROJECT_SOURCE_DIR}/include/vector2D.h      
       ${PROJECT_SOURCE_DIR}/include/viewport.h
+      ${PROJECT_SOURCE_DIR}/include/update_mgr.h
     )
 
     target_link_libraries(WMSServer
-      PUBLIC
-      # debug ../cache/buildwin/glew32
+      PUBLIC      
       debug ../prebuilt/libs/observable/Debug/_OBSERVABLE
       debug ../prebuilt/libs/ssl_sha1/Debug/SHA1
       debug ../prebuilt/libs/mongoose/Debug/MONGOOSE
@@ -967,8 +1003,7 @@ if(NOT CPPSERVER_MODULE)
       debug ../prebuilt/libs/tinyxml/Debug/TINYXML      
       debug ../prebuilt/libs/s52plib/Debug/S52PLIB
       debug ../prebuilt/libs/pugixml/Debug/OCPN_PUGIXML
-      debug ../prebuilt/libs/N2KParser/Debug/N2KPARSER
-      debug ../prebuilt/Debug/S57ENC		
+      debug ../prebuilt/libs/N2KParser/Debug/N2KPARSER      
       debug ../prebuilt/libs/texcmp/Debug/TEXCMP
       debug ../prebuilt/libs/mipmap/Debug/MIPMAP
       debug ../prebuilt/libs/lz4/Debug/LZ4
@@ -993,6 +1028,7 @@ if(NOT CPPSERVER_MODULE)
       debug version
       debug wsock32
       debug setupapi.lib 
+      debug ../prebuilt/lib/Debug/GLU
       debug psapi.lib 
       debug iphlpapi.lib
       debug gdiplus
@@ -1005,10 +1041,10 @@ if(NOT CPPSERVER_MODULE)
       debug ../cache/buildwin/archive
       debug ../cache/buildwin/libcurl
       debug ../cache/buildwin/zlib1
+      debug glu32.lib
       debug ../prebuilt/libs/iso8211/Debug/ISO8211
       debug ../prebuilt/libs/gdal/Debug/GDAL
       debug ws2_32      
-      # optimized ../cache/buildwin/glew32
       optimized ../prebuilt/libs/observable/Release/_OBSERVABLE
       optimized ../prebuilt/libs/ssl_sha1/Release/SHA1
       optimized ../prebuilt/libs/mongoose/Release/MONGOOSE
@@ -1023,8 +1059,7 @@ if(NOT CPPSERVER_MODULE)
       optimized ../prebuilt/libs/tinyxml/Release/TINYXML      
       optimized ../prebuilt/libs/s52plib/Release/S52PLIB
       optimized ../prebuilt/libs/pugixml/Release/OCPN_PUGIXML
-      optimized ../prebuilt/libs/N2KParser/Release/N2KPARSER
-      optimized ../prebuilt/Release/S57ENC		
+      optimized ../prebuilt/libs/N2KParser/Release/N2KPARSER      
       optimized ../prebuilt/libs/texcmp/Release/TEXCMP
       optimized ../prebuilt/libs/mipmap/Release/MIPMAP
       optimized ../prebuilt/libs/lz4/Release/LZ4
@@ -1048,7 +1083,8 @@ if(NOT CPPSERVER_MODULE)
       optimized shlwapi
       optimized version
       optimized wsock32
-      optimized setupapi.lib       
+      optimized setupapi.lib
+      optimized ../prebuilt/lib/Release/GLU
       optimized psapi.lib 
       optimized iphlpapi.lib      
       optimized gdiplus
@@ -1061,6 +1097,7 @@ if(NOT CPPSERVER_MODULE)
       optimized ../cache/buildwin/archive
       optimized ../cache/buildwin/libcurl
       optimized ../cache/buildwin/zlib1      
+      optimized glu32.lib
       optimized ../prebuilt/libs/iso8211/Release/ISO8211
       optimized ../prebuilt/libs/gdal/Release/GDAL
       optimized ws2_32      
@@ -1097,13 +1134,11 @@ if(NOT CPPSERVER_MODULE)
       include/FontDesc.h
       include/FontMgr.h
       include/geodesic.h
-      include/georef.h
-      # include/glChartCanvas.h
-      # include/glTexCache.h
-      # include/glTextureDescriptor.h
-      # include/glTextureManager.h
+      include/georef.h      
       include/gshhs.h
+      include/gui_lib.h
       include/IDX_entry.h
+      include/kml.h
       include/Layer.h
       include/line_clip.h
       include/linmath.h
@@ -1125,9 +1160,16 @@ if(NOT CPPSERVER_MODULE)
       include/options.h
       include/Osenc.h
       include/own_ship.h      
-      include/piano.h      
+      include/piano.h
+      include/pluginmanager.h    
+      include/plugin_blacklist.h
+      include/plugin_cache.h
+      include/plugin_handler.h
+      include/plugin_loader.h
+      include/plugin_paths.h      
       include/poly_math.h
       include/Quilt.h
+      include/RolloverWin.h
       include/s57.h
       include/s57chart.h
       include/S57ClassRegistrar.h
@@ -1135,6 +1177,8 @@ if(NOT CPPSERVER_MODULE)
       include/S57ObjectDesc.h
       include/s57RegistrarMgr.h
       include/S57Sector.h
+      include/safe_mode.h
+      include/semantic_vers.h
       include/SencManager.h
       include/shaders.h
       include/Station_Data.h
@@ -1145,9 +1189,13 @@ if(NOT CPPSERVER_MODULE)
       include/TCDS_Ascii_Harmonic.h
       include/TCDS_Binary_Harmonic.h
       include/tcmgr.h
+      include/TCWin.h
       include/thumbwin.h
+      include/TTYScroll.h
+      include/TTYWindow.h
       include/vector2D.h
-      include/viewport.h      
+      include/viewport.h
+      include/update_mgr.h      
       ${EXAMPLE_HEADER_FILES}
     )
     
@@ -1187,13 +1235,11 @@ if(NOT CPPSERVER_MODULE)
       src/FontDesc.cpp
       src/FontMgr.cpp
       src/geodesic.cpp
-      src/georef.cpp
-      # src/glChartCanvas.cpp
-      # src/glTexCache.cpp
-      # src/glTextureDescriptor.cpp
-      # src/glTextureManager.cpp
-      src/gshhs.cpp    
+      src/georef.cpp   
+      src/gshhs.cpp
+      src/gui_lib.cpp   
       src/IDX_entry.cpp
+      src/kml.cpp
       src/Layer.cpp
       src/line_clip.cpp
       src/LLRegion.cpp
@@ -1206,6 +1252,7 @@ if(NOT CPPSERVER_MODULE)
       src/ocpn_frame.cpp
       src/ocpn_pixel.cpp
       src/ocpn_plugin.cpp
+      src/ocpn_print.cpp
       src/ocpn_utils.cpp
       src/ocpndc.cpp
       src/OCPNPlatform.cpp
@@ -1215,16 +1262,24 @@ if(NOT CPPSERVER_MODULE)
       src/options.cpp
       src/Osenc.cpp
       src/own_ship.cpp
-      src/piano.cpp      
+      src/piano.cpp
+      src/pluginmanager.cpp
+      src/plugin_blacklist.cpp
+      src/plugin_cache.cpp
+      src/plugin_handler.cpp
+      src/plugin_loader.cpp
+      src/plugin_paths.cpp 
       src/poly_math.cpp
       src/Quilt.cpp
+      src/RolloverWin.cpp
       src/s57chart.cpp
       src/s57classregistrar.cpp
       src/s57featuredefns.cpp
       src/s57obj.cpp
       src/s57reader.cpp
       src/s57RegistrarMgr.cpp
-      src/select_item.cpp
+      src/safe_mode.cpp
+      src/semantic_vers.cpp
       src/SencManager.cpp
       src/shaders.cpp
       src/Station_Data.cpp
@@ -1235,8 +1290,12 @@ if(NOT CPPSERVER_MODULE)
       src/TCDS_Ascii_Harmonic.cpp
       src/TCDS_Binary_Harmonic.cpp
       src/tcmgr.cpp
+      src/TCWin.cpp
       src/thumbwin.cpp
-      src/viewport.cpp      
+      src/TTYScroll.cpp
+      src/TTYWindow.cpp
+      src/viewport.cpp
+      src/update_mgr.cpp
       main/MainApp.cpp
       main/https_server.cpp
     )
@@ -1494,8 +1553,9 @@ if(NOT CPPSERVER_MODULE)
 
     message(STATUS "S57 ENC support: enabled")
     set(
-      SRC_S57ENC	  
+      SRC_S57ENC
       include/bbox.h
+      include/cm93.h
       include/line_clip.h
       include/linmath.h
       include/LLRegion.h
@@ -1506,8 +1566,9 @@ if(NOT CPPSERVER_MODULE)
       include/s57chart.h
       include/s57RegistrarMgr.h
       include/SencManager.h	  
-      include/vector2D.h
+      include/vector2D.h      
       src/bbox.cpp
+      src/cm93.cpp
       src/line_clip.cpp
       src/LLRegion.cpp
       src/LOD_reduce.cpp

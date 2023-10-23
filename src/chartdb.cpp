@@ -44,6 +44,10 @@
 #include "CanvasConfig.h"
 #include "ocpn_frame.h"  //FIXME (dave) LoadS57
 
+#ifdef ocpnUSE_GL
+#include "glChartCanvas.h"
+#endif
+
 #include <stdio.h>
 #include <math.h>
 
@@ -229,6 +233,12 @@ void ChartDB::DeleteCacheEntry(CacheEntry *pce, bool bDelTexture, const wxString
     if (pthumbwin->pThumbChart == ch) pthumbwin->pThumbChart = NULL;
   }
 
+#ifdef ocpnUSE_GL
+  // The glCanvas may be cacheing some information for this chart
+  if (g_glTextureManager)
+    g_glTextureManager->PurgeChartTextures(ch, bDelTexture);
+#endif
+
   pChartCache->Remove(pce);
   delete ch;
   delete pce;
@@ -259,7 +269,13 @@ void ChartDB::PurgeCachePlugins() {
       CacheEntry *pce = (CacheEntry *)(pChartCache->Item(i));
       ChartBase *Ch = (ChartBase *)pce->pChart;
 
-      if (CHART_TYPE_PLUGIN != Ch->GetChartType()) {        
+      if (CHART_TYPE_PLUGIN == Ch->GetChartType()) {
+        DeleteCacheEntry(pce, true);
+
+        nCache = pChartCache->GetCount();  // restart the while loop
+        i = 0;
+
+      } else {
         i++;
       }
     }
@@ -378,7 +394,6 @@ ChartBase *ChartDB::GetChart(const wxChar *theFilePath,
   if (chartExt == wxT("000") || chartExt == wxT("S57")) {
     //printf("GetChart: LoadS57\n");
     LoadS57();
-    //printf("GetChart: create new s57chart\n");
     pch = new s57chart;
   } else {
 	  printf("GetChart: No ENC Format\n");    
@@ -431,7 +446,11 @@ int ChartDB::BuildChartStack(ChartStack *cstk, float lat, float lon,
       //  Plugin loading is deferred, so the chart may have been disabled
       //  elsewhere. Tentatively reenable the chart so that it appears in the
       //  piano. It will get disabled later if really not useable
-      
+      if (cte.GetChartType() == CHART_TYPE_PLUGIN) {
+        ChartTableEntry *pcte = (ChartTableEntry *)&cte;
+        pcte->ReEnable();
+      }
+
       if (CheckPositionWithinChart(db_index, lat, lon) && (j < MAXSTACK))
         b_pos_add = true;
 
@@ -447,7 +466,20 @@ int ChartDB::BuildChartStack(ChartStack *cstk, float lat, float lon,
       }
     }
 
-    if (b_group_add && b_pos_add) {  // add it
+    bool b_available = true;
+    //  Verify PlugIn charts are actually available
+    if (b_group_add && b_pos_add && (cte.GetChartType() == CHART_TYPE_PLUGIN)) {
+      ChartTableEntry *pcte = (ChartTableEntry *)&cte;
+      if (!IsChartAvailable(db_index)) {
+        pcte->SetAvailable(false);
+        b_available = false;
+      } else {
+        pcte->SetAvailable(true);
+        pcte->ReEnable();
+      }
+    }
+
+    if (b_group_add && b_pos_add && b_available) {  // add it
       j++;
       cstk->nEntry = j;
       cstk->SetDBIndex(j - 1, db_index);

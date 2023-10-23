@@ -32,6 +32,7 @@
 #include "options.h"
 #include "AboutFrameImpl.h"
 #include "about.h"
+#include "plugin_paths.h"
 #include "ocpn_frame.h"
 #include <string>
 #include <vector>
@@ -153,7 +154,6 @@ extern bool g_bskew_comp;
 
 extern bool g_bopengl;
 extern bool g_bresponsive;
-extern bool g_bShowStatusBar;
 extern int g_cm93_zoom_factor;
 extern int g_GUIScaleFactor;
 extern bool g_fog_overzoom;
@@ -756,6 +756,19 @@ void OCPNPlatform::SetLocaleSearchPrefixes(void) {
   location.SetName(_T("locale"));
   locale_location = location.GetFullPath();
   wxLocale::AddCatalogLookupPathPrefix(locale_location);
+
+  // And then for managed plugins
+  std::string dir = PluginPaths::getInstance()->UserDatadir();
+  wxString managed_locale_location(dir + "/locale");
+  wxLocale::AddCatalogLookupPathPrefix(managed_locale_location);
+#endif
+
+#ifdef __WXOSX__
+  std::string macDir =
+      PluginPaths::getInstance()->Homedir() +
+      "/Library/Application Support/OpenCPN/Contents/Resources";
+  wxString Mac_managed_locale_location(macDir);
+  wxLocale::AddCatalogLookupPathPrefix(Mac_managed_locale_location);
 #endif
 
 #endif
@@ -1091,20 +1104,18 @@ MyConfig *OCPNPlatform::GetConfigObject() {
   return result;
 }
 //--------------------------------------------------------------------------
-//      Platform Display Support
+//      Internal GPS Support
 //--------------------------------------------------------------------------
 
-void OCPNPlatform::ShowBusySpinner(void) {
-#if wxCHECK_VERSION(2, 9, 0)
-  //    if( !::wxIsBusy() )
-  { ::wxBeginBusyCursor(); }
-#endif
-}
+bool OCPNPlatform::hasInternalGPS(wxString profile) {
+#ifdef __OCPN__ANDROID__
+  bool t = androidDeviceHasGPS();
+  //    qDebug() << "androidDeviceHasGPS" << t;
+  return t;
+#else
 
-void OCPNPlatform::HideBusySpinner(void) {
-#if wxCHECK_VERSION(2, 9, 0)
-  //    if( ::wxIsBusy() )
-  { ::wxEndBusyCursor(); }
+  return false;
+
 #endif
 }
 
@@ -1232,6 +1243,37 @@ void OCPNPlatform::PositionAISAlert(wxWindow *alert_window) {
     alert_window->SetSize(g_ais_alert_dialog_x, g_ais_alert_dialog_y,
                           g_ais_alert_dialog_sx, g_ais_alert_dialog_sy);
   }
+}
+
+double OCPNPlatform::GetToolbarScaleFactor(int GUIScaleFactor) {
+  double rv = 1.0;
+
+  double premult = 1.0;
+
+  if (g_bresponsive) {
+    //  Get the basic size of a tool icon
+    ocpnStyle::Style *style = g_StyleManager->GetCurrentStyle();
+    wxSize style_tool_size = style->GetToolSize();
+    double tool_size = style_tool_size.x;
+
+    // unless overridden by user, we declare the "best" tool size
+    // to be roughly 9 mm square.
+    double target_size = 9.0;  // mm
+
+    double basic_tool_size_mm = tool_size / GetDisplayDPmm();
+    premult = target_size / basic_tool_size_mm;
+  }
+
+  // Adjust the scale factor using the global GUI scale parameter
+  double postmult = exp(GUIScaleFactor * (0.693 / 5.0));  //  exp(2)
+
+  rv = premult * postmult;
+  rv = wxMin(rv, 3.0);  //  Clamp at 3.0
+  rv = wxMax(rv, 0.5);  //  and at 0.5
+
+  rv /= g_BasePlatform->GetDisplayDIPMult(gFrame);
+
+  return rv;
 }
 
 float OCPNPlatform::GetChartScaleFactorExp() {
@@ -1450,33 +1492,4 @@ void OCPNColourPickerCtrl::OnPaint(wxPaintEvent &event) {
                    m_bitmap.GetHeight());
 
   event.Skip();
-}
-
-double OCPNPlatform::GetToolbarScaleFactor(int GUIScaleFactor) {
-	double rv = 1.0;
-	double premult = 1.0;
-
-	if (g_bresponsive) {
-		//  Get the basic size of a tool icon
-		ocpnStyle::Style* style = g_StyleManager->GetCurrentStyle();
-		wxSize style_tool_size = style->GetToolSize();
-		double tool_size = style_tool_size.x;
-
-		// unless overridden by user, we declare the "best" tool size
-		// to be roughly 9 mm square.
-		double target_size = 9.0;  // mm
-
-		double basic_tool_size_mm = tool_size / GetDisplayDPmm();
-		premult = target_size / basic_tool_size_mm;
-	}
-
-	// Adjust the scale factor using the global GUI scale parameter
-	double postmult = exp(GUIScaleFactor * (0.693 / 5.0));  //  exp(2)
-
-	rv = premult * postmult;
-	rv = wxMin(rv, 3.0);  //  Clamp at 3.0
-	rv = wxMax(rv, 0.5);  //  and at 0.5
-
-	rv /= g_BasePlatform->GetDisplayDIPMult(gFrame);
-	return rv;
 }

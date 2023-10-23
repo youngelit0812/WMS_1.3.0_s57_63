@@ -286,9 +286,6 @@ int LLBBox::CompareWithOther(LLBBox& other) {
 	if (other.IntersectIn(m_minlat, m_minlon, m_maxlat, m_maxlon)) return -1;
 
 	return 0;
-/*
-	double dLatInterval = abs(m_maxlat - m_minlat);
-	double dLonInterval = abs(m_maxlon - m_minlon);*/
 }
 
 void LLBBox::SetFromSegment(double lat1, double lon1, double lat2,

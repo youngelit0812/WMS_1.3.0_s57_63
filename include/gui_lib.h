@@ -66,8 +66,7 @@ public:
                   long style = wxOK | wxCANCEL, int timeout_sec = -1,
                   const wxPoint& pos = wxDefaultPosition);
   ~TimedMessageBox();
-  int GetRetVal(void) { return ret_val; }
-  void OnTimer(wxTimerEvent& evt);
+  int GetRetVal(void) { return ret_val; }  
 
   wxTimer m_timer;
   OCPNMessageDialog* dlg;

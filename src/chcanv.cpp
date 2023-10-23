@@ -24,8 +24,6 @@
 #include "chartdb.h"
 #include "chartimg.h"
 #include "cutil.h"
-#include "MarkInfo.h"
-#include "nav_object_database.h"
 #include "tcmgr.h"
 #include "ocpn_pixel.h"
 #include "ocpndc.h"
@@ -109,14 +107,11 @@ extern int g_nbrightness;
 extern ConsoleCanvas *console;
 extern OCPNPlatform *g_Platform;
 
-extern RouteList *pRouteList;
-extern std::vector<Track*> g_TrackList;
 extern MyConfig *pConfig;
 
 extern Routeman *g_pRouteMan;
 extern ThumbWin *pthumbwin;
 extern TCMgr *ptcmgr;
-extern MarkInfoDlg *g_pMarkInfoDialog;
 extern double AnchorPointMinDist;
 extern bool AnchorAlertOn1;
 extern bool AnchorAlertOn2;
@@ -125,17 +120,11 @@ extern int g_iDistanceFormat;
 extern wxString GetLayerName(int id);
 extern wxString g_uploadConnection;
 extern bool g_bsimplifiedScalebar;
-
 extern bool bDrawCurrentValues;
 
 extern s52plib *ps52plib;
 
-extern bool g_bShowCompassWin;
-
 extern bool bGPSValid;
-extern bool g_bTempShowMenuBar;
-extern bool g_bShowMenuBar;
-
 extern bool g_bShowAreaNotices;
 extern int g_Show_Target_Name_Scale;
 extern bool g_bCPAWarn;
@@ -390,7 +379,6 @@ ChartCanvas::ChartCanvas(wxFrame *frame, int canvasIndex)
   m_pCurrentStack = NULL;
   m_bpersistent_quilt = false;
   m_piano_ctx_menu = NULL;  
-  m_Compass = NULL;
 
   g_ChartNotRenderScaleFactor = 2.0;
   m_bShowScaleInStatusBar = true;
@@ -630,12 +618,6 @@ ChartCanvas::ChartCanvas(wxFrame *frame, int canvasIndex)
 
   m_Piano = new Piano(this);
 
-  m_bShowCompassWin = g_bShowCompassWin;
-
-  m_Compass = new ocpnCompass(this);
-  m_Compass->SetScaleFactor(g_compass_scalefactor);
-  m_Compass->Show(m_bShowCompassWin);
-
   m_bToolbarEnable = false;
   m_pianoFrozen = false;
 
@@ -727,7 +709,6 @@ ChartCanvas::~ChartCanvas() {
   // wx tries to deliver events to this canvas during destroy.
   delete m_pQuilt;
   delete m_pCurrentStack;
-  delete m_Compass;
   delete m_Piano;
 }
 
@@ -838,10 +819,8 @@ void ChartCanvas::SetupGlCanvas() {
 }
 
 void ChartCanvas::ResetGLContext() {
-	if (g_bopengl) {
-		/*m_glcc->SetContext(g_pGLcontext);
-		g_pGLcontext->SetCurrent(*m_glcc);
-		m_glcc->SetCurrent(*g_pGLcontext);*/
+	if (g_bopengl) {		
+		if (g_pGLcontext) delete g_pGLcontext;
 
 		wxGLContext* pctx = new wxGLContext(m_glcc);
 		m_glcc->SetContext(pctx);
@@ -945,12 +924,6 @@ void ChartCanvas::ApplyCanvasConfig(canvasConfig *pcc) {
 }
 
 void ChartCanvas::ApplyGlobalSettings() {
-  // GPS compas window
-  m_bShowCompassWin = g_bShowCompassWin;
-  if (m_Compass) {
-    m_Compass->Show(m_bShowCompassWin);
-    if (m_bShowCompassWin) m_Compass->UpdateStatus();
-  }
 }
 
 void ChartCanvas::CheckGroupValid(bool showMessage, bool switchGroup0) {
@@ -973,11 +946,8 @@ void ChartCanvas::ShowTides(bool bShow) {
 
   if (ptcmgr->IsReady()) {
     SetbShowTide(bShow);
-
-    parent_frame->SetMenubarItemState(ID_MENU_SHOW_TIDES, bShow);
   } else {
     SetbShowTide(false);
-    parent_frame->SetMenubarItemState(ID_MENU_SHOW_TIDES, false);
   }
 }
 
@@ -986,11 +956,8 @@ void ChartCanvas::ShowCurrents(bool bShow) {
 
   if (ptcmgr->IsReady()) {
     SetbShowCurrent(bShow);
-
-    parent_frame->SetMenubarItemState(ID_MENU_SHOW_CURRENTS, bShow);
   } else {
     SetbShowCurrent(false);
-    parent_frame->SetMenubarItemState(ID_MENU_SHOW_CURRENTS, false);
   }
 }
 
@@ -1908,7 +1875,6 @@ void ChartCanvas::InvalidateGL() {
 #ifdef ocpnUSE_GL
   if (g_bopengl) m_glcc->Invalidate();
 #endif
-  if (m_Compass) m_Compass->UpdateStatus(true);
 }
 
 int ChartCanvas::GetCanvasChartNativeScale() {
@@ -2404,8 +2370,6 @@ void ChartCanvas::RotateTimerEvent(wxTimerEvent &event) {
 }
 
 void ChartCanvas::SetCursorStatus(double cursor_lat, double cursor_lon) {
-  if (!parent_frame->m_pStatusBar) return;
-
   wxString s1;
   s1 += _T(" ");
   s1 += toSDMM(1, cursor_lat);
@@ -2732,8 +2696,6 @@ void ChartCanvas::TogglebFollow(void) {
 void ChartCanvas::ClearbFollow(void) {
   m_bFollow = false;  // update the follow flag
 
-  parent_frame->SetMenubarItemState(ID_MENU_NAV_FOLLOW, false);
-
   DoCanvasUpdate();
   ReloadVP();
   parent_frame->SetChartUpdatePeriod();
@@ -2743,9 +2705,6 @@ void ChartCanvas::SetbFollow(void) {
   JumpToPosition(gLat, gLon, GetVPScale());
   m_bFollow = true;
 
-  parent_frame->SetMenubarItemState(ID_MENU_NAV_FOLLOW, true);
-  // Is the OWNSHIP on-screen?
-  // If not, then reset the OWNSHIP offset to 0 (center screen)
   if ((fabs(m_OSoffsetx) > VPoint.pix_width / 2) ||
       (fabs(m_OSoffsety) > VPoint.pix_height / 2)) {
     m_OSoffsetx = 0;
@@ -2873,7 +2832,8 @@ void ChartCanvas::LoadVP(ViewPort &vp, bool b_adjust) {
   if (g_bopengl && m_glcc) {
     m_glcc->Invalidate();
     if (m_glcc->GetSize() != GetSize()) {
-      m_glcc->SetSize(GetSize());
+      wxSize xCurrentSize = GetSize();     
+      m_glcc->SetSize(xCurrentSize);
     }
   } else
 #endif
@@ -4703,9 +4663,12 @@ void ChartCanvas::DrawCanvasData(LLBBox &llbBox, int nWidth, int nHeight, std::v
 	UpdateCanvasS52PLIBConfig();
 
 #if defined ocpnUSE_GL
-	if (!g_bdisable_opengl && m_glcc) m_glcc->Show(g_bopengl);
+	if (!g_bdisable_opengl && m_glcc) {
+		m_glcc->Show(g_bopengl);
+	}
 
 	if (g_bopengl && m_glcc) {
+    m_glcc->SetSize(nWidth, nHeight);
 		m_glcc->DrawGLCanvasData(sIMGFilePath, bPNGFlag);
 		return;
 	}
@@ -5043,11 +5006,6 @@ void ChartCanvas::DrawCanvasData(LLBBox &llbBox, int nWidth, int nHeight, std::v
 		upd++;
 	}
 
-	/*if (mscratch_dc.IsOk()) {
-		mscratch_dc.SetBackground(*wxBLACK_BRUSH);
-		mscratch_dc.SetTextForeground(*wxBLACK);
-	}*/
-
 	// If multi-canvas, indicate which canvas has keyboard focus
 	// by drawing a simple blue bar at the top.
 	if (g_canvasConfig != 0) {  // multi-canvas?
@@ -5182,6 +5140,23 @@ void ChartCanvas::DrawCanvasData(LLBBox &llbBox, int nWidth, int nHeight, std::v
 	m_b_paint_enable = true;
 }
 
+void ChartCanvas::GenerateImageFile(std::string& sIMGFilePath, bool bPNGFlag) {
+	wxMemoryDC dc;
+	int nWidth, nHeight;
+
+	nWidth = GetVP().pix_width;
+	nHeight = GetVP().pix_height;
+
+	wxBitmap bmp(nWidth, nHeight, -1);
+	dc.SelectObject(bmp);
+
+	glFlush();
+	m_glcc->SwapBuffers();
+	wxClientDC cdc(this);
+	dc.Blit(0, 0, nWidth, nHeight, &cdc, 0, 0);
+	bmp.SaveFile(sIMGFilePath, wxBITMAP_TYPE_PNG);
+}
+
 void ChartCanvas::GenerateImageFile(wxMemoryDC* pMemDC, std::string& sIMGFilePath, bool bPNGFlag) {
 	int nDCWidth, nDCHeight;
 	nDCWidth = pMemDC->GetSize().GetWidth();
@@ -5241,11 +5216,6 @@ void ChartCanvas::PaintCleanup() {
     WarpPointer(warp_x, warp_y);
     warp_flag = false;
   }
-
-  // Start movement timer, this runs nearly immediately.
-  // the reason we cannot simply call it directly is the
-  // refresh events it emits may be blocked from this paint event
-  pMovementTimer->Start(1, wxTIMER_ONE_SHOT);
 }
 
 #if 0
@@ -5403,10 +5373,6 @@ void ChartCanvas::Refresh(bool eraseBackground, const wxRect *rect) {
       m_pCIWin->Raise();
       m_pCIWin->Refresh(false);
     }
-
-    //        if(g_MainToolbar)
-    //            g_MainToolbar->UpdateRecoveryWindow(g_bshowToolbar);
-
   } else
 #endif
     wxWindow::Refresh(eraseBackground, rect);
@@ -6301,8 +6267,6 @@ void ChartCanvas::DoCanvasStackDelta(int direction) {
     }
   }
 
-  gFrame->UpdateGlobalMenuItems();  // update the state of the menu items
-                                    // (checkmarks etc)
   SetQuiltChartHiLiteIndex(-1);
 
   ReloadVP();
@@ -6666,8 +6630,6 @@ void ChartCanvas::HandlePianoClick(int selected_index, int selected_dbIndex) {
   }
 
   SetQuiltChartHiLiteIndex(-1);
-  gFrame->UpdateGlobalMenuItems();  // update the state of the menu items
-                                    // (checkmarks etc)
   HideChartInfoWindow();
   DoCanvasUpdate();
   ReloadVP();  // Pick up the new selections

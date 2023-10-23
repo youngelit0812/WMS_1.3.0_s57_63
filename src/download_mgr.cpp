@@ -515,13 +515,8 @@ std::string GuiDownloader::run(wxWindow* parent, bool remove_current) {
     m_dialog =
         new wxProgressDialog(_("Downloading"), label.c_str(), size, parent,
                              wxPD_AUTO_HIDE | wxPD_APP_MODAL | wxPD_CAN_ABORT);
-#ifdef __OCPN__ANDROID__
-    m_dialog->SetBackgroundColour(wxColour(0x7c, 0xb0, 0xe9));  // light blue
-#endif
 
     ok = download(path);
-    g_Platform->HideBusySpinner();
-
     if (!ok) {
       delete m_dialog;
       showErrorDialog("Download error");

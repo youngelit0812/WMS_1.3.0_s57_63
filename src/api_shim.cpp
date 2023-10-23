@@ -45,6 +45,23 @@ typedef unsigned short OCushort;
 class GLUtesselator;
 extern "C" {
 typedef void (*_GLUfuncptr)();
+DECL_EXP GLUtesselator *gluNewTess(void) { return 0; }
+DECL_EXP void gluTessProperty(GLUtesselator *tess, unsigned which,
+                              double data) {}
+DECL_EXP void gluTessEndPolygon(GLUtesselator *tess) {}
+DECL_EXP void gluTessBeginPolygon(GLUtesselator *tess, void *data) {}
+DECL_EXP void gluTessNormal(GLUtesselator *tess, double X, double Y, double Z) {
+}
+DECL_EXP void gluTessVertex(GLUtesselator *tess, double *location, void *data) {
+}
+DECL_EXP void gluTessCallback(GLUtesselator *tess, unsigned which,
+                              _GLUfuncptr CallBackFunc) {}
+DECL_EXP const unsigned char *gluErrorString(unsigned error) {
+  return reinterpret_cast<const unsigned char *>("");
+}
+DECL_EXP void gluDeleteTess(GLUtesselator *tess) {}
+DECL_EXP void gluTessBeginContour(GLUtesselator *tess) {}
+DECL_EXP void gluTessEndContour(GLUtesselator *tess) {}
 DECL_EXP void glLineWidth(float width) {}
 
 DECL_EXP void glClearIndex(float c) {}
@@ -1022,7 +1039,6 @@ DECL_EXP void GetCanvasPixLL(PlugIn_ViewPort *vp, wxPoint *pp, double lat,
                              double lon) {}
 DECL_EXP void GetCanvasLLPix(PlugIn_ViewPort *vp, wxPoint p, double *plat,
                              double *plon) {}
-DECL_EXP void PushNMEABuffer(wxString str) {}
 DECL_EXP void PositionBearingDistanceMercator_Plugin(double lat, double lon,
                                                      double brg, double dist,
                                                      double *dlat,
@@ -1056,9 +1072,6 @@ DECL_EXP void fromSM_ECC_Plugin(double x, double y, double lat0, double lon0,
 DECL_EXP bool DecodeSingleVDOMessage(const wxString &str,
                                      PlugIn_Position_Fix_Ex *pos,
                                      wxString *acc) {
-  return true;
-}
-DECL_EXP bool GetActiveRoutepointGPX(char *buffer, unsigned int buffer_length) {
   return true;
 }
 DECL_EXP int GetChartbarHeight(void) { return 1; }
@@ -1101,25 +1114,8 @@ DECL_EXP bool AddCustomWaypointIcon(wxBitmap *pimage, wxString key,
   return false;
 }
 
-DECL_EXP bool AddSingleWaypoint(PlugIn_Waypoint *pwaypoint, bool b_permanent) {
-  return true;
-}
-DECL_EXP bool DeleteSingleWaypoint(wxString &GUID) { return true; }
-DECL_EXP bool UpdateSingleWaypoint(PlugIn_Waypoint *pwaypoint) { return true; }
-
-DECL_EXP bool AddPlugInRoute(PlugIn_Route *proute, bool b_permanent) {
-  return true;
-}
-DECL_EXP bool DeletePlugInRoute(wxString &GUID) { return true; }
-DECL_EXP bool UpdatePlugInRoute(PlugIn_Route *proute) { return true; }
-
 DECL_EXP PlugIn_Track::PlugIn_Track() {}
 DECL_EXP PlugIn_Track::~PlugIn_Track() {}
-DECL_EXP bool AddPlugInTrack(PlugIn_Track *ptrack, bool b_permanent) {
-  return true;
-}
-DECL_EXP bool DeletePlugInTrack(wxString &GUID) { return true; }
-DECL_EXP bool UpdatePlugInTrack(PlugIn_Track *ptrack) { return true; }
 
 DECL_EXP wxColour GetBaseGlobalColor(wxString colorName) { return *wxRED; }
 int DECL_EXP OCPNMessageBox_PlugIn(wxWindow *parent, const wxString &message,
@@ -1377,9 +1373,6 @@ DECL_EXP void GetDoubleCanvasPixLL(PlugIn_ViewPort *vp, wxPoint2DDouble *pp,
 DECL_EXP double fromDMM_Plugin(wxString sdms) { return 0.0; }
 DECL_EXP void SetCanvasRotation(double rotation) {}
 DECL_EXP void SetCanvasProjection(int projection) {}
-DECL_EXP bool GetSingleWaypoint(wxString GUID, PlugIn_Waypoint *pwaypoint) {
-  return true;
-}
 DECL_EXP bool CheckEdgePan_PlugIn(int x, int y, bool dragging, int margin,
                                   int delta) {
   return true;
@@ -1416,7 +1409,6 @@ DECL_EXP void ForceChartDBRebuild() {}
 
 DECL_EXP wxString GetWritableDocumentsDir(void) { return wxString(""); }
 DECL_EXP wxDialog *GetActiveOptionsDialog() { return 0; }
-DECL_EXP wxArrayString GetWaypointGUIDArray(void) { return dummy_array_string; }
 DECL_EXP wxArrayString GetIconNameArray(void) { return dummy_array_string; }
 
 DECL_EXP bool AddPersistentFontKey(wxString TextElement) { return true; }
@@ -1427,21 +1419,6 @@ DECL_EXP wxBitmap GetBitmapFromSVGFile(wxString filename, unsigned int width,
   return dummy_bitmap;
 }
 DECL_EXP bool IsTouchInterface_PlugIn(void) { return true; }
-
-/*  Platform optimized File/Dir selector dialogs */
-DECL_EXP int PlatformDirSelectorDialog(wxWindow *parent, wxString *file_spec,
-                                       wxString Title, wxString initDir) {
-  return 0;
-}
-
-DECL_EXP int PlatformFileSelectorDialog(wxWindow *parent, wxString *file_spec,
-                                        wxString Title, wxString initDir,
-                                        wxString suggestedName,
-                                        wxString wildcard) {
-  return 0;
-}
-
-/*  OpenCPN HTTP File Download PlugIn Interface   */
 
 /*   Synchronous (Blocking) download of a single file  */
 
@@ -1539,12 +1516,6 @@ DECL_EXP wxString GetSelectedTrackGUID_Plugin() { return wxString(""); }
 DECL_EXP std::unique_ptr<PlugIn_Waypoint> GetWaypoint_Plugin(const wxString &) {
   return nullptr;
 }
-DECL_EXP std::unique_ptr<PlugIn_Route> GetRoute_Plugin(const wxString &) {
-  return nullptr;
-}
-DECL_EXP std::unique_ptr<PlugIn_Track> GetTrack_Plugin(const wxString &) {
-  return nullptr;
-}
 
 DECL_EXP wxWindow *GetCanvasUnderMouse() { return 0; }
 DECL_EXP int GetCanvasIndexUnderMouse() { return 0; }
@@ -1556,11 +1527,8 @@ DECL_EXP bool CheckMUIEdgePan_PlugIn(int x, int y, bool dragging, int margin,
 }
 DECL_EXP void SetMUICursor_PlugIn(wxCursor *pCursor, int canvasIndex) {}
 wxRect dummy_rectangle;
-DECL_EXP wxRect GetMasterToolbarRect() { return dummy_rectangle; }
 
 DECL_EXP int GetLatLonFormat(void) { return 0; }
-
-DECL_EXP void ZeroXTE() {}
 
 DECL_EXP PlugIn_Waypoint::PlugIn_Waypoint() {}
 DECL_EXP PlugIn_Waypoint::~PlugIn_Waypoint() {}
@@ -1572,36 +1540,11 @@ DECL_EXP PlugIn_Waypoint_Ex::PlugIn_Waypoint_Ex(
 DECL_EXP PlugIn_Waypoint_Ex::~PlugIn_Waypoint_Ex() {}
 DECL_EXP void PlugIn_Waypoint_Ex::InitDefaults() {}
 
-DECL_EXP bool PlugIn_Waypoint_Ex::GetFSStatus() { return true; }
-
-DECL_EXP int PlugIn_Waypoint_Ex::GetRouteMembershipCount() { return 0; }
-
 DECL_EXP PlugIn_Route::PlugIn_Route(void) {}
 DECL_EXP PlugIn_Route::~PlugIn_Route(void) {}
 
 DECL_EXP PlugIn_Route_Ex::PlugIn_Route_Ex(void) {}
 DECL_EXP PlugIn_Route_Ex::~PlugIn_Route_Ex(void) {}
-
-DECL_EXP wxArrayString GetRouteGUIDArray(void) { return dummy_array_string; }
-DECL_EXP wxArrayString GetTrackGUIDArray(void) { return dummy_array_string; }
-
-DECL_EXP bool GetSingleWaypointEx(wxString GUID,
-                                  PlugIn_Waypoint_Ex *pwaypoint) {
-  return true;
-}
-
-DECL_EXP bool AddSingleWaypointEx(PlugIn_Waypoint_Ex *pwaypoint,
-                                  bool b_permanent) {
-  return true;
-}
-DECL_EXP bool UpdateSingleWaypointEx(PlugIn_Waypoint_Ex *pwaypoint) {
-  return true;
-}
-
-DECL_EXP bool AddPlugInRouteEx(PlugIn_Route_Ex *proute, bool b_permanent) {
-  return true;
-}
-DECL_EXP bool UpdatePlugInRouteEx(PlugIn_Route_Ex *proute) { return true; }
 
 DECL_EXP std::unique_ptr<PlugIn_Waypoint_Ex> GetWaypointEx_Plugin(
     const wxString &) {
@@ -1622,27 +1565,4 @@ DECL_EXP double OCPN_GetDisplayContentScaleFactor() { return 0; }
 //  Scaled display support, on Windows devices
 DECL_EXP double OCPN_GetWinDIPScaleFactor() { return 0; }
 
-//  Comm Priority query support
-DECL_EXP std::vector<std::string> GetPriorityMaps() {
-  std::vector<std::string> v;
-  return v;
-}
-DECL_EXP std::vector<std::string> GetActivePriorityIdentifiers() {
-  std::vector<std::string> v;
-  return v;
-}
-
 extern DECL_EXP int GetGlobalWatchdogTimoutSeconds() { return 0; }
-
-DECL_EXP wxArrayString GetRouteGUIDArray(OBJECT_LAYER_REQ req) {
-  wxArrayString was;
-  return was;
-}
-DECL_EXP wxArrayString GetTrackGUIDArray(OBJECT_LAYER_REQ req) {
-  wxArrayString was;
-  return was;
-}
-DECL_EXP wxArrayString GetWaypointGUIDArray(OBJECT_LAYER_REQ req) {
-  wxArrayString was;
-  return was;
-}

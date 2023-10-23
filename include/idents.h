@@ -268,8 +268,6 @@ public:
   bool OnExceptionInMainLoop();
 #endif
 
-  Track* TrackOff(void);
-
   wxSingleInstanceChecker *m_checker;
 
   DECLARE_EVENT_TABLE()
@@ -287,13 +285,18 @@ public:
 
   int GetApplicationMemoryUse(void);
 
-  void OnEraseBackground(wxEraseEvent &event);
-  void OnMaximize(wxMaximizeEvent &event);  
+  void OnMaximize(wxMaximizeEvent &event);
+  void OnCloseWindow(wxCloseEvent &event);
   void OnExit(wxCommandEvent &event);
   void OnSize(wxSizeEvent &event);
   void OnMove(wxMoveEvent &event);  
   void OnFrameTimer1(wxTimerEvent &event);
-  bool DoChartUpdate(void);  
+  bool DoChartUpdate(void);
+  void OnEvtTHREADMSG(OCPN_ThreadMessageEvent &event);
+  void OnEvtOCPN_NMEA(OCPN_DataStreamEvent &event);
+  void OnEvtOCPN_SignalK(OCPN_SignalKEvent &event);
+  void OnEvtOCPN_SIGNALK_Test(OCPN_SignalKEvent &event);
+  void OnEvtPlugInMessage(OCPN_MsgEvent &event);
   void OnMemFootTimer(wxTimerEvent &event);  
   void OnSENCEvtThread(OCPN_BUILDSENC_ThreadEvent &event);  
   void OnBellsFinished(wxCommandEvent &event);
@@ -315,12 +318,9 @@ public:
   void setStringVP(wxString VPS);
   void InvalidateAllGL();
   void RefreshAllCanvas(bool bErase = true);
-  void CancelAllMouseRoute();
   void InvalidateAllQuilts();
 
   void SetUpMode(ChartCanvas *cc, int mode);
-
-  wxMenuBar *GetMainMenuBar() { return m_pMenuBar; }
 
   ChartCanvas *GetPrimaryCanvas();
   ChartCanvas *GetFocusCanvas();
@@ -342,18 +342,18 @@ public:
   //     db_index, bool b_autoscale = true);
   void JumpToPosition(ChartCanvas *cc, double lat, double lon, double scale);
 
-  void BuildMenuBar(void);
+  void ProcessCanvasResize(void);
+
   void ApplyGlobalSettings(bool bnewtoolbar);
-  void RegisterGlobalMenuItems();
-  void UpdateGlobalMenuItems();
-  void UpdateGlobalMenuItems(ChartCanvas *cc);  
+  int DoOptionsDialog();
   bool ProcessOptionsDialog(int resultFlags, ArrayOfCDI *pNewDirArray);
   void DoPrint(void);
   void StopSockets(void);
   void ResumeSockets(void);
   void ToggleDataQuality(ChartCanvas *cc);
   void TogglebFollow(ChartCanvas *cc);
-  void ToggleFullScreen();  
+  void ToggleFullScreen();
+  void ToggleChartBar(ChartCanvas *cc);
   void SetbFollow(ChartCanvas *cc);
   void ClearbFollow(ChartCanvas *cc);
   void ToggleChartOutlines(ChartCanvas *cc);
@@ -366,13 +366,11 @@ public:
   void ToggleAISMinimizeTargets(ChartCanvas *cc);
 
   void ToggleTestPause(void);
-  void TrackOn(void);
   void SetENCDisplayCategory(ChartCanvas *cc, enum _DisCat nset);
   void ToggleNavobjects(ChartCanvas *cc);
 
-  void TrackDailyRestart(void);  
+  bool ShouldRestartTrack();
   void ToggleColorScheme();
-  void SetMenubarItemState(int item_id, bool state);
   void SetMasterToolbarItemState(int tool_id, bool state);
 
   void SetToolbarItemBitmaps(int tool_id, wxBitmap *bitmap,
@@ -394,15 +392,11 @@ public:
 
   void ChartsRefresh();
 
-  bool CheckGroup(int igroup);  
+  bool CheckGroup(int igroup);
+  double GetMag(double a);
+  double GetMag(double a, double lat, double lon);
   bool SendJSON_WMM_Var_Request(double lat, double lon, wxDateTime date);
-
-  void DestroyPersistentDialogs();
-  void TouchAISActive(void);
-  void UpdateAISTool(void);
   
-  wxStatusBar *m_pStatusBar;
-  wxMenuBar *m_pMenuBar;
   int nBlinkerTick;
   bool m_bTimeIsSet;
   bool m_bDateIsSet;
@@ -426,11 +420,8 @@ public:
     return RequestNewMasterToolbar();
   }
   void RequestNewToolbars(bool bforcenew = false);
-
-  void ActivateMOB(void);
-  void UpdateGPSCompassStatusBoxes(bool b_force_new = false);
   void UpdateRotationState(double rotation);
-
+  
   bool m_bdefer_resize;
   wxSize m_defer_size;
   wxSize m_newsize;
@@ -452,55 +443,22 @@ public:
   void UpdateCanvasConfigDescriptors();
   void ScheduleSettingsDialog();
   static void RebuildChartDatabase();
-  
-  bool ParsePosition(const LATLONG &Position);
-  void setSatelitesInView(int no);
-  void setPosition(double lat, double lon);
-  void setSpeedOverGround(double sog);
-  void setCourseOverGround(double cog);
-  void setHeadingTrue(double heading);
-  void setHeadingMagnetic(double heading);
-  void setMagneticVariation(double var);
-
-  void InitCommListeners();
-
-  bool HandleN2K_129029( std::shared_ptr <const Nmea2000Msg> n2k_msg );
-  bool HandleN2K_129026( std::shared_ptr <const Nmea2000Msg> n2k_msg );
-
-  bool HandleN0183_RMC( std::shared_ptr <const Nmea0183Msg> n0183_msg );
-  bool HandleN0183_HDT( std::shared_ptr <const Nmea0183Msg> n0183_msg );
-  bool HandleN0183_HDG( std::shared_ptr <const Nmea0183Msg> n0183_msg );
-  bool HandleN0183_HDM( std::shared_ptr <const Nmea0183Msg> n0183_msg );
-  bool HandleN0183_VTG( std::shared_ptr <const Nmea0183Msg> n0183_msg );
-  bool HandleN0183_GSV( std::shared_ptr <const Nmea0183Msg> n0183_msg );
-  bool HandleN0183_GGA( std::shared_ptr <const Nmea0183Msg> n0183_msg );
-  bool HandleN0183_GLL( std::shared_ptr <const Nmea0183Msg> n0183_msg );
-  bool HandleN0183_AIVDO( std::shared_ptr <const Nmea0183Msg> n0183_msg );
 
 private:
   void CheckToolbarPosition();
   void ODoSetSize(void);
   void DoCOGSet(void);
 
-  void UpdateAllToolbars(ColorScheme cs);
-
   void FilterCogSog(void);
-
-  void ApplyGlobalColorSchemetoStatusBar(void);
-  void PostProcessNMEA(bool pos_valid, bool sog_valid,
-                       bool cog_valid, const wxString &sfixtime);
 
   bool ScrubGroupArray();
   wxString GetGroupName(int igroup);
 
-  bool EvalPriority(const wxString &message, DataStream *pDS);
   void SetAISDisplayStyle(ChartCanvas *cc, int StyleIndx);
 
   bool GetMasterToolItemShow(int toolid);
   void OnToolbarAnimateTimer(wxTimerEvent &event);
   bool CollapseGlobalToolbar();
-
-  int m_StatusBarFieldCount;
 
   NMEA0183 m_NMEA0183;  // Used to parse messages from NMEA threads
 
@@ -540,7 +498,6 @@ private:
   wxRect m_mainlast_tb_rect;
   wxTimer ToolbarAnimateTimer;
   int m_nMasterToolCountShown;
-  wxTimer m_recaptureTimer;
 
   SignalKEventHandler m_signalKHandler;
 

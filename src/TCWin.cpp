@@ -395,7 +395,6 @@ void TCWin::RecalculateSize() {
 
 void TCWin::OKEvent(wxCommandEvent &event) {
   Hide();
-  
   if (--gpIDXn == 0) gpIDX = NULL;
   delete m_pTCRolloverWin;
   delete m_tList;
@@ -412,7 +411,6 @@ void TCWin::OKEvent(wxCommandEvent &event) {
 
 void TCWin::OnCloseWindow(wxCloseEvent &event) {
   Hide();
-  
   if (--gpIDXn == 0) gpIDX = NULL;
   delete m_pTCRolloverWin;
   delete m_tList;

@@ -4,7 +4,6 @@
 #include <wx/tokenzr.h>
 
 #include "FontMgr.h"
-#include "ocpn_frame.h"
 #include "OCPNPlatform.h"
 #include "ocpn_plugin.h"
 
@@ -35,7 +34,6 @@ private:
   std::vector<font_cache_record> m_fontVector;
 };
 
-extern MyFrame *gFrame;
 extern wxString g_locale;
 
 wxString s_locale;

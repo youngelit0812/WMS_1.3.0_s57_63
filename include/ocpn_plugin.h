@@ -455,9 +455,9 @@ typedef void destroy_t(opencpn_plugin *);
 class DECL_EXP opencpn_plugin_16 : public opencpn_plugin {
 public:
   opencpn_plugin_16(void *pmgr);
+  virtual ~opencpn_plugin_16();
 
   using opencpn_plugin::RenderOverlay;
-  virtual ~opencpn_plugin_16();
 
   virtual bool RenderOverlay(wxDC &dc, PlugIn_ViewPort *vp);
 
@@ -583,7 +583,10 @@ public:
 class DECL_EXP opencpn_plugin_118 : public opencpn_plugin_117 {
 public:
   opencpn_plugin_118(void *pmgr);
+
   using opencpn_plugin_116::RenderGLOverlayMultiCanvas;
+  using opencpn_plugin_116::RenderOverlayMultiCanvas;
+
   /// Render plugin overlay over chart canvas in OpenGL mode
   ///
   /// \param pcontext Pointer to the OpenGL context
@@ -592,20 +595,41 @@ public:
   /// \param priority Priority, plugins only upgrading from older API versions
   ///        should draw only when priority is OVERLAY_LEGACY (0)
   /// \return true if overlay was rendered, false otherwise
-  virtual bool RenderGLOverlayMultiCanvas(wxGLContext *pcontext,
-                                          PlugIn_ViewPort *vp, int canvasIndex,
-                                          int priority = -1);
-  using opencpn_plugin_116::RenderOverlayMultiCanvas;
+#ifdef _MSC_VER
+  virtual bool RenderGLOverlayMultiCanvas(wxGLContext *pcontext, PlugIn_ViewPort *vp,
+		                          int canvasIndex, int priority = -1);
+#else
+  bool RenderGLOverlayMultiCanvas(wxGLContext *pcontext, PlugIn_ViewPort *vp,
+                                  int canvasIndex, int priority);
+
+  bool RenderGLOverlayMultiCanvas(wxGLContext *pcontext, PlugIn_ViewPort *vp,
+                                  int canvas_ix) override {
+    return RenderGLOverlayMultiCanvas(pcontext, vp, canvas_ix, -1);
+  }
+#endif
+
+
+
   /// Render plugin overlay over chart canvas in non-OpenGL mode
   ///
   /// \param dc Reference to the "device context"
   /// \param vp Pointer to the Viewport
   /// \param canvasIndex Index of the chart canvas, 0 for the first canvas
   /// \param priority Priority, plugins only upgrading from older API versions
-  /// should draw only when priority is OVERLAY_LEGACY (0)
+  ///        should draw only when priority is OVERLAY_LEGACY (0)
   /// \return true if overlay was rendered, false otherwise
+#ifdef _MSC_VER
   virtual bool RenderOverlayMultiCanvas(wxDC &dc, PlugIn_ViewPort *vp,
                                         int canvasIndex, int priority = -1);
+#else
+  bool RenderOverlayMultiCanvas(wxDC &dc, PlugIn_ViewPort *vp, int canvas_ix,
+                                int priority);
+  bool RenderOverlayMultiCanvas(wxDC &dc, PlugIn_ViewPort *vp,
+                                int canvas_ix) override {
+    return RenderOverlayMultiCanvas(dc, vp, canvas_ix, -1);
+  }
+#endif
+
 };
 //------------------------------------------------------------------
 //      Route and Waypoint PlugIn support
@@ -724,13 +748,9 @@ extern "C" DECL_EXP wxFont *OCPNGetFont(wxString TextElement, int default_size);
 
 extern "C" DECL_EXP wxString *GetpSharedDataLocation();
 
-extern "C" DECL_EXP ArrayOfPlugIn_AIS_Targets *GetAISTargetArray(void);
-
 extern "C" DECL_EXP wxAuiManager *GetFrameAuiManager(void);
 
 extern "C" DECL_EXP bool AddLocaleCatalog(wxString catalog);
-
-extern "C" DECL_EXP void PushNMEABuffer(wxString str);
 
 extern DECL_EXP wxXmlDocument GetChartDatabaseEntryXML(int dbIndex,
                                                        bool b_getGeom);
@@ -778,8 +798,6 @@ extern "C" DECL_EXP bool DecodeSingleVDOMessage(const wxString &str,
                                                 PlugIn_Position_Fix_Ex *pos,
                                                 wxString *acc);
 extern "C" DECL_EXP int GetChartbarHeight(void);
-extern "C" DECL_EXP bool GetActiveRoutepointGPX(char *buffer,
-                                                unsigned int buffer_length);
 
 /* API 1.9 */
 typedef enum OptionsParentPI {
@@ -822,22 +840,6 @@ extern DECL_EXP void PlugInPlaySound(wxString &sound_file);
 extern DECL_EXP wxBitmap *FindSystemWaypointIcon(wxString &icon_name);
 extern DECL_EXP bool AddCustomWaypointIcon(wxBitmap *pimage, wxString key,
                                            wxString description);
-
-extern DECL_EXP bool AddSingleWaypoint(PlugIn_Waypoint *pwaypoint,
-                                       bool b_permanent = true);
-extern DECL_EXP bool DeleteSingleWaypoint(wxString &GUID);
-extern DECL_EXP bool UpdateSingleWaypoint(PlugIn_Waypoint *pwaypoint);
-
-extern DECL_EXP bool AddPlugInRoute(PlugIn_Route *proute,
-                                    bool b_permanent = true);
-extern DECL_EXP bool DeletePlugInRoute(wxString &GUID);
-extern DECL_EXP bool UpdatePlugInRoute(PlugIn_Route *proute);
-
-extern DECL_EXP bool AddPlugInTrack(PlugIn_Track *ptrack,
-                                    bool b_permanent = true);
-extern DECL_EXP bool DeletePlugInTrack(wxString &GUID);
-extern DECL_EXP bool UpdatePlugInTrack(PlugIn_Track *ptrack);
-
 /* API 1.11  */
 
 /* API 1.11  adds some more common functions to avoid unnecessary code
@@ -1187,8 +1189,7 @@ extern "C" DECL_EXP void GetDoubleCanvasPixLL(PlugIn_ViewPort *vp,
 extern DECL_EXP double fromDMM_Plugin(wxString sdms);
 extern DECL_EXP void SetCanvasRotation(double rotation);
 extern DECL_EXP void SetCanvasProjection(int projection);
-extern DECL_EXP bool GetSingleWaypoint(wxString GUID,
-                                       PlugIn_Waypoint *pwaypoint);
+
 extern DECL_EXP bool CheckEdgePan_PlugIn(int x, int y, bool dragging,
                                          int margin, int delta);
 extern DECL_EXP wxBitmap GetIcon_PlugIn(const wxString &name);
@@ -1217,7 +1218,6 @@ extern DECL_EXP void ForceChartDBRebuild();
 
 extern DECL_EXP wxString GetWritableDocumentsDir(void);
 extern DECL_EXP wxDialog *GetActiveOptionsDialog();
-extern DECL_EXP wxArrayString GetWaypointGUIDArray(void);
 extern DECL_EXP wxArrayString GetIconNameArray(void);
 
 extern DECL_EXP bool AddPersistentFontKey(wxString TextElement);
@@ -1226,20 +1226,6 @@ extern DECL_EXP wxString GetActiveStyleName();
 extern DECL_EXP wxBitmap GetBitmapFromSVGFile(wxString filename,
                                               unsigned int width,
                                               unsigned int height);
-extern DECL_EXP bool IsTouchInterface_PlugIn(void);
-
-/*  Platform optimized File/Dir selector dialogs */
-extern DECL_EXP int PlatformDirSelectorDialog(wxWindow *parent,
-                                              wxString *file_spec,
-                                              wxString Title, wxString initDir);
-
-extern DECL_EXP int PlatformFileSelectorDialog(wxWindow *parent,
-                                               wxString *file_spec,
-                                               wxString Title, wxString initDir,
-                                               wxString suggestedName,
-                                               wxString wildcard);
-
-/*  OpenCPN HTTP File Download PlugIn Interface   */
 
 /*   Various method Return Codes, etc          */
 typedef enum _OCPN_DLStatus {
@@ -1463,8 +1449,6 @@ extern DECL_EXP wxString GetSelectedTrackGUID_Plugin();
 
 extern DECL_EXP std::unique_ptr<PlugIn_Waypoint> GetWaypoint_Plugin(
     const wxString &);  // doublon with GetSingleWaypoint
-extern DECL_EXP std::unique_ptr<PlugIn_Route> GetRoute_Plugin(const wxString &);
-extern DECL_EXP std::unique_ptr<PlugIn_Track> GetTrack_Plugin(const wxString &);
 
 extern DECL_EXP wxWindow *GetCanvasUnderMouse();
 extern DECL_EXP int GetCanvasIndexUnderMouse();
@@ -1476,10 +1460,6 @@ extern DECL_EXP bool CheckMUIEdgePan_PlugIn(int x, int y, bool dragging,
                                             int canvasIndex);
 extern DECL_EXP void SetMUICursor_PlugIn(wxCursor *pCursor, int canvasIndex);
 
-// API 1.17
-//
-extern DECL_EXP wxRect GetMasterToolbarRect();
-
 enum SDDMFORMAT {
   DEGREES_DECIMAL_MINUTES = 0,
   DECIMAL_DEGREES,
@@ -1488,9 +1468,6 @@ enum SDDMFORMAT {
 };
 
 extern DECL_EXP int GetLatLonFormat(void);
-
-// API 1.17
-extern "C" DECL_EXP void ZeroXTE();
 
 // Extended Waypoint manipulation API
 class DECL_EXP PlugIn_Waypoint_Ex {
@@ -1503,15 +1480,6 @@ public:
                      const wxColor RangeColor = wxColor(255, 0, 0));
   ~PlugIn_Waypoint_Ex();
   void InitDefaults();
-
-  bool GetFSStatus();  // return "free standing" status
-                       // To be a "free standing waypoint"(FSWP),
-                       // the RoutePoint will have been created by GUI dropping
-                       // a point; by importing a waypoint in a GPX file or by
-                       // the AddSingleWaypoint API.
-
-  int GetRouteMembershipCount();  // Return the number of routes to which this
-                                  // WP belongs
 
   double m_lat;
   double m_lon;
@@ -1552,22 +1520,9 @@ public:
   bool m_isVisible;
   wxString m_Description;
 
+
   Plugin_WaypointExList *pWaypointList;
 };
-
-extern DECL_EXP wxArrayString GetRouteGUIDArray(void);
-extern DECL_EXP wxArrayString GetTrackGUIDArray(void);
-
-extern DECL_EXP bool GetSingleWaypointEx(wxString GUID,
-                                         PlugIn_Waypoint_Ex *pwaypoint);
-
-extern DECL_EXP bool AddSingleWaypointEx(PlugIn_Waypoint_Ex *pwaypoint,
-                                         bool b_permanent = true);
-extern DECL_EXP bool UpdateSingleWaypointEx(PlugIn_Waypoint_Ex *pwaypoint);
-
-extern DECL_EXP bool AddPlugInRouteEx(PlugIn_Route_Ex *proute,
-                                      bool b_permanent = true);
-extern DECL_EXP bool UpdatePlugInRouteEx(PlugIn_Route_Ex *proute);
 
 extern DECL_EXP std::unique_ptr<PlugIn_Waypoint_Ex> GetWaypointEx_Plugin(
     const wxString &);
@@ -1587,10 +1542,6 @@ extern DECL_EXP double OCPN_GetDisplayContentScaleFactor();
 //  Scaled display support, on Windows devices
 extern DECL_EXP double OCPN_GetWinDIPScaleFactor();
 
-//  Comm Priority query support
-extern DECL_EXP std::vector<std::string> GetPriorityMaps();
-extern DECL_EXP std::vector<std::string> GetActivePriorityIdentifiers();
-
 extern DECL_EXP int GetGlobalWatchdogTimoutSeconds();
 
 typedef enum _OBJECT_LAYER_REQ {
@@ -1598,13 +1549,6 @@ typedef enum _OBJECT_LAYER_REQ {
   OBJECTS_NO_LAYERS,
   OBJECTS_ONLY_LAYERS
 } OBJECT_LAYER_REQ;
-
-// FIXME (dave)  Implement these
-extern DECL_EXP wxArrayString GetRouteGUIDArray(OBJECT_LAYER_REQ req);
-extern DECL_EXP wxArrayString GetTrackGUIDArray(OBJECT_LAYER_REQ req);
-extern DECL_EXP wxArrayString GetWaypointGUIDArray(OBJECT_LAYER_REQ req);
-
-/**   listen-notify interface   */
 
 /* Listening to messages. */
 class ObservableListener;
@@ -1672,8 +1616,10 @@ extern DECL_EXP std::shared_ptr<ObservableListener> GetListener(
 extern DECL_EXP std::vector<uint8_t> GetN2000Payload(NMEA2000Id id,
                                                      ObservedEvt ev);
 
-/** Return source identifier (iface) of a received n2000 message of type id in
- * ev. */
+/**
+ * Return source identifier (iface) of a received n2000 message of type id
+ * in ev.
+ */
 extern DECL_EXP std::string GetN2000Source(NMEA2000Id id, ObservedEvt ev);
 
 /** Return payload in a received n0183 message of type id in ev. */
@@ -1702,31 +1648,33 @@ struct PluginNavdata {
 /** Return BasicNavDataMsg decoded data available in ev */
 extern DECL_EXP PluginNavdata GetEventNavdata(ObservedEvt ev);
 
-/* Plugin API supporting direct access to comm drivers for output purposes
- *
+/** Plugin API supporting direct access to comm drivers for output purposes */
+/*
  * Plugins may access comm ports for direct output.
  * The general program flow for a plugin may look something like this
  * pseudo-code:
  * 1.  Plugin will query OCPN core for a list of active comm drivers.
- * 2.  Plugin will inspect the list, and query OCPN core for driver attributes.
+ * 2.  Plugin will inspect the list, and query OCPN core for driver
+ *     attributes.
  * 3.  Plugin will select a comm driver with appropriate attributes for output.
- * 4.  Plugin will register a list of PGNs expected to be transmitted (N2K
- * specific)
+ * 4.  Plugin will register a list of PGNs expected to be transmitted
+ *     (N2K specific)
  * 5.  Plugin may then send a payload buffer to a specific comm driver for
- * output as soon as possible.
+ *     output as soon as possible.
  *
  * The mechanism for specifying a particular comm driver uses the notion of
  * "handles". Each active comm driver has an associated opaque handle, managed
  * by OCPN core. All references by a plugin to a driver are by means of its
  * handle. Handles should be considered to be "opaque", meaning that the exact
- * contents of the handle are of no specific value to the plugin, and only have
- * meaning to the OCPN core management of drivers.
+ * contents of the handle are of no specific value to the plugin, and only
+ * have meaning to the OCPN core management of drivers.
  */
 
 /** Definition of OCPN DriverHandle  */
 typedef std::string DriverHandle;
 
 /** Error return values  */
+
 typedef enum CommDriverResult {
   RESULT_COMM_NO_ERROR = 0,
   RESULT_COMM_INVALID_HANDLE,
@@ -1735,52 +1683,5 @@ typedef enum CommDriverResult {
   RESULT_COMM_REGISTER_GATEWAY_ERROR,
   RESULT_COMM_REGISTER_PGN_ERROR
 } _CommDriverResult;
-
-/** Query OCPN core for a list of active drivers  */
-extern DECL_EXP std::vector<DriverHandle> GetActiveDrivers();
-
-/** Query a specific driver for attributes
- * Driver attributes are available from OCPN core as a hash map of
- * tag->attribute pairs. There is a defined set of common tags guaranteed for
- * every driver. Both tags and attributes are defined as std::string. Here is
- * the list of common tag-attribute pairs.
- *
- * Tag              Attribute definition
- * ----------       --------------------
- * "protocol"       Comm bus device protocol, such as "NMEA0183", "NMEA2000"
- *
- *
- */
-extern DECL_EXP const std::unordered_map<std::string, std::string>
-GetAttributes(DriverHandle handle);
-
-/**
- * Send a message to a specific driver/device.
- *
- * Comm drivers on bus protocols other than NMEA2000 may write directly to the
- * port using  a simple call.  The physical write operation will be queued, and
- * executed in order as bandwidth allows. Return value is number of bytes queued
- * for transmission.
- */
-extern DECL_EXP CommDriverResult WriteCommDriver(
-    DriverHandle handle, const std::shared_ptr<std::vector<uint8_t>> &payload);
-
-/** Send a PGN message to a NMEA2000 address.  */
-extern DECL_EXP CommDriverResult WriteCommDriverN2K(
-    DriverHandle handle, int PGN, int destinationCANAddress, int priority,
-    const std::shared_ptr<std::vector<uint8_t>> &payload);
-
-/**
- * Register a PGN transmitted by a device.
- *
- * NMEA2000 bus protocol device management requires that devices writing on the
- * bus must inform all bus listeners of the specific PGNs that may be
- * transmitted by this device. Once configured, this bus management process will
- * be handled transparently by the OCPN core drivers. It is only necessary for
- * plugins wishing to write to the NMEA2000 bus to register the specific PGNs
- * that they anticipate using, with the selected driver.
- */
-extern DECL_EXP CommDriverResult RegisterTXPGNs(DriverHandle handle,
-                                                std::vector<int> &pgn_list);
 
 #endif  //_PLUGIN_H_

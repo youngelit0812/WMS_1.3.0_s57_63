@@ -41,17 +41,14 @@
 #include "gui_lib.h"
 #include "concanv.h"
 #include "styles.h"
-#include "routeman.h"
 #include "navutil.h"
 #include "navutil_base.h"
 #include "FontMgr.h"
 #include "wx28compat.h"
-#include "route.h"
 #include "ocpn_frame.h"
 #include "OCPNPlatform.h"
 #include "ocpn_plugin.h"
 
-extern Routeman* g_pRouteMan;
 extern MyFrame* gFrame;
 extern bool g_bShowActiveRouteHighway;
 extern double gCog;
@@ -175,15 +172,6 @@ void ConsoleCanvas::SetColorScheme(ColorScheme cs) {
 void ConsoleCanvas::OnPaint(wxPaintEvent& event) {
   wxPaintDC dc(this);
 
-  if (g_pRouteMan->GetpActiveRoute()) {
-    if (m_bNeedClear) {
-      pThisLegText->Refresh();
-      m_bNeedClear = false;
-    }
-
-    UpdateRouteData();
-  }
-
   if (!g_bShowActiveRouteHighway) pCDI->Hide();
 }
 
@@ -259,172 +247,7 @@ void ConsoleCanvas::ToggleRouteTotalDisplay() {
   LegRoute();
 }
 
-void ConsoleCanvas::UpdateRouteData() {
-  wxString str_buf;
-
-  if (g_pRouteMan->GetpActiveRoute()) {
-    if (g_pRouteMan->m_bDataValid) {
-      // Range to the next waypoint is needed always
-      float rng = g_pRouteMan->GetCurrentRngToActivePoint();
-
-      // Brg to the next waypoint
-      float dcog = g_pRouteMan->GetCurrentBrgToActivePoint();
-      if (dcog >= 359.5) dcog = 0;
-
-      wxString cogstr;
-      if (g_bShowTrue)
-        cogstr << wxString::Format(wxString("%6.0f", wxConvUTF8), dcog);
-      if (g_bShowMag)
-        cogstr << wxString::Format(wxString("%6.0f(M)", wxConvUTF8),
-                                   gFrame->GetMag(dcog));
-
-      pBRG->SetAValue(cogstr);
-
-      double speed = 0.;
-      if (!std::isnan(gCog) && !std::isnan(gSog)) {
-        double BRG;
-        BRG = g_pRouteMan->GetCurrentBrgToActivePoint();
-        double vmg = gSog * cos((BRG - gCog) * PI / 180.);
-        str_buf.Printf(_T("%6.2f"), toUsrSpeed(vmg));
-
-        if (m_speedUsed == SPEED_VMG) {
-          // VMG
-          // VMG is always to next waypoint, not to end of route
-          // VMG is SOG x cosine (difference between COG and BRG to Waypoint)
-          speed = vmg;
-        } else {
-          speed = gSog;
-        }
-      } else
-        str_buf = _T("---");
-
-      pVMG->SetAValue(str_buf);
-
-      if (!g_bShowRouteTotal) {
-        float nrng = g_pRouteMan->GetCurrentRngToActiveNormalArrival();
-        wxString srng;
-        double deltarng = fabs(rng - nrng);
-        if ((deltarng > .01) && ((deltarng / rng) > .10) &&
-            (rng < 10.0))  // show if there is more than 10% difference in
-                           // ranges, etc...
-        {
-          if (nrng < 10.0)
-            srng.Printf(_T("%5.2f/%5.2f"), toUsrDistance(rng),
-                        toUsrDistance(nrng));
-          else
-            srng.Printf(_T("%5.1f/%5.1f"), toUsrDistance(rng),
-                        toUsrDistance(nrng));
-        } else {
-          if (rng < 10.0)
-            srng.Printf(_T("%6.2f"), toUsrDistance(rng));
-          else
-            srng.Printf(_T("%6.1f"), toUsrDistance(rng));
-        }
-
-        // RNG to the next WPT
-        pRNG->SetAValue(srng);
-        // XTE
-        str_buf.Printf(
-            _T("%6.2f"),
-            toUsrDistance(g_pRouteMan->GetCurrentXTEToActivePoint()));
-        pXTE->SetAValue(str_buf);
-        if (g_pRouteMan->GetXTEDir() < 0)
-          pXTE->SetALabel(wxString(_("XTE         L")));
-        else
-          pXTE->SetALabel(wxString(_("XTE         R")));
-        // TTG
-        // In all cases, ttg/eta are declared invalid if VMG <= 0.
-        // If showing only "this leg", use VMG for calculation of ttg
-        wxString ttg_s;
-        if ((speed > 0.) && !std::isnan(gCog) && !std::isnan(gSog)) {
-          float ttg_sec = (rng / speed) * 3600.;
-          wxTimeSpan ttg_span(0, 0, long(ttg_sec), 0);
-          ttg_s = ttg_span.Format();
-        } else
-          ttg_s = _T("---");
-
-        pTTG->SetAValue(ttg_s);
-        if (m_speedUsed == SPEED_VMG) {
-          pTTG->SetALabel(wxString(_("TTG  @VMG")));
-        } else {
-          pTTG->SetALabel(wxString(_("TTG  @SOG")));
-        }
-      } else {
-        //    Remainder of route
-        float trng = rng;
-
-        Route* prt = g_pRouteMan->GetpActiveRoute();
-        wxRoutePointListNode* node = (prt->pRoutePointList)->GetFirst();
-        RoutePoint* prp;
-
-        int n_addflag = 0;
-        while (node) {
-          prp = node->GetData();
-          if (n_addflag) trng += prp->m_seg_len;
-
-          if (prp == prt->m_pRouteActivePoint) n_addflag++;
-
-          node = node->GetNext();
-        }
-
-        //                total rng
-        wxString strng;
-        if (trng < 10.0)
-          strng.Printf(_T("%6.2f"), toUsrDistance(trng));
-        else
-          strng.Printf(_T("%6.1f"), toUsrDistance(trng));
-
-        pRNG->SetAValue(strng);
-
-        // total TTG
-        // If showing total route TTG/ETA, use gSog for calculation
-
-        wxString tttg_s;
-        wxTimeSpan tttg_span;
-        float tttg_sec = 0.0;
-        if (speed > 0.) {
-          tttg_sec = (trng / gSog) * 3600.;
-          tttg_span = wxTimeSpan::Seconds((long)tttg_sec);
-          // Show also #days if TTG > 24 h
-          tttg_s = tttg_sec > SECONDS_PER_DAY ? tttg_span.Format(_("%Dd %H:%M"))
-                                              : tttg_span.Format("%H:%M:%S");
-        } else {
-          tttg_span = wxTimeSpan::Seconds(0);
-          tttg_s = _T("---");
-        }
-
-        pTTG->SetAValue(tttg_s);
-
-        //                total ETA to be shown on XTE panel
-        wxDateTime dtnow, eta;
-        dtnow.SetToCurrent();
-        eta = dtnow.Add(tttg_span);
-        wxString seta;
-
-        if (speed > 0.) {
-          // Show date, e.g. Feb 15, if TTG > 24 h
-          seta = tttg_sec > SECONDS_PER_DAY ? eta.Format(_T("%d/%m %H:%M"))
-                                            : eta.Format(_T("%H:%M"));
-        } else {
-          seta = _T("---");
-        }
-        pXTE->SetAValue(seta);
-        if (m_speedUsed == SPEED_VMG) {
-          pTTG->SetALabel(wxString(_("TTG  @VMG")));
-          pXTE->SetALabel(wxString(_("ETA  @VMG")));
-        } else {
-          pTTG->SetALabel(wxString(_("TTG  @SOG")));
-          pXTE->SetALabel(wxString(_("ETA  @SOG")));
-        }
-      }
-
-      pRNG->Refresh();
-      pBRG->Refresh();
-      pVMG->Refresh();
-      pTTG->Refresh();
-      pXTE->Refresh();
-    }
-  }
+void ConsoleCanvas::UpdateRouteData() {  
 }
 
 void ConsoleCanvas::RefreshConsoleData(void) {
@@ -700,55 +523,6 @@ void CDI::OnPaint(wxPaintEvent& event) {
 
   int path_length = sy * 3;
   int pix_per_xte = 120;
-
-  if (g_pRouteMan->GetpActiveRoute()) {
-    double angle = 90 - (g_pRouteMan->GetCurrentSegmentCourse() - gCog);
-
-    double dy = path_length * sin(angle * PI / 180.);
-    double dx = path_length * cos(angle * PI / 180.);
-
-    int xtedir;
-    xtedir = g_pRouteMan->GetXTEDir();
-    double xte = g_pRouteMan->GetCurrentXTEToActivePoint();
-
-    double ddy = xtedir * pix_per_xte * xte * sin((90 - angle) * PI / 180.);
-    double ddx = xtedir * pix_per_xte * xte * cos((90 - angle) * PI / 180.);
-
-    int ddxi = (int)ddx;
-    int ddyi = (int)ddy;
-
-    int xc1 = xp - (int)(dx / 2) + ddxi;
-    int yc1 = yp + (int)(dy / 2) + ddyi;
-    int xc2 = xp + (int)(dx / 2) + ddxi;
-    int yc2 = yp - (int)(dy / 2) + ddyi;
-
-    wxPoint road[4];
-
-    int road_top_width = 10;
-    int road_bot_width = 40;
-
-    road[0].x = xc1 - (int)(road_bot_width * cos((90 - angle) * PI / 180.));
-    road[0].y = yc1 - (int)(road_bot_width * sin((90 - angle) * PI / 180.));
-
-    road[1].x = xc2 - (int)(road_top_width * cos((90 - angle) * PI / 180.));
-    road[1].y = yc2 - (int)(road_top_width * sin((90 - angle) * PI / 180.));
-
-    road[2].x = xc2 + (int)(road_top_width * cos((90 - angle) * PI / 180.));
-    road[2].y = yc2 + (int)(road_top_width * sin((90 - angle) * PI / 180.));
-
-    road[3].x = xc1 + (int)(road_bot_width * cos((90 - angle) * PI / 180.));
-    road[3].y = yc1 + (int)(road_bot_width * sin((90 - angle) * PI / 180.));
-
-    mdc.SetBrush(*m_proadBrush);
-    mdc.SetPen(*m_proadPen);
-    mdc.DrawPolygon(4, road, 0, 0, wxODDEVEN_RULE);
-
-    ///        mdc.DrawLine( xc1, yc1, xc2, yc2 );
-
-    mdc.DrawLine(0, yp, sx, yp);
-    mdc.DrawCircle(xp, yp, 6);
-    mdc.DrawLine(xp, yp + 5, xp, yp - 5);
-  }
 
   wxPaintDC dc(this);
   dc.Blit(0, 0, sx, sy, &mdc, 0, 0);

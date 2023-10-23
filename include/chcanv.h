@@ -280,7 +280,6 @@ public:
   void SetUpMode(int mode);
   void ToggleLookahead();  
 
-  ocpnCompass* GetCompass() { return m_Compass; }
   wxColour GetFogColor() { return m_fog_color; }
 
   void ShowChartInfoWindow(int x, int dbIndex);
@@ -565,6 +564,7 @@ public:
   void DrawEmboss(ocpnDC &dc, emboss_data *pemboss);    
 
   void RescaleCanvas(LLBBox&);
+  void GenerateImageFile(std::string&, bool);
 
   //    Data
   int m_canvas_width, m_canvas_height;
@@ -732,7 +732,6 @@ public:
   wxMenu *m_piano_ctx_menu;
   int menu_selected_dbIndex, menu_selected_index;
 
-  ocpnCompass* m_Compass;
   bool m_bShowGPS;
 
   wxRect m_mainlast_tb_rect;
@@ -766,8 +765,7 @@ public:
   bool m_MouseDragging;
 
   wxString m_alertString;
-  wxRect m_scaleBarRect;  
-  bool m_bShowCompassWin;
+  wxRect m_scaleBarRect;    
   bool m_pianoFrozen;
 
   double m_sector_glat, m_sector_glon;

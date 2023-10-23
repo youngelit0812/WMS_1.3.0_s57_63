@@ -20,6 +20,7 @@
 #include "setupapi.h"  // presently stored in opencpn/src
 #endif
 
+#include <wx/app.h>
 #include <wx/apptrait.h>
 #include <wx/dir.h>
 #include <wx/filename.h>
@@ -596,24 +597,6 @@ wxString BasePlatform::GetPluginDataPath() {
   }
   return m_pluginDataPath;
 }
-
-
-#ifdef __ANDROID__
-void BasePlatform::ShowBusySpinner() { androidShowBusyIcon(); }
-#elif defined(CLIAPP)
-void BasePlatform::ShowBusySpinner() { }
-#else
-void BasePlatform::ShowBusySpinner() { ::wxBeginBusyCursor(); }
-#endif
-
-#ifdef __ANDROID__
-void BasePlatform::HideBusySpinner() { androidHideBusyIcon(); }
-#elif defined(CLIAPP)
-void BasePlatform::HideBusySpinner() { }
-#else
-void BasePlatform::HideBusySpinner() { ::wxEndBusyCursor(); }
-#endif
-
 // getDisplaySize
 
 #ifdef CLIAPP

@@ -69,6 +69,9 @@ public:
   OCPNPlatform();
   virtual ~OCPNPlatform();
 
+  //      Internal Device Support
+  static bool hasInternalGPS(wxString profile = _T(""));  // GPS
+
   static bool hasInternalBT(wxString profile = _T(""));  // Bluetooth
   bool startBluetoothScan();
   wxArrayString getBluetoothScanResults();
@@ -79,8 +82,12 @@ public:
   //  Called from MyApp() immediately upon entry to MyApp::OnInit()
   static void Initialize_1(void);
 
+  //  Called from MyApp() immediately before creation of MyFrame()
   void Initialize_2(void);
-  void Initialize_3();
+
+  //  Called from MyApp()::OnInit() just after gFrame is created, so gFrame is
+  //  available
+  void Initialize_3(void);
 
   //  Called from MyApp() just before end of MyApp::OnInit()
   static void Initialize_4(void);
@@ -94,8 +101,6 @@ public:
   //--------------------------------------------------------------------------
   //      Platform Display Support
   //--------------------------------------------------------------------------
-  static void ShowBusySpinner(void);
-  static void HideBusySpinner(void);
   double getFontPointsperPixel(void);
   wxSize getDisplaySize();
   double GetDisplaySizeMM();
@@ -107,6 +112,7 @@ public:
   double GetToolbarScaleFactor(int GUIScaleFactor);
 
   void PositionAISAlert(wxWindow *alert_window);
+  float GetChartScaleFactorExp();
   float GetChartScaleFactorExp(float scale_linear);
   float GetMarkScaleFactorExp(float scale_linear);
   //float GetDIPScaleFactor();
@@ -121,9 +127,7 @@ public:
   //--------------------------------------------------------------------------
   //      Per-Platform file/directory support
   //--------------------------------------------------------------------------
-
-    MyConfig *GetConfigObject();  
-
+    MyConfig *GetConfigObject();
   //--------------------------------------------------------------------------
   //      Per-Platform Utility support
   //--------------------------------------------------------------------------
@@ -137,7 +141,6 @@ public:
 
   void SetLocaleSearchPrefixes(void);
   wxString GetDefaultSystemLocale();
-  float GetChartScaleFactorExp();
 
 #if wxUSE_XLOCALE
   wxString GetAdjustedAppLocale();

@@ -516,20 +516,6 @@ bool ChartTableEntry::Read(const ChartDatabase *pDb, wxInputStream &is) {
       int npeSize = nPlyEntries * 2 * sizeof(float);
       pPlyTable = (float *)malloc(npeSize);
       is.Read(pPlyTable, npeSize);
-
-	  char szValues[100] = { 0 };
-	  FILE* pFile = 0;
-	  if (nPlyEntries > 100) pFile = fopen("D:\\vertex.txt", "wb");
-	  else pFile = fopen("D:\\vertex1.txt", "wb");
-
-	  for (int iii = 0; iii < nPlyEntries; iii++) {
-		  memset(szValues, 0x00, 100);
-		  sprintf(szValues, "x:%.2f, y:%.2f\n", pPlyTable[iii * 2], pPlyTable[iii * 2 + 1]);
-		  fwrite(szValues, 1, strlen(szValues), pFile);
-	  }
-	  
-	  fclose(pFile);
-
     }
 
     if (nAuxPlyEntries) {

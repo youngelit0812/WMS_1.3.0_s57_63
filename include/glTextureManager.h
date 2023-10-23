@@ -64,6 +64,9 @@ public:
   void SetTicket(JobTicket *ticket) { m_ticket = ticket; }
   JobTicket *GetTicket(void) { return m_ticket; }
 
+  // required for sending with wxPostEvent()
+  wxEvent *Clone() const;
+
   int type;
   int nstat;
   int nstat_max;

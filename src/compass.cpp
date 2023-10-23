@@ -76,12 +76,99 @@ ocpnCompass::ocpnCompass(ChartCanvas* parent, bool bShowGPS) {
 }
 
 ocpnCompass::~ocpnCompass() {
+#ifdef ocpnUSE_GL
+  if (m_texobj) {
+    glDeleteTextures(1, &m_texobj);
+    m_texobj = 0;
+  }
+#endif
+
   delete m_pStatBoxToolStaticBmp;
 }
 
 void ocpnCompass::Paint(ocpnDC& dc) {
   if (m_shown && m_StatBmp.IsOk()) {
+#if defined(ocpnUSE_GLES) || defined(ocpnUSE_GL)
+    if (!m_texobj){
+      // The glContext is known active here,
+      // so safe to create a texture.
+      glGenTextures(1, &m_texobj);
+      CreateTexture();
+    }
+
+    if (g_bopengl && m_texobj /*&& m_texOK*/) {
+      glBindTexture(GL_TEXTURE_2D, m_texobj);
+      glEnable(GL_TEXTURE_2D);
+
+#if defined(USE_ANDROID_GLES2) || defined(ocpnUSE_GLSL)
+      float coords[8];
+      float uv[8];
+
+      // normal uv, normalized to POT
+      uv[0] = 0;
+      uv[1] = 0;
+      uv[2] = (float)m_image_width / m_tex_w;
+      uv[3] = 0;
+      uv[4] = (float)m_image_width / m_tex_w;
+      uv[5] = (float)m_image_height / m_tex_h;
+      uv[6] = 0;
+      uv[7] = (float)m_image_height / m_tex_h;
+
+      // pixels
+      coords[0] = m_rect.x;
+      coords[1] = m_rect.y;
+      coords[2] = m_rect.x + m_rect.width;
+      coords[3] = m_rect.y;
+      coords[4] = m_rect.x + m_rect.width;
+      coords[5] = m_rect.y + m_rect.height;
+      coords[6] = m_rect.x;
+      coords[7] = m_rect.y + m_rect.height;
+
+      m_parent->GetglCanvas()->RenderTextures(dc, coords, uv, 4,
+                                              m_parent->GetpVP());
+#else
+
+      glBegin(GL_QUADS);
+
+      glTexCoord2f(0, 0);
+      glVertex2i(m_rect.x, m_rect.y);
+      glTexCoord2f((float)m_image_width / m_tex_w, 0);
+      glVertex2i(m_rect.x + m_rect.width, m_rect.y);
+      glTexCoord2f((float)m_image_width / m_tex_w,
+                   (float)m_image_height / m_tex_h);
+      glVertex2i(m_rect.x + m_rect.width, m_rect.y + m_rect.height);
+      glTexCoord2f(0, (float)m_image_height / m_tex_h);
+      glVertex2i(m_rect.x, m_rect.y + m_rect.height);
+
+      glEnd();
+#endif
+
+      glDisable(GL_TEXTURE_2D);
+
+    } else {
+#ifdef __WXOSX__
+      // Support MacBook Retina display
+      if(g_bopengl){
+        double scale = m_parent->GetContentScaleFactor();
+        if(scale > 1){
+          wxImage image = m_StatBmp.ConvertToImage();
+          image.Rescale( image.GetWidth() * scale, image.GetHeight() * scale);
+          wxBitmap bmp( image );
+          dc.DrawBitmap(bmp, m_rect.x, m_rect.y, true);
+        }
+        else
+          dc.DrawBitmap(m_StatBmp, m_rect.x, m_rect.y, true);
+      }
+      else
+        dc.DrawBitmap(m_StatBmp, m_rect.x, m_rect.y, true);
+#else
+      dc.DrawBitmap(m_StatBmp, m_rect.x, m_rect.y, true);
+#endif
+    }
+
+#else
     dc.DrawBitmap(m_StatBmp, m_rect.x, m_rect.y, true);
+#endif
   }
 }
 
@@ -106,9 +193,16 @@ void ocpnCompass::SetColorScheme(ColorScheme cs) {
 }
 
 void ocpnCompass::UpdateStatus(bool bnew) {
-  if (bnew) m_lastgpsIconName.Clear();  // force an update to occur
+  if (bnew)
+    m_lastgpsIconName.Clear();  // force an update to occur
 
   CreateBmp(bnew);
+
+#ifdef ocpnUSE_GL
+  if (g_bopengl && m_texobj)
+    CreateTexture();
+#endif
+
 }
 
 void ocpnCompass::SetScaleFactor(float factor) {

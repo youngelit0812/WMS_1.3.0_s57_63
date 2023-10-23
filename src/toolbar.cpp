@@ -299,7 +299,6 @@ public:
 //---------------------------------------------------------------------------------------
 BEGIN_EVENT_TABLE(ocpnFloatingToolbarDialog, wxFrame)
 EVT_MOUSE_EVENTS(ocpnFloatingToolbarDialog::MouseEvent)
-EVT_MENU(wxID_ANY, ocpnFloatingToolbarDialog::OnToolLeftClick)
 EVT_TIMER(FADE_TIMER, ocpnFloatingToolbarDialog::FadeTimerEvent)
 EVT_TIMER(DESTROY_TIMER, ocpnFloatingToolbarDialog::DestroyTimerEvent)
 EVT_KEY_DOWN(ocpnFloatingToolbarDialog::OnKeyDown)
@@ -812,7 +811,6 @@ void ocpnFloatingToolbarDialog::FadeTimerEvent(wxTimerEvent &event) {
       if (m_bAutoHideToolbar && (m_nAutoHideToolbar > 0) && !m_bsubmerged) {
         wxCommandEvent event;
         event.SetId(ID_MASTERTOGGLE);
-        gFrame->OnToolLeftClick(event);
       }
     }
   } else {
@@ -1073,16 +1071,6 @@ void ocpnFloatingToolbarDialog::Realize() {
   }
 }
 
-void ocpnFloatingToolbarDialog::OnToolLeftClick(wxCommandEvent &event) {
-  // Since Dialog events don't propagate automatically, we send it explicitly
-  // (instead of relying on event.Skip()). Send events up the window hierarchy
-
-  m_pparent->GetEventHandler()->AddPendingEvent(event);
-#ifndef __WXQT__
-  gFrame->Raise();
-#endif
-}
-
 ocpnToolBarSimple *ocpnFloatingToolbarDialog::GetToolbar() {
   if (!m_ptoolbar) {
     m_ptoolbar = CreateNewToolbar();
@@ -1337,9 +1325,6 @@ ocpnToolBarSimple *ocpnFloatingToolbarDialog::CreateMyToolbar() {
         if( pttc->kind == wxITEM_CHECK )
             tb->ToggleTool( pttc->id, pttc->b_toggle );
     }
-
-
-    // TODO SetStatusBarPane( -1 );                   // don't show help on status bar
 
     return tb;
 #endif

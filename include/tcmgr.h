@@ -123,6 +123,11 @@ public:
 private:
   void PurgeData();
 
+  void LoadMRU(void);
+  void SaveMRU(void);
+  void AddMRU(Station_Data *psd);
+  void FreeMRU(void);
+
   bool bTCMReady;
   wxString pmru_file_name;
 

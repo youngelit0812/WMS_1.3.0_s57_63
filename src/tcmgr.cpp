@@ -7208,10 +7208,7 @@ void bit_pack(NV_U_BYTE *buffer, NV_U_INT32 start, NV_U_INT32 numbits,
 
     /*  For the last byte we mask out anything after the end bit.       */
 
-    if (end_bit < 8) {
-	NV_U_BYTE nuByte = notmask[end_bit];
-	buffer[start_byte] &= nuByte;
-    }
+    buffer[start_byte] &= notmask[end_bit];
 
     /*  Get the last part of the value and stuff it in the end byte.    */
     /*  The left shift effectively erases anything above 8 - end_bit    */
