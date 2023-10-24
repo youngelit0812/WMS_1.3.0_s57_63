@@ -110,13 +110,20 @@ void HTTPSession::onReceivedRequestInternal(const HTTPRequest& request)
 				std::string sIMGFilePath = bPNGImageFlag ? sIMGFilePathPrefix + PNG_FILE_EXTENSION : sIMGFilePathPrefix + JPEG_FILE_EXTENSION;
 
 				std::string sMessage("");				
-				sMessage += umParameters.at("bbox") + "|" + umParameters.at("width") + "|" + umParameters.at("height") 
+				sMessage += "|" + umParameters.at("bbox") + "|" + umParameters.at("width") + "|" + umParameters.at("height") 
 						 + "|" + umParameters.at("layers") + "|" + sIMGFilePath + "|" + (bPNGImageFlag ? "1" : "0");
 
-				std::lock_guard<std::mutex> lock(g_mtx);
-				g_messageQueue.push(sMessage);
-				
-				g_cv.notify_one();				
+				std::unique_lock<std::mutex> lock(g_mtx);
+				lock.unlock();
+				g_messageQueue.push(sMessage);				
+				g_cv.notify_one();
+#if defined(_WIN32) || defined(_WIN64)				
+				::_sleep(5);
+#else
+				usleep(5 * 1000);
+#endif
+				lock.lock();
+
 				SendResponseAsync(response().MakeGetMapResponse(sIMGFilePath, bPNGImageFlag));
 			}
 			catch (std::exception const& ex) {

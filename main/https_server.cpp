@@ -43,8 +43,16 @@
 #include <gtk/gtk.h>
 #endif
 
-#define MAIN_PARAM_COUNT		6
+#if !defined(_WIN32) && !defined(_WIN64)
+#include <unistd.h>
+#endif
 
+#define MAIN_PARAM_COUNT		7
+#define RESTART_MARK_STR		"!"
+#define TERMINATE_MARK_STR		"exit"
+#define RENDER_SPLIT_MARK		'|'
+
+bool g_bUserInput;
 bool g_isRunning;
 int g_nCSignal;
 
@@ -288,21 +296,73 @@ void c_signal_handler(int signal)
 	g_bMessageLoop = false;
 }
 
+#ifdef _WIN32
+BOOL WINAPI ConsoleCtrlHandler(DWORD dwCtrlType) {
+	switch (dwCtrlType) {
+	case CTRL_C_EVENT:	
+		return TRUE;
+	default:
+		return FALSE;
+	}
+}
+#else
+void IgnoreInterruptSignal(int signal) {
+}
+#endif
+
+void UserInputThreadProc() {
+	std::string sInput;
+
+#ifdef _WIN32	
+	SetConsoleCtrlHandler(ConsoleCtrlHandler, TRUE);
+#else	
+	std::signal(SIGINT, IgnoreInterruptSignal);
+#endif
+
+	while (g_bUserInput) {
+		std::getline(std::cin, sInput);
+
+		if (sInput == RESTART_MARK_STR || sInput == TERMINATE_MARK_STR) {
+			std::unique_lock<std::mutex> lock(g_mtx);
+			lock.unlock();
+			g_messageQueue.push(sInput);
+			g_cv.notify_one();
+#if defined(_WIN32) || defined(_WIN64)				
+			::_sleep(10);
+#else
+			usleep(10 * 1000);
+#endif
+			lock.lock();
+		}
+
+#if defined(_WIN32) || defined(_WIN64)				
+		::_sleep(0);
+#else
+		sleep(0);
+#endif		
+	}
+}
+
 int main(int argc, char** argv)
 {
 	std::string sConfigPath = "./env/config.json";
-
 	g_bMessageLoop = true;
 	g_nCSignal = 0;
 	g_isRunning = true;
+	g_bUserInput = true;
+
+	std::thread userInputThread(UserInputThreadProc);
+
 	signal(SIGINT, signal_handler);
 	signal(SIGILL, signal_handler);
 	signal(SIGFPE, signal_handler);
 	signal(SIGSEGV, signal_handler);
-	signal(SIGTERM, signal_handler);
-	signal(SIGBREAK, signal_handler);
+	signal(SIGTERM, signal_handler);	
 	signal(SIGABRT, signal_handler);
+#if defined(_WIN32) || defined(_WIN64)
+	signal(SIGBREAK, signal_handler);
 	signal(SIGABRT_COMPAT, signal_handler);
+#endif
 
 	std::signal(SIGINT, c_signal_handler);
 
@@ -363,43 +423,66 @@ int main(int argc, char** argv)
 	std::cout << "Server starting..." << std::endl;
 	serverHTTP->Start();
 
+	printf("Press 'exit' to stop the server or '!' to restart the server...\n");
     // Perform text input
     std::string line;
-	while (1) {		
+	while (1) {
 		if (!g_isRunning || g_nCSignal > 0) break;
 		
 		if (g_bMessageLoop) {
-			std::unique_lock<std::mutex> lock(g_mtx);
-			g_cv.wait(lock, [] { return !g_messageQueue.empty(); });
+			try {
+				printf("enter to wait in main1\n");
+				std::unique_lock<std::mutex> lock(g_mtx);
+				g_cv.wait(lock, [] { return !g_messageQueue.empty(); });
+				printf("enter to wait in main2\n");
 
-			std::string message = g_messageQueue.front();
-			g_messageQueue.pop();
+				std::string message = g_messageQueue.front();
+				g_messageQueue.pop();
 
-			printf("new message : %s", message.c_str());
+				if (message == RESTART_MARK_STR) {
+					printf("Server restarting...\n");
+					serverHTTP->Restart();
+					serverHTTPS->Restart();
+					printf("Done!\n");					
+				}
+				else if (message == TERMINATE_MARK_STR) {
+					break;
+				} else if (message.at(0) == RENDER_SPLIT_MARK){
+					std::vector<std::string> substrings;
 
-			std::vector<std::string> substrings;
+					std::string delimiter("|");
+					size_t pos = 0;
+					std::string token;
+					while ((pos = message.find(delimiter)) != std::string::npos) {
+						token = message.substr(0, pos);
+						substrings.push_back(token);
+						message.erase(0, pos + delimiter.length());
+					}
+					substrings.push_back(message);
 
-			std::string delimiter = "|";
-			size_t pos = 0;
-			std::string token;
-			while ((pos = message.find(delimiter)) != std::string::npos) {
-				token = message.substr(0, pos);
-				substrings.push_back(token);
-				message.erase(0, pos + delimiter.length());
+					if (substrings.size() == MAIN_PARAM_COUNT) {
+						pAppForService->UpdateFrameCanvas(substrings.at(1), std::stoi(substrings.at(2)), std::stoi(substrings.at(3)),
+							substrings.at(4), substrings.at(5), substrings.at(6) == "1" ? true : false);
+					}
+				}
 			}
-			substrings.push_back(message);
-
-			if (substrings.size() == MAIN_PARAM_COUNT) {
-				pAppForService->UpdateFrameCanvas(substrings.at(0), std::stoi(substrings.at(1)), std::stoi(substrings.at(2)), 
-								substrings.at(3), substrings.at(4), substrings.at(5) == "1" ? true : false);
+			catch (std::exception& e) {
+				continue;
 			}
-			
-			continue;
 		}
-
+#if defined(_WIN32) || defined(_WIN64)
 		::Sleep(0);
+#else
+		sleep(0);
+#endif
     }
 
+	g_bUserInput = false;
+#if defined(_WIN32) || defined(_WIN64)
+	::Sleep(0);
+#else
+	sleep(0);
+#endif
     // Stop the server
 	std::cout << "Server stopping..." << std::endl;
 	if (pAppForService->OnExit(envConfig.sIMGDirPath)) delete pAppForService;
@@ -412,6 +495,8 @@ int main(int argc, char** argv)
     std::cout << "Asio service stopping..." << std::endl;
     service->Stop();
     std::cout << "Done!" << std::endl;
+	
+	userInputThread.join();
 
 	return 0;
 }

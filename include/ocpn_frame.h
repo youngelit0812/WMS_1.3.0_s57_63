@@ -198,7 +198,7 @@ public:
   bool SetGlobalToolbarViz(bool viz);
 
   void MouseEvent(wxMouseEvent &event);
-  void CenterView(ChartCanvas *cc, const LLBBox &RBBox, int nWidth, int nHeight);
+  void CenterView(ChartCanvas *cc, const LLBBox &RBBox);
 
   void JumpToPosition(ChartCanvas *cc, double lat, double lon, double scale);
 

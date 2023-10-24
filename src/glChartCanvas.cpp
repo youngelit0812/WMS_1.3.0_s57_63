@@ -8,6 +8,7 @@
 #include "dychart.h"
 
 #include <algorithm>
+#include <iostream>
 #include <stdint.h>
 #include <vector>
 
@@ -230,7 +231,6 @@ extern wxSize pprog_size;
 extern int pprog_count;
 extern int pprog_threads;
 extern float g_ChartScaleFactorExp;
-extern MyFrame *gFrame;
 
 //#if defined(__MSVC__) && !defined(ocpnUSE_GLES) /* this compiler doesn't
 // support vla */ const #endif extern int g_mipmap_max_level;
@@ -372,12 +372,7 @@ void glChartCanvas::Init() {
   if (!EnableTouchEvents(wxTOUCH_ZOOM_GESTURE |
                          wxTOUCH_PRESS_GESTURES)) {
     wxLogError("Failed to enable touch events");
-  }
-
-  Bind(wxEVT_GESTURE_ZOOM, &ChartCanvas::OnZoom, m_pParentCanvas);
-
-  Bind(wxEVT_LONG_PRESS, &ChartCanvas::OnLongPress, m_pParentCanvas);
-  Bind(wxEVT_PRESS_AND_TAP, &ChartCanvas::OnPressAndTap, m_pParentCanvas);
+  }    
 #endif /* HAVE_WX_GESTURE_EVENTS */
   if (!g_glTextureManager) g_glTextureManager = new glTextureManager;
 }
@@ -672,7 +667,7 @@ void glChartCanvas::SetupOpenGL() {
   if (g_bSoftwareGL) msg.Printf(_T("OpenGL-> Software OpenGL"));
   msg.Printf(_T("OpenGL-> Renderer String: "));
   msg += m_renderer;
-  printf((const char *)msg.mb_str(wxConvUTF8));
+  printf("%s\n", (const char *)msg.mb_str(wxConvUTF8));
 
   if (ps52plib) ps52plib->SetGLRendererString(m_renderer);
 
@@ -681,14 +676,14 @@ void glChartCanvas::SetupOpenGL() {
   msg.Printf(_T("OpenGL-> Version reported:  "));
   m_version = wxString(version_string, wxConvUTF8);
   msg += m_version;
-  printf((const char*)msg.mb_str(wxConvUTF8));
+  printf("%s\n", (const char*)msg.mb_str(wxConvUTF8));
 
   char GLSL_version_string[80];
   strncpy(GLSL_version_string, (char *)glGetString(GL_SHADING_LANGUAGE_VERSION), 79);
   msg.Printf(_T("OpenGL-> GLSL Version reported:  "));
   m_GLSLversion = wxString(GLSL_version_string, wxConvUTF8);
   msg += m_GLSLversion;
-  printf((const char*)msg.mb_str(wxConvUTF8));
+  printf("%s\n", (const char*)msg.mb_str(wxConvUTF8));
 
 #ifndef __WXOSX__
   GLenum err = glewInit();
@@ -1390,7 +1385,7 @@ void glChartCanvas::GridDraw() {
 	double dRv = 1.0;
 #if defined(__WXOSX__) || defined(__WXGTK3__)
 	// Support scaled HDPI displays.
-	if (gFrame) dRv = gFrame->GetContentScaleFactor();
+	m_pParentCanvas->GetContentScaleFactor();
 #endif
 
     m_gridfont.SetContentScaleFactor(dRv);
@@ -2746,88 +2741,70 @@ void glChartCanvas::RenderGLAlertMessage() {
 
 void glChartCanvas::DrawGLCanvasData(std::string& sIMGFilePath, bool bPNGFlag) {
 	wxClientDC dc(this);
+	printf("glchcanv: DrawGL1\n");
+	if (!m_pcontext) return;
+	if (!g_bopengl) return;  
+	printf("glchcanv: DrawGL2\n");
+	SetCurrent(*m_pcontext);
+	if (!m_bsetup) {
+		SetupOpenGL();
+		if (ps52plib) ps52plib->FlushSymbolCaches(ChartCtxFactory());
+		m_bsetup = true;  
+	}
+	printf("glchcanv: DrawGL3\n");
+	if (!m_b_paint_enable) return;	
+	if (m_in_glpaint) return;
+	printf("glchcanv: DrawGL4\n");
+	//  If necessary, reconfigure the S52 PLIB
+	m_pParentCanvas->UpdateCanvasS52PLIBConfig();
 
-  if (!m_pcontext) return;
-
-  if (!g_bopengl) {    
-    return;
-  }
-
-  SetCurrent(*m_pcontext);
-
-  if (!m_bsetup) {
-    SetupOpenGL();
-
-    if (ps52plib) ps52plib->FlushSymbolCaches(ChartCtxFactory());
-
-    m_bsetup = true;  
-  }
-
-  //  Paint updates may have been externally disabled (temporarily, to avoid
-  //  Yield() recursion performance loss)
-  if (!m_b_paint_enable) return;
-  //      Recursion test, sometimes seen on GTK systems when wxBusyCursor is
-  //      activated
-  if (m_in_glpaint) return;
-
-  //  If necessary, reconfigure the S52 PLIB
-  m_pParentCanvas->UpdateCanvasS52PLIBConfig();
-
-  m_in_glpaint++;
-  Render();
-  m_in_glpaint--;
-
-  GenerateImageFile(sIMGFilePath, bPNGFlag);
+	m_in_glpaint++;
+	Render();
+	m_in_glpaint--;
+	printf("glchcanv: DrawGL5\n");
+	GenerateImageFile(sIMGFilePath, bPNGFlag);
 }
 
 void glChartCanvas::GenerateImageFile(std::string& sIMGFilePath, bool bPNGFlag) {
   int nWidth, nHeight;
+  int i, j, r, g, b;
 
   nWidth = GetGLCanvasWidth();
   nHeight = GetGLCanvasHeight();
 
-  wxMemoryDC dc;
-  wxBitmap bmp(nWidth, nHeight, -1);
-  dc.SelectObject(bmp);
-
   SwapBuffers();
 
-  unsigned char* pixels = new unsigned char[nWidth * nHeight * 3];
-  glReadPixels(0, 0, nWidth, nHeight, GL_RGB, GL_UNSIGNED_BYTE, pixels);
-  int nErrorCode = glGetError();
-  if (nErrorCode == GL_INVALID_OPERATION) return;
+  int bufferSize = nWidth * nHeight * 3; // 3 components per pixel
+  GLubyte* pixels = new GLubyte[bufferSize];
+  glReadnPixels(0, 0, nWidth, nHeight, GL_RGB, GL_UNSIGNED_BYTE, bufferSize, pixels);
 
-  wxImage xImage(nWidth, nHeight, pixels, true);
-  xImage = xImage.Mirror(false);
+  if (pixels) {
+	  wxImage xImage(nWidth, nHeight, pixels, true);
+	  xImage = xImage.Mirror(false);
 
-  for (int i = 0; i < xImage.GetWidth(); i++) {
-    for (int j = 0; j < xImage.GetHeight(); j++) {
-      int r = xImage.GetRed(i, j);
-      int g = xImage.GetGreen(i, j);
-      int b = xImage.GetBlue(i, j);
+	  for (i = 0; i < xImage.GetWidth(); i++) {
+		  for (j = 0; j < xImage.GetHeight(); j++) {			  
+			  r = (xImage.GetRed(i, j) - 128) * 1.3 + 128;
+			  g = (xImage.GetGreen(i, j) - 128) * 1.3 + 128;
+			  b = (xImage.GetBlue(i, j) - 128) * 1.3 + 128;
 
-      r = (r - 128) * 1.3 + 128;
-      g = (g - 128) * 1.3 + 128;
-      b = (b - 128) * 1.3 + 128;
+			  r = std::min(255, std::max(0, r));
+			  g = std::min(255, std::max(0, g));
+			  b = std::min(255, std::max(0, b));
 
-      r = wxMin(255, wxMax(0, r));
-      g = wxMin(255, wxMax(0, g));
-      b = wxMin(255, wxMax(0, b));
+			  xImage.SetRGB(i, j, r, g, b);
+		  }
+	  }
 
-      xImage.SetRGB(i, j, r, g, b);
-    }
+	  xImage.Blur(3);	 
+
+	  wxFileOutputStream xFileOutput(sIMGFilePath);
+	  if (xFileOutput.IsOk()) {
+		  xImage.SaveFile(xFileOutput, wxBITMAP_TYPE_JPEG);
+	  }
+	  // Unmap the buffer
+	  delete[] pixels;
   }
-
-  xImage.Blur(3);
-  xImage.SetOption(wxIMAGE_OPTION_QUALITY, 100);
-
-  wxFileOutputStream xFileOutput(sIMGFilePath);
-  if (xFileOutput.IsOk()) {
-	  xImage.SaveFile(xFileOutput, wxBITMAP_TYPE_JPEG);
-  }
-
-  delete[] pixels;
-  xImage.Destroy();  
 }
 
 unsigned long quiltHash;
@@ -2852,6 +2829,7 @@ void glChartCanvas::Render() {
 
 #ifdef __WXOSX__
   // Support scaled HDPI displays.
+  printf("glCC: Render 1\n");
   m_displayScale = GetContentScaleFactor();
 #endif
 
@@ -2881,6 +2859,7 @@ void glChartCanvas::Render() {
   m_glcanvas_width = gl_width;
   m_glcanvas_height = gl_height;
 
+  printf("glCC: w:%d, h:%d", gl_width, gl_height);
   // Avoid some harmonic difficulties with odd-size glCanvas
   bool b_odd = false;
   if (gl_height & 1){
@@ -2914,6 +2893,7 @@ void glChartCanvas::Render() {
 
   OCPNRegion screen_region(wxRect(0, 0, gl_width, gl_height));
   glViewport(0, 0, (GLint)gl_width, (GLint)gl_height);
+  printf("glCC : render : screen_region:%d,%d\n", gl_width, gl_height);
 
 //#ifndef USE_ANDROID_GLES2
 #if !defined(USE_ANDROID_GLES2)
@@ -2949,7 +2929,6 @@ void glChartCanvas::Render() {
 
   //  If we plan to post process the display, don't use accelerated panning
   double scale_factor = VPoint.ref_scale / VPoint.chart_scale;
-
 
   bool bpost_hilite = !m_pParentCanvas->m_pQuilt->GetHiliteRegion().Empty();
   bool useFBO = false;
@@ -3069,6 +3048,8 @@ void glChartCanvas::Render() {
                                  GL_TEXTURE_2D,
                                  m_cache_tex[m_cache_page], 0);
           // First render the new content into the update region
+		  wxRect xRectTemp = update_region.GetBox();
+		  printf("glCC : Render charts:%d,%d,%d,%d\n", xRectTemp.GetLeft(), xRectTemp.GetTop(), xRectTemp.GetRight(), xRectTemp.GetBottom());
           RenderCharts(m_gldc, update_region);
           glDisable(g_texture_rectangle_format);
           glUseProgram(0);
@@ -3197,6 +3178,7 @@ void glChartCanvas::Render() {
         glClear(GL_COLOR_BUFFER_BIT);
 
         OCPNRegion rscreen_region(VPoint.rv_rect);
+		printf("glCC : render chart 2 : %d,%d,%d,%d", VPoint.rv_rect.GetLeft(), VPoint.rv_rect.GetTop(), VPoint.rv_rect.GetRight(), VPoint.rv_rect.GetBottom());
         RenderCharts(m_gldc, rscreen_region);
 
         m_cache_page = !m_cache_page; /* page flip */
@@ -3795,7 +3777,6 @@ void glChartCanvas::ZoomProject(float offset_x, float offset_y, float swidth,
   //  on-screen due to address wrapping in the frame buffer. Detect this case,
   //  and render some simple solid covering quads to avoid a confusing display.
 
-
   SwapBuffers();
 }
 
@@ -3805,7 +3786,7 @@ void glChartCanvas::onZoomTimerEvent(wxTimerEvent &event) {
   if ((m_nRun < m_nTotal) && !m_zoomFinal) {
     m_runoffsetx += m_offsetxStep;
     if (m_offsetxStep > 0)
-      m_runoffsetx = wxMin(m_runoffsetx, m_fbo_offsetx);
+      m_runoffsetx = std::min(m_runoffsetx, m_fbo_offsetx);
     else
       m_runoffsetx = wxMax(m_runoffsetx, m_fbo_offsetx);
 

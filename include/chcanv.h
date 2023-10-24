@@ -121,14 +121,8 @@ public:
   //    Methods
   void PaintCleanup();  
   void SetCanvasCursor(wxMouseEvent &event);  
-#ifdef HAVE_WX_GESTURE_EVENTS
-  void OnZoom(wxZoomGestureEvent& event);
-  void OnLongPress(wxLongPressEvent& event);
-  void OnPressAndTap(wxPressAndTapEvent& event);
-
+#ifdef HAVE_WX_GESTURE_EVENTS  
   void OnDoubleLeftClick(wxMouseEvent& event);
-
-  void OnWheel(wxMouseEvent& event);  
 #endif /* HAVE_WX_GESTURE_EVENTS */
 
   bool IsPrimaryCanvas() { return (m_canvasIndex == 0); }
@@ -330,8 +324,7 @@ public:
   double m_VPRotate;
 
 #ifdef HAVE_WX_GESTURE_EVENTS
-  double m_oldVPSScale;
-  bool m_popupWanted;
+  double m_oldVPSScale;  
   bool m_leftdown;
   wxPoint m_zoomStartPoint;
 #endif /* HAVE_WX_GESTURE_EVENTS */

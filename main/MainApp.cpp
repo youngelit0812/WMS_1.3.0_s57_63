@@ -20,6 +20,7 @@
 #include <chrono>
 #include <ctime>
 #include <iomanip>
+#include <vector>
 
 #ifdef __WXMSW__
 #include <math.h>
@@ -1044,6 +1045,11 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart, std::string& 
 
   g_nframewin_x = cw;
   g_nframewin_y = ch;  
+
+  g_lastClientRectx = cx;
+  g_lastClientRecty = cy;
+  g_lastClientRectw = cw;
+  g_lastClientRecth = ch;
   
   if ((g_nframewin_x > 100) && (g_nframewin_y > 100) && (g_nframewin_x <= cw) && (g_nframewin_y <= ch))
     new_frame_size.Set(g_nframewin_x, g_nframewin_y);
@@ -1055,11 +1061,6 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart, std::string& 
 		new_frame_size.Set(cw * 7 / 10, ch * 7 / 10);
 		g_bframemax = false;
 	}
-
-	g_lastClientRectx = cx;
-	g_lastClientRecty = cy;
-	g_lastClientRectw = cw;
-	g_lastClientRecth = ch;
 
 	wxPoint position(0, 0);
 	wxSize dsize = wxGetDisplaySize();
@@ -1348,6 +1349,8 @@ int MainApp::GetLayerIndex(std::string& sLayerCaption) {
 
 bool MainApp::UpdateFrameCanvas(std::string& sBBox, int nWidth, int nHeight, std::string& sLayers, std::string& sIMGFilePath, bool bPNGFlag)
 {
+	if (nWidth % 2 > 0) nWidth--;	
+
 	if (!gFrame || sBBox.empty() || sLayers.empty() || nWidth < 1 || nWidth > 5000 || nHeight < 1 || nHeight > 5000) return false;
 
 	std::vector<std::string> bbox_parts;
@@ -1375,28 +1378,28 @@ bool MainApp::UpdateFrameCanvas(std::string& sBBox, int nWidth, int nHeight, std
 
 	if (dMinLat < -89.5 || dMinLat > 89.5 || dMaxLat < -89.5 || dMaxLat > 89.5) return false;
 
-	std::vector<int> vnLayers;
-
+	std::vector<int> vnTLayers;
+	
 	pos = 0;
 	int nLayerIndex = -1;
 	while ((pos = sLayers.find(delimiter)) != std::string::npos) {
 		std::string part = sLayers.substr(0, pos);
 		nLayerIndex = GetLayerIndex(part);
-		if (nLayerIndex >= 0) vnLayers.push_back(nLayerIndex);
+		if (nLayerIndex >= 0) vnTLayers.push_back(nLayerIndex);
 		sLayers.erase(0, pos + delimiter.length());
 	}
 
 	nLayerIndex = GetLayerIndex(sLayers);
-	if (nLayerIndex >= 0) vnLayers.push_back(nLayerIndex);
-
+	if (nLayerIndex >= 0) vnTLayers.push_back(nLayerIndex);
+	
 	gFrame->ResizeFrameWH(nWidth, nHeight);
-	ChartCanvas* pCC = gFrame->GetPrimaryCanvas();	
-	gFrame->CenterView(pCC, llbBox, nWidth, nHeight);
+	ChartCanvas* pTCC = gFrame->GetPrimaryCanvas();
+	gFrame->CenterView(pTCC, llbBox);
 	gFrame->DoChartUpdate();
 	gFrame->ChartsRefresh();
+	
+	pTCC->m_b_paint_enable = true;
+	pTCC->DrawCanvasData(llbBox, nWidth, nHeight, vnTLayers, sIMGFilePath, bPNGFlag);
+	return true;	
 
-	pCC->m_b_paint_enable = true;
-	pCC->DrawCanvasData(llbBox, nWidth, nHeight, vnLayers, sIMGFilePath, bPNGFlag);
-
-	return true;
 }

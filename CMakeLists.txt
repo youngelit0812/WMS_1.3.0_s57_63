@@ -677,10 +677,6 @@ endif ()
 message(STATUS "Forcing wxWidgets_VERSION_STRING: ${wxWidgets_VERSION_STRING}")
 set(wxWidgets_VERSION_STRING "3.2.0")
 
-if ( wxWidgets_VERSION_STRING VERSION_GREATER "3.1.0")
-  add_definitions("-DHAVE_WX_GESTURE_EVENTS")
-endif()
-
 if (LINUX)
 	message(STATUS "")
 	message(STATUS "*** Staging to build ${PACKAGE_NAME}  ***")
@@ -794,7 +790,7 @@ if(NOT CPPSERVER_MODULE)
       ${PROJECT_SOURCE_DIR}/src/base_platform.cpp
       ${PROJECT_SOURCE_DIR}/src/bbox.cpp
       ${PROJECT_SOURCE_DIR}/src/CanvasConfig.cpp      
-      ${PROJECT_SOURCE_DIR}/src/CanvasMenu.cpp
+      ${PROJECT_SOURCE_DIR}/src/canvasMenu.cpp
       ${PROJECT_SOURCE_DIR}/src/CanvasOptions.cpp
       ${PROJECT_SOURCE_DIR}/src/cat_settings.cpp
       ${PROJECT_SOURCE_DIR}/src/catalog_handler.cpp
@@ -1214,10 +1210,18 @@ if(NOT CPPSERVER_MODULE)
 
     set(
       SRCS      
-      src/api_shim.cpp
+      src/about.cpp
+      src/AboutFrame.cpp
+      src/AboutFrameImpl.cpp            
       src/bbox.cpp
       src/base_platform.cpp
       src/CanvasConfig.cpp
+      src/canvasMenu.cpp
+      src/CanvasOptions.cpp
+      src/cat_settings.cpp
+      src/catalog_handler.cpp
+      src/catalog_mgr.cpp
+      src/catalog_parser.cpp
       src/certificates.cpp
       src/chartdata_input_stream.cpp
       src/chartdb.cpp
@@ -1225,12 +1229,17 @@ if(NOT CPPSERVER_MODULE)
       src/chartimg.cpp
       src/chcanv.cpp
       src/ChInfoWin.cpp
+      src/cm93.cpp
       src/color_handler.cpp
       src/comm_vars.cpp
       src/compass.cpp
+      src/concanv.cpp
       src/config_vars.cpp
       src/ConfigMgr.cpp
       src/cutil.cpp
+      src/DetailSlider.cpp
+      src/download_mgr.cpp
+      src/downloader.cpp
       src/FlexHash.cpp
       src/FontDesc.cpp
       src/FontMgr.cpp
@@ -1238,6 +1247,7 @@ if(NOT CPPSERVER_MODULE)
       src/georef.cpp   
       src/gshhs.cpp
       src/gui_lib.cpp   
+      src/hyperlink.cpp
       src/IDX_entry.cpp
       src/kml.cpp
       src/Layer.cpp
@@ -1248,6 +1258,7 @@ if(NOT CPPSERVER_MODULE)
       src/mbtiles.cpp
       src/navutil.cpp
       src/navutil_base.cpp
+      src/NMEALogWindow.cpp
       src/OCPN_AUIManager.cpp
       src/ocpn_frame.cpp
       src/ocpn_pixel.cpp

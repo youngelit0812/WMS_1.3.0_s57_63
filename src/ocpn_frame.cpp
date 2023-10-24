@@ -1907,15 +1907,14 @@ void MyFrame::UpdateCanvasConfigDescriptors() {
   }
 }
 
-void MyFrame::CenterView(ChartCanvas *cc, const LLBBox &RBBox, int nWidth, int nHeight) {
+void MyFrame::CenterView(ChartCanvas *cc, const LLBBox &RBBox) {
   if (!RBBox.GetValid()) return;
   // Calculate bbox center
   double clat = (RBBox.GetMinLat() + RBBox.GetMaxLat()) / 2;
   double clon = (RBBox.GetMinLon() + RBBox.GetMaxLon()) / 2;
   double ppm;  // final ppm scale to use
 
-  if (RBBox.GetMinLat() == RBBox.GetMaxLat() &&
-      RBBox.GetMinLon() == RBBox.GetMaxLon()) {
+  if (RBBox.GetMinLat() == RBBox.GetMaxLat() && RBBox.GetMinLon() == RBBox.GetMaxLon()) {
     // only one point, (should be a box?)
     ppm = cc->GetVPScale();
   } else {
@@ -1929,13 +1928,10 @@ void MyFrame::CenterView(ChartCanvas *cc, const LLBBox &RBBox, int nWidth, int n
     DistanceBearingMercator(RBBox.GetMinLat(), RBBox.GetMinLon(),
                             RBBox.GetMaxLat(), RBBox.GetMinLon(), NULL, &rh);
 
-    cc->GetSize(&ww, &wh);
-	/*ww = nWidth;
-	wh = nHeight;*/
+    cc->GetSize(&ww, &wh);	
 
-    ppm = wxMin(ww / (rw * 1852), wh / (rh * 1852)) * (100 - fabs(clat)) / 90;
-
-    ppm = wxMin(ppm, 1.0);
+    ppm = std::min(ww / (rw * 1852), wh / (rh * 1852)) * (100 - fabs(clat)) / 90;
+    ppm = std::min(ppm, 1.0);
   }
 
   JumpToPosition(cc, clat, clon, ppm);
@@ -2477,7 +2473,6 @@ void MyFrame::RefreshCanvasOther(ChartCanvas *ccThis) {
 void MyFrame::ChartsRefresh() {
   if (!ChartData) return;
 
-  // ..For each canvas...
   for (unsigned int i = 0; i < g_canvasArray.GetCount(); i++) {
     ChartCanvas *cc = g_canvasArray.Item(i);
     if (cc) {

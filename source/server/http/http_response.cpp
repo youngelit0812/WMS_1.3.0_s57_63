@@ -12,10 +12,12 @@
 #include "string/format.h"
 #include "string/string_utils.h"
 #include "utility/countof.h"
-
+#if !defined(_WIN32) && !defined(_WIN64)
+	#include <unistd.h>
+#endif
 #include <cassert>
 
-#define DELAY_FOR_RESPONSE		5
+#define DELAY_FOR_RESPONSE		10
 
 namespace CppServer {
 namespace HTTP {
@@ -399,6 +401,13 @@ HTTPResponse& HTTPResponse::MakeGetResponse(std::string_view content, std::strin
 HTTPResponse& HTTPResponse::MakeGetMapResponse(std::string sImgFilePath, bool bPNGFlag)
 {
 	Clear();
+	
+	if (sImgFilePath.empty()) {
+		SetBegin(400);
+		SetContentType("text/plain");
+		SetBody("404 Page Not Found.");
+		return *this;
+	}
 
 	std::ifstream file;	
 
@@ -422,7 +431,12 @@ HTTPResponse& HTTPResponse::MakeGetMapResponse(std::string sImgFilePath, bool bP
 			break;
 		}
 		else {
-			::_sleep(3);
+			printf("Wait for rendered image to display...\n");
+#if defined(_WIN32) || defined(_WIN64)			
+			::_sleep(150);
+#else
+			usleep(150 * 1000);
+#endif
 			nDelayIndex++;
 		}
 	}

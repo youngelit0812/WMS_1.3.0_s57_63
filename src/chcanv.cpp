@@ -7,7 +7,6 @@
 #include <wx/graphics.h>
 #include <wx/clipbrd.h>
 #include <wx/aui/aui.h>
-
 #include "config.h"
 
 #include <wx/listimpl.cpp>
@@ -400,8 +399,7 @@ ChartCanvas::ChartCanvas(wxFrame *frame, int canvasIndex)
   m_sector_glon = 0;
 
 #ifdef HAVE_WX_GESTURE_EVENTS
-  m_oldVPSScale = -1.0;
-  m_popupWanted = false;
+  m_oldVPSScale = -1.0;  
   m_leftdown = false;
 #endif /* HAVE_WX_GESTURE_EVENTS */
 
@@ -627,21 +625,6 @@ ChartCanvas::ChartCanvas(wxFrame *frame, int canvasIndex)
   // Support scaled HDPI displays.
   m_displayScale = GetContentScaleFactor();
 #endif
-
-
-#ifdef HAVE_WX_GESTURE_EVENTS
-  if (!EnableTouchEvents(wxTOUCH_ZOOM_GESTURE |
-                         wxTOUCH_PRESS_GESTURES)) {
-    wxLogError("Failed to enable touch events");
-  }
-
-  Bind(wxEVT_GESTURE_ZOOM, &ChartCanvas::OnZoom, this);
-
-  Bind(wxEVT_LONG_PRESS, &ChartCanvas::OnLongPress, this);
-  Bind(wxEVT_PRESS_AND_TAP, &ChartCanvas::OnPressAndTap, this);
-
-
-#endif
 }
 
 ChartCanvas::~ChartCanvas() {
@@ -828,45 +811,6 @@ void ChartCanvas::ResetGLContext() {
 }
 
 #ifdef HAVE_WX_GESTURE_EVENTS
-void ChartCanvas::OnLongPress(wxLongPressEvent &event) {
-  /* we defer the popup menu call upon the leftup event
-  else the menu disappears immediately,
-  (see
-  http://wxwidgets.10942.n7.nabble.com/Popupmenu-disappears-immediately-if-called-from-QueueEvent-td92572.html)
-  */
-  m_popupWanted = true;
-}
-
-void ChartCanvas::OnPressAndTap(wxPressAndTapEvent &event) {
-  // not implemented yet
-}
-
-void ChartCanvas::OnZoom(wxZoomGestureEvent &event) {
-  /* there are spurious end zoom events upon right-click */
-  if (event.IsGestureEnd()) return;
-
-  double factor = event.GetZoomFactor();
-
-  if (event.IsGestureStart() || m_oldVPSScale < 0) {
-    m_oldVPSScale = GetVPScale();
-  }
-
-  double current_vps = GetVPScale();
-  double wanted_factor = m_oldVPSScale / current_vps * factor;
-
-  ZoomCanvas(wanted_factor, true, false);
-
-  //  Allow combined zoom/pan operation
-  if (event.IsGestureStart()) {
-    m_zoomStartPoint = event.GetPosition();
-  } else {
-    wxPoint delta = event.GetPosition() - m_zoomStartPoint;
-    PanCanvas(-delta.x, -delta.y);
-    m_zoomStartPoint = event.GetPosition();
-  }
-}
-
-
 void ChartCanvas::OnDoubleLeftClick(wxMouseEvent &event) {
   DoRotateCanvas(0.0);
 }
@@ -4662,12 +4606,10 @@ void ChartCanvas::DrawCanvasData(LLBBox &llbBox, int nWidth, int nHeight, std::v
 	UpdateCanvasS52PLIBConfig();
 
 #if defined ocpnUSE_GL
-	if (!g_bdisable_opengl && m_glcc) {
-		m_glcc->Show(g_bopengl);
-	}
-
-	if (g_bopengl && m_glcc) {
-    m_glcc->SetSize(nWidth, nHeight);
+	if (!g_bdisable_opengl && g_bopengl && m_glcc) {
+		printf("chcanv: DrawCD\n");
+		m_glcc->Show(g_bopengl);	
+		m_glcc->SetSize(nWidth, nHeight);
 		m_glcc->DrawGLCanvasData(sIMGFilePath, bPNGFlag);
 		return;
 	}
@@ -5156,7 +5098,8 @@ void ChartCanvas::GenerateImageFile(std::string& sIMGFilePath, bool bPNGFlag) {
 	bmp.SaveFile(sIMGFilePath, wxBITMAP_TYPE_PNG);
 }
 
-void ChartCanvas::GenerateImageFile(wxMemoryDC* pMemDC, std::string& sIMGFilePath, bool bPNGFlag) {
+void ChartCanvas::GenerateImageFile(wxMemoryDC* pMemDC, std::string& sIMGFilePath, bool bPNGFlag) {	
+	int i, j, r, g, b;
 	int nDCWidth, nDCHeight;
 	nDCWidth = pMemDC->GetSize().GetWidth();
 	nDCHeight = pMemDC->GetSize().GetHeight();
@@ -5175,17 +5118,11 @@ void ChartCanvas::GenerateImageFile(wxMemoryDC* pMemDC, std::string& sIMGFilePat
 	if (xbTargetBitmap.IsOk()) {
 		xImage = xbTargetBitmap.ConvertToImage();
 		
-		for (int i = 0; i < xImage.GetWidth(); i++)
-		{
-			for (int j = 0; j < xImage.GetHeight(); j++)
-			{
-				int r = xImage.GetRed(i, j);
-				int g = xImage.GetGreen(i, j);
-				int b = xImage.GetBlue(i, j);
-
-				r = (r - 128) * 1.3 + 128;
-				g = (g - 128) * 1.3 + 128;
-				b = (b - 128) * 1.3 + 128;
+		for (i = 0; i < xImage.GetWidth(); i++) {
+			for (j = 0; j < xImage.GetHeight(); j++) {
+				r = (xImage.GetRed(i, j) - 128) * 1.3 + 128;
+				g = (xImage.GetGreen(i, j) - 128) * 1.3 + 128;
+				b = (xImage.GetBlue(i, j) - 128) * 1.3 + 128;
 
 				r = wxMin(255, wxMax(0, r));
 				g = wxMin(255, wxMax(0, g));
@@ -5195,8 +5132,7 @@ void ChartCanvas::GenerateImageFile(wxMemoryDC* pMemDC, std::string& sIMGFilePat
 			}
 		}
 
-		xImage.Blur(3);
-		xImage.SetOption(wxIMAGE_OPTION_QUALITY, 100);
+		xImage.Blur(3);		
 		wxFileOutputStream xFileOutput(sIMGFilePath);
 		if (xFileOutput.IsOk()) {
 			xImage.SaveFile(xFileOutput, wxBITMAP_TYPE_JPEG);			

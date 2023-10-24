@@ -6,6 +6,9 @@
 #include "FontMgr.h"
 #include "OCPNPlatform.h"
 #include "ocpn_plugin.h"
+#include "ocpn_frame.h"
+
+extern MyFrame* gFrame;
 
 struct font_cache_record {
   wxFont *font;
