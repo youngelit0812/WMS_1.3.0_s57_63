@@ -302,7 +302,6 @@ ChartCanvas::ChartCanvas(wxFrame *frame, int canvasIndex)
   SetBackgroundColour(wxColour(0, 0, 0));
   SetBackgroundStyle(wxBG_STYLE_CUSTOM);  // on WXMSW, this prevents flashing on
                                           // color scheme change
-
   m_groupIndex = 0;
   m_bIsInRadius = false;
   m_bMayToggleMenuBar = true;

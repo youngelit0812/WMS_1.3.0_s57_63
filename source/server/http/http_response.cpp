@@ -15,6 +15,8 @@
 
 #include <cassert>
 
+#define DELAY_FOR_RESPONSE		5
+
 namespace CppServer {
 namespace HTTP {
 
@@ -398,24 +400,34 @@ HTTPResponse& HTTPResponse::MakeGetMapResponse(std::string sImgFilePath, bool bP
 {
 	Clear();
 
-	std::ifstream file;
-	file.open(sImgFilePath, std::ios::binary);	
+	std::ifstream file;	
 
-	if (file.good()) {
-		std::ostringstream image_stream;
-		image_stream << file.rdbuf();
-		std::string image_data = image_stream.str();
+	int nDelayIndex = 0;
+	while (nDelayIndex < DELAY_FOR_RESPONSE) {
+		file.open(sImgFilePath, std::ios::binary);
 
-		// Construct HTTP response header
-		SetBegin(200);
-		if (bPNGFlag) SetContentType("image/png");
-		else SetContentType("image/jpeg");		
-		SetHeader("Content-Length", std::to_string(image_data.length()));
+		if (file.good()) {
+			std::ostringstream image_stream;
+			image_stream << file.rdbuf();
+			std::string image_data = image_stream.str();
 
-		// Write HTTP response header and image data to response body
-		SetBody(image_data);
+			// Construct HTTP response header
+			SetBegin(200);
+			if (bPNGFlag) SetContentType("image/png");
+			else SetContentType("image/jpeg");
+			SetHeader("Content-Length", std::to_string(image_data.length()));
+
+			// Write HTTP response header and image data to response body
+			SetBody(image_data);
+			break;
+		}
+		else {
+			::_sleep(3);
+			nDelayIndex++;
+		}
 	}
-	else {		
+	
+	if (nDelayIndex >= 5) {	
 		SetBegin(400);
 		SetContentType("text/plain");
 		SetBody("404 Page Not Found.");

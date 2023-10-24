@@ -181,7 +181,7 @@ protected:
 private:
     // Static content cache
     CppCommon::FileCache& _cache;
-	void* m_pApp;
+	void* m_pMainApp;
 	void* m_pConfig;
 
     void onReceivedRequestInternal(const HTTPRequest& request);

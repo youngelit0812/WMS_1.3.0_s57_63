@@ -32,6 +32,8 @@
 #include <iostream>
 #include <map>
 #include <mutex>
+#include <csignal>
+#include <queue>
 #include <signal.h>
 
 #include "Json.hpp"
@@ -41,7 +43,15 @@
 #include <gtk/gtk.h>
 #endif
 
+#define MAIN_PARAM_COUNT		6
+
 bool g_isRunning;
+int g_nCSignal;
+
+bool g_bMessageLoop;
+std::queue<std::string> g_messageQueue;
+std::mutex g_mtx;
+std::condition_variable g_cv;
 
 class Cache : public CppCommon::Singleton<Cache>
 {
@@ -189,7 +199,7 @@ protected:
         // Process HTTP GET request methods
         if (request.method() == "GET")
         {
-            std::string key(request.url());
+			std::string key(request.url());
             std::string value;
 
 			// Decode the key value
@@ -266,19 +276,35 @@ void loadEnvironment(char* szEnvFilePath, Environments& envConfig)
 	json_file.close();
 }
 
-void signalHandler(int signal) 
+void signal_handler(int signal) 
 {
-	if (signal == SIGINT) {
-		g_isRunning = false; // Set the global flag to stop the server
-	}
+	g_isRunning = false; // Set the global flag to stop the server	
+	g_bMessageLoop = false;
+}
+
+void c_signal_handler(int signal)
+{
+	g_nCSignal = signal;
+	g_bMessageLoop = false;
 }
 
 int main(int argc, char** argv)
 {
 	std::string sConfigPath = "./env/config.json";
 
+	g_bMessageLoop = true;
+	g_nCSignal = 0;
 	g_isRunning = true;
-	signal(SIGINT, signalHandler);
+	signal(SIGINT, signal_handler);
+	signal(SIGILL, signal_handler);
+	signal(SIGFPE, signal_handler);
+	signal(SIGSEGV, signal_handler);
+	signal(SIGTERM, signal_handler);
+	signal(SIGBREAK, signal_handler);
+	signal(SIGABRT, signal_handler);
+	signal(SIGABRT_COMPAT, signal_handler);
+
+	std::signal(SIGINT, c_signal_handler);
 
 	Environments envConfig;
 	loadEnvironment((char*)sConfigPath.c_str(), envConfig);
@@ -288,9 +314,10 @@ int main(int argc, char** argv)
 #ifdef __linux__
 	gtk_init(&argc, &argv);
 #endif
-	MainApp* app = new MainApp();
-	if (!app->OnInit(envConfig.sENCDirPath, envConfig.rebuildCharts)) {
-		delete app;
+
+	MainApp* pAppForService = new MainApp();
+	if (!pAppForService->OnInit(envConfig.sENCDirPath, envConfig.rebuildCharts, envConfig.sIMGDirPath)) {
+		delete pAppForService;
 		return 1;
 	}
 
@@ -316,49 +343,66 @@ int main(int argc, char** argv)
 
 	// Create a new HTTPS server
 	auto serverHTTPS = std::make_shared<HTTPSCacheServer>(service, context, nPortForHTTPS);
-	serverHTTPS->SetDBFlag((void*)app, (void*)& envConfig);
+	serverHTTPS->SetEnvironment((void*)& envConfig);
 	serverHTTPS->AddStaticContent(www, &envConfig, "/api");
 
 	// Start the server
 	std::cout << "Server starting..." << std::endl;
-	serverHTTPS->Start();
+	serverHTTPS->Start();	
 
 	//HTTP server
 	int nPortForHTTP = envConfig.nPortForHTTP;
 	std::cout << "HTTP server port: " << nPortForHTTP << std::endl;
-
+	
 	// Create a new HTTP server
 	auto serverHTTP = std::make_shared<HTTPCacheServer>(service, nPortForHTTP);
-	serverHTTP->SetDBFlag((void*)app, (void*)&envConfig);
+	serverHTTP->SetEnvironment((void*)&envConfig);
 	serverHTTP->AddStaticContent(www, &envConfig, "/api");
 
 	// Start the server
 	std::cout << "Server starting..." << std::endl;
 	serverHTTP->Start();
 
-    std::cout << "Press Enter to stop the server or '!' to restart the server..." << std::endl;
-
     // Perform text input
     std::string line;
-    while (!g_isRunning || getline(std::cin, line))
-    {
-        if (!g_isRunning || line.empty())
-            break;
+	while (1) {		
+		if (!g_isRunning || g_nCSignal > 0) break;
+		
+		if (g_bMessageLoop) {
+			std::unique_lock<std::mutex> lock(g_mtx);
+			g_cv.wait(lock, [] { return !g_messageQueue.empty(); });
 
-        // Restart the server
-        if (line == "!")
-        {
-            std::cout << "Server restarting..." << std::endl;			
-			serverHTTP->Restart();
-			serverHTTPS->Restart();
-            std::cout << "Done!" << std::endl;
-            continue;
-        }
+			std::string message = g_messageQueue.front();
+			g_messageQueue.pop();
+
+			printf("new message : %s", message.c_str());
+
+			std::vector<std::string> substrings;
+
+			std::string delimiter = "|";
+			size_t pos = 0;
+			std::string token;
+			while ((pos = message.find(delimiter)) != std::string::npos) {
+				token = message.substr(0, pos);
+				substrings.push_back(token);
+				message.erase(0, pos + delimiter.length());
+			}
+			substrings.push_back(message);
+
+			if (substrings.size() == MAIN_PARAM_COUNT) {
+				pAppForService->UpdateFrameCanvas(substrings.at(0), std::stoi(substrings.at(1)), std::stoi(substrings.at(2)), 
+								substrings.at(3), substrings.at(4), substrings.at(5) == "1" ? true : false);
+			}
+			
+			continue;
+		}
+
+		::Sleep(0);
     }
 
     // Stop the server
 	std::cout << "Server stopping..." << std::endl;
-	if (app->OnExit(envConfig.sIMGDirPath)) delete app;
+	if (pAppForService->OnExit(envConfig.sIMGDirPath)) delete pAppForService;
 
 	serverHTTPS->Stop();
 	serverHTTP->Stop();			

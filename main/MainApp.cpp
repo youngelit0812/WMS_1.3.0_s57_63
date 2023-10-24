@@ -669,6 +669,11 @@ extern ColorScheme GetColorScheme();
 void InitializeUserColors(void);
 void DeInitializeUserColors(void);
 
+static bool LoadAllPlugIns(bool load_enabled) {
+  bool b = PluginLoader::getInstance()->LoadAllPlugIns(load_enabled);
+  return b;
+}
+
 //------------------------------------------------------------------------------
 //    PNG Icon resources
 //------------------------------------------------------------------------------
@@ -694,152 +699,6 @@ wxString newPrivateFileName(wxString home_locn, const char* name,
 #endif
 
 	return filePathAndName;
-}
-
-std::string getCurrentDateTimeMicrosecond() {	
-	auto now = std::chrono::system_clock::now();
-	auto now_time = std::chrono::system_clock::to_time_t(now);
-
-	std::stringstream ss;
-	ss << std::put_time(std::localtime(&now_time), "%Y%m%d_%H%M%S");
-
-	auto duration = now.time_since_epoch();
-	auto microseconds = std::chrono::duration_cast<std::chrono::microseconds>(duration).count() % 1000000;
-
-	ss << "_" << std::setfill('0') << std::setw(6) << microseconds;
-
-	return ss.str() + ".";
-}
-
-void AddChartCacheFromDB(ChartDB* pChartDB) {
-	wxArrayPtrVoid* pChartCacheFromDB = pChartDB->GetChartCache();
-
-	for (unsigned int i = 0; i < pChartDB->active_chartTable.GetCount(); i++) {
-		const ChartTableEntry& cte = pChartDB->active_chartTable[i];
-		wxString ChartFullPath = cte.GetFullSystemPath();
-		ChartTypeEnum chart_type = (ChartTypeEnum)cte.GetChartType();
-		ChartFamilyEnum chart_family = (ChartFamilyEnum)cte.GetChartFamily();
-
-		if (!pChartDB->IsCacheLocked()) {
-			if (g_memCacheLimit) {
-				int mem_used;
-				GetMemoryStatus(0, &mem_used);
-
-				//printf("AddChartCacheFromDB : cache size: %d, chart type: %d\n", (int)pChartCacheFromDB->GetCount(), chart_type);
-				if ((mem_used > g_memCacheLimit * 8 / 10) && (pChartCacheFromDB->GetCount() > 2)) {
-					wxString msg(_T("Removing oldest chart from cache: "));
-					while (1) {
-						CacheEntry* pce = pChartDB->FindOldestDeleteCandidate(true);
-						if (pce == 0) break;  // no possible delete candidate
-
-						// purge texture cache, really need memory here
-						pChartDB->DeleteCacheEntry(pce, true, msg);
-
-						GetMemoryStatus(0, &mem_used);
-						if ((mem_used < g_memCacheLimit * 8 / 10) || (pChartCacheFromDB->GetCount() <= 2)) break;
-					}  // while
-				}
-			}
-			else {  // Use n chart cache policy, if memory-limit  policy is not used			
-			 //      Limit cache to n charts, tossing out the oldest when space is
-			 //      needed
-				unsigned int nCache = pChartCacheFromDB->GetCount();
-				if (nCache > (unsigned int)g_nCacheLimit && nCache > 2) {
-					wxString msg(_T("Removing oldest chart from cache: "));
-					while (nCache > (unsigned int)g_nCacheLimit) {
-						CacheEntry* pce = pChartDB->FindOldestDeleteCandidate(true);
-						if (pce == 0) break;
-
-						pChartDB->DeleteCacheEntry(pce, true, msg);
-						nCache--;
-					}
-				}
-			}
-		}
-
-		LoadS57();
-		ChartBase* pChartBase = new s57chart();
-		s57chart* pENCChart = static_cast<s57chart*>(pChartBase);
-
-		pENCChart->SetNativeScale(cte.GetScale());
-
-		//    Explicitely set the chart extents from the database to
-		//    support the case wherein the SENC file has not yet been built
-		Extent ext;
-		ext.NLAT = cte.GetLatMax();
-		ext.SLAT = cte.GetLatMin();
-		ext.WLON = cte.GetLonMin();
-		ext.ELON = cte.GetLonMax();
-		pENCChart->SetFullExtent(ext);
-
-		InitReturn ir;
-		s52plib* plib = ps52plib;
-		wxString msg_fn(ChartFullPath);
-		msg_fn.Replace(_T("%"), _T("%%"));
-
-		if ((chart_family != CHART_FAMILY_VECTOR) || ((chart_family == CHART_FAMILY_VECTOR) && plib)) {
-			wprintf(_T("AddChartCacheFromDB : Initializing Chart %s\n"), msg_fn.wc_str());
-
-			ir = pChartBase->Init(ChartFullPath, FULL_INIT);  // using the passed flag
-			pChartBase->SetColorScheme(GetColorScheme());
-		}
-		else {
-			wprintf(_T("AddChartCacheFromDB : No PLIB, Skipping vector chart  %s\n"), msg_fn.wc_str());
-		}
-
-		if (INIT_OK == ir) {
-			CacheEntry* pce = new CacheEntry;
-			pce->FullPath = ChartFullPath;
-			pce->pChart = pChartBase;
-			pce->dbIndex = i;
-
-			pce->n_lock = 0;
-
-			printf("AddChartCacheFromDB : entry is created for %s\n", (const char*)(ChartFullPath.mb_str(wxConvUTF8)));			
-		}
-		else {
-			delete pChartBase;
-			pChartBase = NULL;
-		}
-	}
-}
-
-bool ConfigureDB(ArrayOfCDI& sENCDirPath, std::string& sDBFilePath, ChartDB* pChartDB) {
-	if (!pChartDB->Create(sENCDirPath)) {
-		return false;
-	}
-
-	pChartDB->PurgeCache();
-	if (!pChartDB->SaveBinary(sDBFilePath)) {
-		printf("Fail to produce the DB.\n");
-		return false;
-	}
-
-	printf("Success to produce the DB.\n");
-	return true;
-}
-
-bool InitChart(std::string& sDBFilePath, ArrayOfCDI& arrayChartDirs, bool rebuildChartFlag) {
-	ChartData = new ChartDB();
-	bool bDBBuildFlag = false;
-	if (rebuildChartFlag) {
-		bDBBuildFlag = ConfigureDB(arrayChartDirs, sDBFilePath, ChartData);
-	}
-	else {
-		FILE* pTestFile = fopen(sDBFilePath.c_str(), "rb");
-		if (!pTestFile) {
-			bDBBuildFlag = ConfigureDB(arrayChartDirs, sDBFilePath, ChartData);
-		}
-		else {
-			fclose(pTestFile);
-
-			ChartData->PurgeCache();
-			bDBBuildFlag = !ChartData->LoadBinary(sDBFilePath, arrayChartDirs);
-		}
-	}
-
-	AddChartCacheFromDB(ChartData);
-	return bDBBuildFlag;
 }
 
 // `Main program' equivalent, creating windows and returning main app frame
@@ -945,18 +804,18 @@ MainApp::MainApp()
 #endif   // __linux__
 }
 
-bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart) {
+bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart, std::string& sIMGDirPath) {
 	if (!wxApp::OnInit()) return false;
-		g_unit_test_2 = 0;
-		g_bportable = true;
-		g_start_fullscreen = false;
-		g_bdisable_opengl = false;
-		g_rebuild_gl_cache = false;
-		g_parse_all_enc = false;
-		g_unit_test_1 = 0;		
 
-  GpxDocument::SeedRandom();
-  last_own_ship_sog_cog_calc_ts = wxInvalidDateTime;
+	g_unit_test_2 = 0;
+	g_bportable = true;
+	g_start_fullscreen = false;
+	g_bdisable_opengl = false;
+	g_rebuild_gl_cache = false;
+	g_parse_all_enc = false;
+	g_unit_test_1 = 0;		
+	GpxDocument::SeedRandom();
+	last_own_ship_sog_cog_calc_ts = wxInvalidDateTime;
 
 #if defined(__WXGTK__) && defined(ocpnUSE_GLES) && defined(__ARM_ARCH)
   // There is a race condition between cairo which is used for text rendering
@@ -1283,7 +1142,7 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart) {
   pthumbwin = new ThumbWin(gFrame->GetPrimaryCanvas());
 
   gFrame->ApplyGlobalSettings(false);  // done once on init with resize
-
+  
   gFrame->SetAndApplyColorScheme(global_color_scheme);
 
   Yield();
@@ -1402,6 +1261,7 @@ int MainApp::OnExit(std::string& sIMGDirPath) {
 		delete g_pGroupArray;
 	}
 
+	wxLog::FlushActive();
 	g_Platform->CloseLogFile();
 
 	if (pInit_Chart_Dir) delete pInit_Chart_Dir;
@@ -1454,6 +1314,21 @@ char my_tolower(char ch)
 
 void toLowerCase(std::string& str) {
 	std::transform(str.begin(), str.end(), str.begin(), [](unsigned char c) { return std::tolower(c); });
+}
+
+std::string getCurrentDateTimeMicrosecond() {
+	auto now = std::chrono::system_clock::now();
+	auto now_time = std::chrono::system_clock::to_time_t(now);
+
+	std::stringstream ss;
+	ss << std::put_time(std::localtime(&now_time), "%Y%m%d_%H%M%S");
+
+	auto duration = now.time_since_epoch();
+	auto microseconds = std::chrono::duration_cast<std::chrono::microseconds>(duration).count() % 1000000;
+
+	ss << "_" << std::setfill('0') << std::setw(6) << microseconds;
+
+	return ss.str() + ".";
 }
 
 int MainApp::GetLayerIndex(std::string& sLayerCaption) {	
@@ -1515,8 +1390,7 @@ bool MainApp::UpdateFrameCanvas(std::string& sBBox, int nWidth, int nHeight, std
 	if (nLayerIndex >= 0) vnLayers.push_back(nLayerIndex);
 
 	gFrame->ResizeFrameWH(nWidth, nHeight);
-	ChartCanvas* pCC = gFrame->GetPrimaryCanvas();
-	pCC->ResetGLContext();
+	ChartCanvas* pCC = gFrame->GetPrimaryCanvas();	
 	gFrame->CenterView(pCC, llbBox, nWidth, nHeight);
 	gFrame->DoChartUpdate();
 	gFrame->ChartsRefresh();

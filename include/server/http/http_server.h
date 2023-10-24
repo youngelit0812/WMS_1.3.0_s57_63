@@ -42,10 +42,8 @@ public:
     CppCommon::FileCache& cache() noexcept { return _cache; }
     const CppCommon::FileCache& cache() const noexcept { return _cache; }
 
-	void SetDBFlag(void* pAPP, void* pConfig);
-
-	void* GetMainApp() { return m_pApp; }
-	void* GetConfig() { return m_pConfig; }
+	void SetEnvironment(void* pConfig);
+	void* GetConfig() { return m_pConfig; }	
 
     //! Add static content cache
     /*!
@@ -73,7 +71,6 @@ private:
     // Static content cache
     CppCommon::FileCache _cache;
 
-	void* m_pApp;
 	void* m_pConfig;
 };
 

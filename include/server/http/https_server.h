@@ -48,9 +48,7 @@ public:
         \param prefix - Cache prefix (default is "/")
         \param timeout - Refresh cache timeout (default is 1 hour)
     */
-	void SetDBFlag(void *pAPP, void *pConfig);
-	
-	void* GetMainApp() { return m_pApp; }
+	void SetEnvironment(void *pConfig);	
 	void* GetConfig() { return m_pConfig; }
 
     void AddStaticContent(const CppCommon::Path& path, void *pConfig, const std::string& prefix = "/", const CppCommon::Timespan& timeout = CppCommon::Timespan::hours(1));
@@ -70,9 +68,9 @@ protected:
 
 private:
     // Static content cache
-    CppCommon::FileCache _cache;	
-	void*				 m_pApp;
-	void*				 m_pConfig;
+	CppCommon::FileCache _cache;
+
+	void*				m_pConfig;
 };
 
 /*! \example https_server.cpp HTTPS server example */

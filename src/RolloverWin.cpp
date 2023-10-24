@@ -257,8 +257,9 @@ void RolloverWin::Draw(ocpnDC &dc) {
     coords[7] = y1;
 
     ChartCanvas *pCanvas = wxDynamicCast(GetParent(), ChartCanvas);
-    if (pCanvas)
-      pCanvas->GetglCanvas()->RenderTextures(dc, coords, uv, 4, pCanvas->GetpVP());
+	if (pCanvas) {
+		pCanvas->GetglCanvas()->RenderTextures(dc, coords, uv, 4, pCanvas->GetpVP());
+	}
 
     glDisable(g_texture_rectangle_format);
     glDisable(GL_BLEND);

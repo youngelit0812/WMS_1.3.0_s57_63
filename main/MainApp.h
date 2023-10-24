@@ -18,7 +18,7 @@ public:
 	MainApp();
 	~MainApp() {};
 
-	bool OnInit(std::string&, bool);
+	bool OnInit(std::string&, bool, std::string&);
 	int OnExit(std::string&);
 	void OnInitCmdLine(wxCmdLineParser& parser);
 	bool OnCmdLineParsed(wxCmdLineParser& parser);
@@ -27,6 +27,7 @@ public:
 	bool UpdateFrameCanvas(std::string&, int, int, std::string&, std::string&, bool);	
 
 	bool GetDBCreateResult() { return m_bDBCreateResult; }	
+	std::string* GetIMGDirPath() { return &m_sIMGDirPath; }
 #ifdef LINUX_CRASHRPT
 	//! fatal exeption handling
 	void OnFatalException();
@@ -38,10 +39,10 @@ public:
 	bool OnExceptionInMainLoop();
 #endif
 
-	wxSingleInstanceChecker* m_checker;	
-
 public:
 	bool m_bDBCreateResult;
+	std::string m_sIMGDirPath;
+	wxSingleInstanceChecker* m_checker;
 };
 
 #endif

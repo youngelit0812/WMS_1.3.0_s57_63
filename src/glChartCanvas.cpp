@@ -394,10 +394,7 @@ void glChartCanvas::OnActivate(wxActivateEvent &event) {
 }
 
 void glChartCanvas::OnSize(wxSizeEvent &event) {
-#if 0
-#endif
-
-  if (!IsShown()) return;
+	if (!IsShown()) return;
 
   SetCurrent(*m_pcontext);
 
@@ -2829,9 +2826,8 @@ void glChartCanvas::GenerateImageFile(std::string& sIMGFilePath, bool bPNGFlag) 
 	  xImage.SaveFile(xFileOutput, wxBITMAP_TYPE_JPEG);
   }
 
-  xImage.Destroy();
-
   delete[] pixels;
+  xImage.Destroy();  
 }
 
 unsigned long quiltHash;

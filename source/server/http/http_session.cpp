@@ -9,6 +9,11 @@
 #include "server/http/http_session.h"
 #include "server/http/http_server.h"
 #include "MainApp.h"
+#include <queue>
+
+extern std::queue<std::string> g_messageQueue;
+extern std::mutex g_mtx;
+extern std::condition_variable g_cv;
 
 namespace CppServer {
 namespace HTTP {
@@ -17,7 +22,6 @@ HTTPSession::HTTPSession(const std::shared_ptr<HTTPServer>& server)
     : Asio::TCPSession(server),
       _cache(server->cache())
 {
-	m_pApp = server->GetMainApp();
 	m_pConfig = server->GetConfig();
 }
 
@@ -82,12 +86,11 @@ void HTTPSession::onReceivedRequestInternal(const HTTPRequest& request)
 		for (auto itemParam : umParameters) {
 			printf("parameter key : %s, value : %s\n", itemParam.first.c_str(), itemParam.second.c_str());
 		}
-
-		printf("\nonReceivedRequestInternal: extracted URL:%s\n", sTrippedURL.c_str());
+				
 		if (!sTrippedURL.empty()) {
-			Environments* pConfig = (Environments*)m_pConfig;
-			MainApp* pMainApp = (MainApp*)m_pApp;
 			try {
+				Environments* pConfig = (Environments*)m_pConfig;		
+
 				std::string sImageFormat = umParameters.at("format");
 
 				if (sImageFormat.empty()) {
@@ -105,12 +108,16 @@ void HTTPSession::onReceivedRequestInternal(const HTTPRequest& request)
 
 				std::string sIMGFilePathPrefix = pConfig->sIMGDirPath + getCurrentDateTimeMicrosecond();
 				std::string sIMGFilePath = bPNGImageFlag ? sIMGFilePathPrefix + PNG_FILE_EXTENSION : sIMGFilePathPrefix + JPEG_FILE_EXTENSION;
-				if (pMainApp->UpdateFrameCanvas(umParameters.at("bbox"), std::stoi(umParameters.at("width")), std::stoi(umParameters.at("height")), umParameters.at("layers"), sIMGFilePath, bPNGImageFlag)) {
-					SendResponseAsync(response().MakeGetMapResponse(sIMGFilePath, bPNGImageFlag));
-				}
-				else {
-					SendResponseAsync(response().MakeGetMapResponse("", false));
-				}
+
+				std::string sMessage("");				
+				sMessage += umParameters.at("bbox") + "|" + umParameters.at("width") + "|" + umParameters.at("height") 
+						 + "|" + umParameters.at("layers") + "|" + sIMGFilePath + "|" + (bPNGImageFlag ? "1" : "0");
+
+				std::lock_guard<std::mutex> lock(g_mtx);
+				g_messageQueue.push(sMessage);
+				
+				g_cv.notify_one();				
+				SendResponseAsync(response().MakeGetMapResponse(sIMGFilePath, bPNGImageFlag));
 			}
 			catch (std::exception const& ex) {
 				SendResponseAsync(response().MakeGetMapResponse("", false));

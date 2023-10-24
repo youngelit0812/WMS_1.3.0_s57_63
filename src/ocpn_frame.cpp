@@ -1847,7 +1847,6 @@ void MyFrame::ApplyGlobalSettings(bool bnewtoolbar) {
   wxSize lastOptSize = options_lastWindowSize;
   SendSizeEvent();
 
-  SendSizeEvent();
   options_lastWindowSize = lastOptSize;
 }
 

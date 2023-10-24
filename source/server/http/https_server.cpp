@@ -13,8 +13,7 @@
 namespace CppServer {
 namespace HTTP {
 
-void HTTPSServer::SetDBFlag(void *pApp, void *pConfig) {
-	m_pApp = pApp;
+void HTTPSServer::SetEnvironment(void *pConfig) {	
 	m_pConfig = pConfig;
 }
 
