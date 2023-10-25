@@ -1050,6 +1050,9 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart, std::string& 
   g_lastClientRecty = cy;
   g_lastClientRectw = cw;
   g_lastClientRecth = ch;
+#ifdef PRINTLOG_DEBUG
+  printf("last client rect : %d,%d\n", g_lastClientRectw, g_lastClientRecth);  
+#endif
   
   if ((g_nframewin_x > 100) && (g_nframewin_y > 100) && (g_nframewin_x <= cw) && (g_nframewin_y <= ch))
     new_frame_size.Set(g_nframewin_x, g_nframewin_y);
@@ -1061,7 +1064,9 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart, std::string& 
 		new_frame_size.Set(cw * 7 / 10, ch * 7 / 10);
 		g_bframemax = false;
 	}
-
+#ifdef PRINTLOG_DEBUG
+	printf("new frame size:%d,%d\n", new_frame_size.GetWidth(), new_frame_size.GetHeight());
+#endif
 	wxPoint position(0, 0);
 	wxSize dsize = wxGetDisplaySize();
 
@@ -1106,6 +1111,9 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart, std::string& 
   app_style |= wxFRAME_NO_TASKBAR;
   app_style |= wxSTAY_ON_TOP;
 
+#ifdef PRINTLOG_DEBUG
+  printf("Create frame with pos:%d,%d", g_nframewin_posx, g_nframewin_posy);
+#endif
   try {
     gFrame = new MyFrame(NULL, "", position, new_frame_size, app_style);
   } catch (std::exception & ex) {
@@ -1244,7 +1252,7 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart, std::string& 
 	g_pauimgr->Update();	
 
 	printf("Wait for minutes to prepare... \n");
-	gFrame->UpdateDB_Canvas();
+	gFrame->UpdateDB_Canvas();	
 	printf("pre-initialize finished! \n");
 
 	return true;
@@ -1399,6 +1407,8 @@ bool MainApp::UpdateFrameCanvas(std::string& sBBox, int nWidth, int nHeight, std
 	gFrame->ChartsRefresh();
 	
 	pTCC->m_b_paint_enable = true;
+	pTCC->RescaleCanvas(llbBox);
+	pTCC->GetVP().SetOldBBox(llbBox);
 	pTCC->DrawCanvasData(llbBox, nWidth, nHeight, vnTLayers, sIMGFilePath, bPNGFlag);
 	return true;	
 

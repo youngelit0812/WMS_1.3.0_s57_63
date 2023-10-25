@@ -139,6 +139,10 @@ public:
 
   bool isInGesture() { return m_binGesture; }
   void ResetGridFont() { m_gridfont.Delete(); }
+
+  void PreSetupGL();
+  void SetManualSize(int nWidth, int nHeight);
+
   time_t m_last_render_time;
 
   int viewport[4];
@@ -178,7 +182,7 @@ protected:
   void DrawGLCurrentsInBBox(ocpnDC &dc, LLBBox &BBox);
 
   void ZoomProject(float offset_x, float offset_y, float swidth, float sheight);
-  
+
   wxGLContext *m_pcontext;
 
   int max_texture_dimension;

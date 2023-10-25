@@ -231,6 +231,7 @@ extern wxSize pprog_size;
 extern int pprog_count;
 extern int pprog_threads;
 extern float g_ChartScaleFactorExp;
+extern MyFrame *gFrame;
 
 //#if defined(__MSVC__) && !defined(ocpnUSE_GLES) /* this compiler doesn't
 // support vla */ const #endif extern int g_mipmap_max_level;
@@ -388,7 +389,49 @@ void glChartCanvas::OnActivate(wxActivateEvent &event) {
   m_pParentCanvas->OnActivate(event);
 }
 
+void glChartCanvas::SetManualSize(int nWidth, int nHeight) {
+#ifdef PRINTLOG_DEBUG
+	printf("glCC : SetManualSize 1\n");
+#endif
+	if (!IsShown()) return;
+#ifdef PRINTLOG_DEBUG
+	printf("glCC : SetManualSize 2\n");
+#endif
+	SetCurrent(*m_pcontext);
+
+	if (!g_bopengl) {
+		SetSize(GetSize().x, GetSize().y);		
+		return;
+	}
+#ifdef PRINTLOG_DEBUG
+	printf("glCC : SetManualSize 3\n");
+#endif	
+	if (m_bsetup && m_pcontext && IsShown()) {
+		SetCurrent(*m_pcontext);
+	}
+
+	//SetSize(m_pParentCanvas->GetClientSize());
+
+	if (m_bsetup) {
+		wxLogMessage(_T("BuildFBO 3"));
+		BuildFBO();
+	}
+
+	//  Set the shader viewport transform matrix
+	ViewPort* vp = m_pParentCanvas->GetpVP();
+#ifdef PRINTLOG_DEBUG
+	printf("glCC : SetManualSize : viewport size:%d, %d\n", vp->pix_width, vp->pix_height);
+#endif
+	mat4x4 m;
+	mat4x4_identity(m);
+	mat4x4_scale_aniso((float(*)[4])vp->vp_matrix_transform, m, 2.0 / (float)vp->pix_width, -2.0 / (float)vp->pix_height, 1.0);
+	mat4x4_translate_in_place((float(*)[4])vp->vp_matrix_transform, -vp->pix_width / 2, -vp->pix_height / 2, 0);
+}
+
 void glChartCanvas::OnSize(wxSizeEvent &event) {
+#ifdef PRINTLOG_DEBUG
+	printf("glCC : OnSize 1\n");
+#endif
 	if (!IsShown()) return;
 
   SetCurrent(*m_pcontext);
@@ -413,9 +456,11 @@ void glChartCanvas::OnSize(wxSizeEvent &event) {
     BuildFBO();
   }
 
-
   //  Set the shader viewport transform matrix
    ViewPort *vp = m_pParentCanvas->GetpVP();
+#ifdef PRINTLOG_DEBUG
+   printf("glCC : onSize : viewport size:%d, %d\n", vp->pix_width, vp->pix_height);
+#endif
    mat4x4 m;
    mat4x4_identity(m);
    mat4x4_scale_aniso((float(*)[4])vp->vp_matrix_transform, m,
@@ -1382,13 +1427,7 @@ void glChartCanvas::GridDraw() {
     font.SetPointSize(font_size * m_displayScale);
     font.SetWeight(wxFONTWEIGHT_NORMAL);
 
-	double dRv = 1.0;
-#if defined(__WXOSX__) || defined(__WXGTK3__)
-	// Support scaled HDPI displays.
-	m_pParentCanvas->GetContentScaleFactor();
-#endif
-
-    m_gridfont.SetContentScaleFactor(dRv);
+    m_gridfont.SetContentScaleFactor(OCPN_GetDisplayContentScaleFactor());
     m_gridfont.Build(font, 1, dpi_factor);
   }
   m_gridfont.SetColor(GridColor);
@@ -2739,29 +2778,50 @@ void glChartCanvas::RenderGLAlertMessage() {
   }
 }
 
+void glChartCanvas::PreSetupGL() {
+	if (!m_bsetup) {
+		SetupOpenGL();
+		if (ps52plib) ps52plib->FlushSymbolCaches(ChartCtxFactory());
+		m_bsetup = true;
+	}
+}
+
 void glChartCanvas::DrawGLCanvasData(std::string& sIMGFilePath, bool bPNGFlag) {
 	wxClientDC dc(this);
+#ifdef PRINTLOG_DEBUG
 	printf("glchcanv: DrawGL1\n");
+#endif
 	if (!m_pcontext) return;
+#ifdef __linux__
+//	Show(g_bopengl);
+#endif
 	if (!g_bopengl) return;  
+#ifdef PRINTLOG_DEBUG
 	printf("glchcanv: DrawGL2\n");
+#endif
 	SetCurrent(*m_pcontext);
 	if (!m_bsetup) {
 		SetupOpenGL();
 		if (ps52plib) ps52plib->FlushSymbolCaches(ChartCtxFactory());
 		m_bsetup = true;  
 	}
+#ifdef PRINTLOG_DEBUG
 	printf("glchcanv: DrawGL3\n");
-	if (!m_b_paint_enable) return;	
+#endif
+	if (!m_b_paint_enable) return;	 
 	if (m_in_glpaint) return;
+#ifdef PRINTLOG_DEBUG
 	printf("glchcanv: DrawGL4\n");
+#endif
 	//  If necessary, reconfigure the S52 PLIB
 	m_pParentCanvas->UpdateCanvasS52PLIBConfig();
 
 	m_in_glpaint++;
 	Render();
 	m_in_glpaint--;
+#ifdef PRINTLOG_DEBUG
 	printf("glchcanv: DrawGL5\n");
+#endif
 	GenerateImageFile(sIMGFilePath, bPNGFlag);
 }
 

@@ -6,7 +6,6 @@ if(WIN32)
 endif()
 
 set(OpenGL_GL_PREFERENCE "LEGACY")
-
 set(PACKAGE_NAME WMSServer)
 
 add_definitions("-DRAPIDJSON_HAS_STDSTRING=1")
@@ -15,7 +14,7 @@ project(WMSServer)
 
 set(OPENGLES_FOUND "NO")
 set(OPENGL_FOUND "YES")
-
+add_definitions(-DPRINTLOG_DEBUG)
 # Global properties
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 

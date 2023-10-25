@@ -4896,7 +4896,7 @@ void MyFrame::UpdateDB_Canvas() {
 	g_pauimgr->Update();
 
 	ParseAllENC(NULL);	
-  gFrame->Hide();
+	gFrame->Hide();
 	pConfig->LoadNavObjects();
 	//    Re-enable anchor watches if set in config file      
 
@@ -4928,4 +4928,6 @@ void MyFrame::UpdateDB_Canvas() {
 	SendSizeEvent();
 
 	RefreshAllCanvas(true);
+
+	g_focusCanvas->GetglCanvas()->Show(g_bopengl);	
 }

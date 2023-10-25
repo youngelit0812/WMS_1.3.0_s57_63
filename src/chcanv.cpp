@@ -4586,10 +4586,8 @@ void ChartCanvas::RescaleCanvas(LLBBox& llbBox)
 	m_bzooming = false;
 }
 
-void ChartCanvas::DrawCanvasData(LLBBox &llbBox, int nWidth, int nHeight, std::vector<int>& vnLayers, std::string& sIMGFilePath, bool bPNGFlag) {
-	RescaleCanvas(llbBox);
-	SetViewPointByCorners(llbBox.GetMinLat(), llbBox.GetMinLon(), llbBox.GetMaxLat(), llbBox.GetMaxLon());	
-	GetVP().SetOldBBox(llbBox);
+void ChartCanvas::DrawCanvasData(LLBBox &llbBox, int nWidth, int nHeight, std::vector<int>& vnLayers, std::string& sIMGFilePath, bool bPNGFlag) {	
+	SetViewPointByCorners(llbBox.GetMinLat(), llbBox.GetMinLon(), llbBox.GetMaxLat(), llbBox.GetMaxLon());		
 
 	SetShowENCText(HasLayer(vnLayers, LAYER_TEXT));
 	SetShowENCLightDesc(HasLayer(vnLayers, LAYER_LDESCR));
@@ -4598,7 +4596,7 @@ void ChartCanvas::DrawCanvasData(LLBBox &llbBox, int nWidth, int nHeight, std::v
 	SetShowENCBuoyLabels(HasLayer(vnLayers, LAYER_BLLABELS));
 	SetShowENCLights(HasLayer(vnLayers, LAYER_LIGHTS));
 	SetShowVisibleSectors(HasLayer(vnLayers, LAYER_SLVIS));
-	SetShowGrid(HasLayer(vnLayers, LAYER_GRID));	
+	SetShowGrid(HasLayer(vnLayers, LAYER_GRID));
 
 	ps52plib->m_bUseSCAMIN = false;
 	ps52plib->UpdateMarinerParams();
@@ -4607,9 +4605,14 @@ void ChartCanvas::DrawCanvasData(LLBBox &llbBox, int nWidth, int nHeight, std::v
 
 #if defined ocpnUSE_GL
 	if (!g_bdisable_opengl && g_bopengl && m_glcc) {
+#ifdef PRINTLOG_DEBUG
 		printf("chcanv: DrawCD\n");
-		m_glcc->Show(g_bopengl);	
+#endif
+#if defined(_WIN32) || defined(_WIN64)
 		m_glcc->SetSize(nWidth, nHeight);
+#else
+		m_glcc->SetManualSize(nWidth, nHeight);
+#endif
 		m_glcc->DrawGLCanvasData(sIMGFilePath, bPNGFlag);
 		return;
 	}

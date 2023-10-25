@@ -431,10 +431,8 @@ int main(int argc, char** argv)
 		
 		if (g_bMessageLoop) {
 			try {
-				printf("enter to wait in main1\n");
 				std::unique_lock<std::mutex> lock(g_mtx);
-				g_cv.wait(lock, [] { return !g_messageQueue.empty(); });
-				printf("enter to wait in main2\n");
+				g_cv.wait(lock, [] { return !g_messageQueue.empty(); });				
 
 				std::string message = g_messageQueue.front();
 				g_messageQueue.pop();
