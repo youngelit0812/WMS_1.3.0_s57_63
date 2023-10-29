@@ -2099,8 +2099,6 @@ bool s57chart::DoRenderViewOnDC(wxMemoryDC &dc, const ViewPort &VPoint, RenderTy
         new PixelCache(VPoint.pix_width, VPoint.pix_height, BPP);
     pDIBNew->SelectIntoDC(dc_new);
 
-    //        printf("reuse blit %d %d %d %d %d %d\n",desx, desy, wu, hu,  srcx,
-    //        srcy);
     dc_new.Blit(desx, desy, wu, hu, (wxDC *)&dc_last, srcx, srcy, wxCOPY);
 
     //        Ask the plib to adjust the persistent text rectangle list for this
@@ -3015,7 +3013,6 @@ WX_DEFINE_ARRAY_PTR(float *, MyFloatPtrArray);
 
 //    Read the .000 ENC file and create required Chartbase data structures
 bool s57chart::CreateHeaderDataFromENC(void) {
-	//printf("s57chart:CreateHeaderDataFromENC 1\n");
   if (!InitENCMinimal(m_TempFilePath)) {
     return false;
   }
@@ -3036,7 +3033,6 @@ bool s57chart::CreateHeaderDataFromENC(void) {
   std::vector<int> auxCntArray, noCovrCntArray;
 
   MyFloatPtrArray *pNoCovrPtrArray = new MyFloatPtrArray;
-  //printf("s57chart:CreateHeaderDataFromENC 2\n");
   // Get the first M_COVR object
   pFeat = GetChartFirstM_COVR(catcov);
 
@@ -3053,8 +3049,6 @@ bool s57chart::CreateHeaderDataFromENC(void) {
     float *pfr = NULL;
 
     if (npt >= 3) {
-      // pf = (float *) malloc( 2 * sizeof(float) );
-
       OGRPoint last_p;
       OGRPoint p;
       for (int i = 0; i < npt; i++) {
@@ -3854,7 +3848,6 @@ int s57chart::BuildSENCFile(const wxString &FullPath000,
 }
 
 int s57chart::BuildRAZFromSENCFile(const wxString &FullPath) {
-	//printf("s57chart: BuildRAZFSF obj Path:%s\n", (const char*)FullPath.mb_str(wxConvUTF8));
   int ret_val = 0;  // default is OK
 
   Osenc sencfile;
@@ -3934,7 +3927,6 @@ int s57chart::BuildRAZFromSENCFile(const wxString &FullPath) {
   VCs.clear();
 
   // Walk the vector of S57Objs, associating LUPS, instructions, etc...
-  //printf("s57chart: BuildRAZFSF obj size:%d\n", (int)Objects.size());
   for (unsigned int i = 0; i < Objects.size(); i++) {
     S57Obj *obj = Objects[i];
 

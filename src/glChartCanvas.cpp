@@ -390,28 +390,19 @@ void glChartCanvas::OnActivate(wxActivateEvent &event) {
 }
 
 void glChartCanvas::SetManualSize(int nWidth, int nHeight) {
-#ifdef PRINTLOG_DEBUG
-	printf("glCC : SetManualSize 1\n");
-#endif
 	if (!IsShown()) return;
-#ifdef PRINTLOG_DEBUG
-	printf("glCC : SetManualSize 2\n");
-#endif
 	SetCurrent(*m_pcontext);
 
 	if (!g_bopengl) {
 		SetSize(GetSize().x, GetSize().y);		
 		return;
 	}
-#ifdef PRINTLOG_DEBUG
-	printf("glCC : SetManualSize 3\n");
-#endif	
+
 	if (m_bsetup && m_pcontext && IsShown()) {
 		SetCurrent(*m_pcontext);
 	}
 
 	//SetSize(m_pParentCanvas->GetClientSize());
-
 	if (m_bsetup) {
 		wxLogMessage(_T("BuildFBO 3"));
 		BuildFBO();
@@ -419,9 +410,6 @@ void glChartCanvas::SetManualSize(int nWidth, int nHeight) {
 
 	//  Set the shader viewport transform matrix
 	ViewPort* vp = m_pParentCanvas->GetpVP();
-#ifdef PRINTLOG_DEBUG
-	printf("glCC : SetManualSize : viewport size:%d, %d\n", vp->pix_width, vp->pix_height);
-#endif
 	mat4x4 m;
 	mat4x4_identity(m);
 	mat4x4_scale_aniso((float(*)[4])vp->vp_matrix_transform, m, 2.0 / (float)vp->pix_width, -2.0 / (float)vp->pix_height, 1.0);
@@ -429,9 +417,6 @@ void glChartCanvas::SetManualSize(int nWidth, int nHeight) {
 }
 
 void glChartCanvas::OnSize(wxSizeEvent &event) {
-#ifdef PRINTLOG_DEBUG
-	printf("glCC : OnSize 1\n");
-#endif
 	if (!IsShown()) return;
 
   SetCurrent(*m_pcontext);
@@ -458,9 +443,6 @@ void glChartCanvas::OnSize(wxSizeEvent &event) {
 
   //  Set the shader viewport transform matrix
    ViewPort *vp = m_pParentCanvas->GetpVP();
-#ifdef PRINTLOG_DEBUG
-   printf("glCC : onSize : viewport size:%d, %d\n", vp->pix_width, vp->pix_height);
-#endif
    mat4x4 m;
    mat4x4_identity(m);
    mat4x4_scale_aniso((float(*)[4])vp->vp_matrix_transform, m,
@@ -2788,40 +2770,30 @@ void glChartCanvas::PreSetupGL() {
 
 void glChartCanvas::DrawGLCanvasData(std::string& sIMGFilePath, bool bPNGFlag) {
 	wxClientDC dc(this);
-#ifdef PRINTLOG_DEBUG
-	printf("glchcanv: DrawGL1\n");
-#endif
+
 	if (!m_pcontext) return;
 #ifdef __linux__
 //	Show(g_bopengl);
 #endif
 	if (!g_bopengl) return;  
-#ifdef PRINTLOG_DEBUG
-	printf("glchcanv: DrawGL2\n");
-#endif
+
 	SetCurrent(*m_pcontext);
 	if (!m_bsetup) {
 		SetupOpenGL();
 		if (ps52plib) ps52plib->FlushSymbolCaches(ChartCtxFactory());
 		m_bsetup = true;  
 	}
-#ifdef PRINTLOG_DEBUG
-	printf("glchcanv: DrawGL3\n");
-#endif
+
 	if (!m_b_paint_enable) return;	 
 	if (m_in_glpaint) return;
-#ifdef PRINTLOG_DEBUG
-	printf("glchcanv: DrawGL4\n");
-#endif
+
 	//  If necessary, reconfigure the S52 PLIB
 	m_pParentCanvas->UpdateCanvasS52PLIBConfig();
 
 	m_in_glpaint++;
 	Render();
 	m_in_glpaint--;
-#ifdef PRINTLOG_DEBUG
-	printf("glchcanv: DrawGL5\n");
-#endif
+
 	GenerateImageFile(sIMGFilePath, bPNGFlag);
 }
 
@@ -2831,39 +2803,42 @@ void glChartCanvas::GenerateImageFile(std::string& sIMGFilePath, bool bPNGFlag) 
 
   nWidth = GetGLCanvasWidth();
   nHeight = GetGLCanvasHeight();
+  try {
+	  SwapBuffers();
 
-  SwapBuffers();
+	  int bufferSize = nWidth * nHeight * 3; // 3 components per pixel
+	  GLubyte* pixels = new GLubyte[bufferSize];
+	  glReadnPixels(0, 0, nWidth, nHeight, GL_RGB, GL_UNSIGNED_BYTE, bufferSize, pixels);
 
-  int bufferSize = nWidth * nHeight * 3; // 3 components per pixel
-  GLubyte* pixels = new GLubyte[bufferSize];
-  glReadnPixels(0, 0, nWidth, nHeight, GL_RGB, GL_UNSIGNED_BYTE, bufferSize, pixels);
+	  if (pixels) {
+		  wxImage xImage(nWidth, nHeight, pixels, true);
+		  xImage = xImage.Mirror(false);
 
-  if (pixels) {
-	  wxImage xImage(nWidth, nHeight, pixels, true);
-	  xImage = xImage.Mirror(false);
+		  for (i = 0; i < xImage.GetWidth(); i++) {
+			  for (j = 0; j < xImage.GetHeight(); j++) {
+				  r = (xImage.GetRed(i, j) - 128) * 1.3 + 128;
+				  g = (xImage.GetGreen(i, j) - 128) * 1.3 + 128;
+				  b = (xImage.GetBlue(i, j) - 128) * 1.3 + 128;
 
-	  for (i = 0; i < xImage.GetWidth(); i++) {
-		  for (j = 0; j < xImage.GetHeight(); j++) {			  
-			  r = (xImage.GetRed(i, j) - 128) * 1.3 + 128;
-			  g = (xImage.GetGreen(i, j) - 128) * 1.3 + 128;
-			  b = (xImage.GetBlue(i, j) - 128) * 1.3 + 128;
+				  r = std::min(255, std::max(0, r));
+				  g = std::min(255, std::max(0, g));
+				  b = std::min(255, std::max(0, b));
 
-			  r = std::min(255, std::max(0, r));
-			  g = std::min(255, std::max(0, g));
-			  b = std::min(255, std::max(0, b));
-
-			  xImage.SetRGB(i, j, r, g, b);
+				  xImage.SetRGB(i, j, r, g, b);
+			  }
 		  }
-	  }
 
-	  xImage.Blur(3);	 
+		  xImage.Blur(3);
 
-	  wxFileOutputStream xFileOutput(sIMGFilePath);
-	  if (xFileOutput.IsOk()) {
-		  xImage.SaveFile(xFileOutput, wxBITMAP_TYPE_JPEG);
+		  wxFileOutputStream xFileOutput(sIMGFilePath);
+		  if (xFileOutput.IsOk()) {
+			  xImage.SaveFile(xFileOutput, wxBITMAP_TYPE_JPEG);
+		  }
+		  // Unmap the buffer
+		  delete[] pixels;
 	  }
-	  // Unmap the buffer
-	  delete[] pixels;
+  }
+  catch (std::exception& e) {
   }
 }
 

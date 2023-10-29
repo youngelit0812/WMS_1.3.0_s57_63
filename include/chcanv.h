@@ -151,8 +151,7 @@ public:
   void SetGroupIndex(int index, bool autoswitch = false);
   bool CheckGroup(int igroup);
   void canvasRefreshGroupIndex(void);
-  void canvasChartsRefresh(int dbi_hint);
-  void GenerateImageFile(wxMemoryDC*, std::string&, bool);
+  void canvasChartsRefresh(int dbi_hint);  
 
   void CheckGroupValid(bool showMessage = true, bool switchGroup0 = true);
 
@@ -557,7 +556,7 @@ public:
   void DrawEmboss(ocpnDC &dc, emboss_data *pemboss);    
 
   void RescaleCanvas(LLBBox&);
-  void GenerateImageFile(std::string&, bool);
+  void GenerateImageFile(wxMemoryDC*, std::string&, bool);
 
   //    Data
   int m_canvas_width, m_canvas_height;

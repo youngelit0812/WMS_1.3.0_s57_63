@@ -3,5 +3,8 @@
     "PortForHTTPS": 8081,
     "rebuildCharts": 1,
     "ENCDirPath": "./ENCs/",
-    "IMGDirPath": "./ENC_IMGs/"        
+    "IMGDirPath": "./ENC_IMGs/",
+    "InstallPermit": "241A7FBF",
+    "UserPermit": "1831A155A73D1C615004EB213147", 
+    "S63DirPath": "./s63_files/"
 }

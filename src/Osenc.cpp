@@ -695,19 +695,7 @@ int Osenc::ingest200(const wxString &senc_file_name,
         // Get the Feature type code and ID
         int featureTypeCode = pPayload->feature_type_code;
         featureID = pPayload->feature_ID;
-
-        // TODO
-        //                if(207 == featureID)
-        //                    int yyp = 4;
-
-        //  Look up the FeatureName from the Registrar
-
         std::string acronym = GetFeatureAcronymFromTypecode(featureTypeCode);
-
-        // TODO debugging
-        //                 printf("%s\n", acronym.c_str());
-        //                 if(!strncmp(acronym.c_str(), "BOYLAT", 6))
-        //                     int yyp = 4;
 
         if (acronym.length()) {
           obj = new S57Obj(acronym.c_str());
@@ -729,8 +717,7 @@ int Osenc::ingest200(const wxString &senc_file_name,
         }
 
         // Get the payload
-        OSENC_Attribute_Record_Payload *pPayload =
-            (OSENC_Attribute_Record_Payload *)buf;
+        OSENC_Attribute_Record_Payload *pPayload = (OSENC_Attribute_Record_Payload *)buf;
 
         int attributeTypeCode = pPayload->attribute_type_code;
 

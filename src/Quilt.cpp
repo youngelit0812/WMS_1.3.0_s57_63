@@ -1581,7 +1581,6 @@ void Quilt::UnlockQuilt() {
 }
 
 bool Quilt::Compose(const ViewPort &vp_in) {
-	//printf("Quilt:Compose:viewport:lan:%.2f,lon:%.2f", vp_in.clat, vp_in.clon);
   if (!ChartData) return false;
 
   if (ChartData->IsBusy()) { // This prevent recursion on chart loads that Yeild()
@@ -1589,7 +1588,6 @@ bool Quilt::Compose(const ViewPort &vp_in) {
   }
 
   if (!m_parent->GetpCurrentStack()) return false;
-
   if (m_bbusy) return false;
 
   // XXX call before setting m_bbusy for wxASSERT in UnlockQuilt
@@ -2458,7 +2456,6 @@ bool Quilt::DoRenderQuiltRegionViewOnDC(wxMemoryDC &dc, ViewPort &vp, OCPNRegion
   OCPNRegion rendered_region;
 
   int nRenderableChartCnt = GetnCharts();
-  //printf("Quilt: render chart cnt:%d", nRenderableChartCnt);
   if (nRenderableChartCnt && !m_bbusy) {
     OCPNRegion screen_region = chart_region;
 

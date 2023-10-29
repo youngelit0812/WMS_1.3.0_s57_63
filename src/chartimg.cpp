@@ -4618,9 +4618,6 @@ int ChartBaseBSB::AnalyzeRefpoints(bool b_testSolution) {
       cPoints.ty[nN] = pRefTable[nN].yr;
       cPoints.lon[nN] = easting;
       cPoints.lat[nN] = northing;
-      //                   printf(" x: %g  y: %g  east: %g  north:
-      //                   %g\n",pRefTable[n].xr, pRefTable[n].yr, easting,
-      //                   northing);
     }
 
     //      Helper parameters
@@ -4634,25 +4631,6 @@ int ChartBaseBSB::AnalyzeRefpoints(bool b_testSolution) {
              &cPoints.latmin);
 
     Georef_Calculate_Coefficients_Proj(&cPoints);
-
-    //              for(int h=0 ; h < 10 ; h++)
-    //                    printf("pix to east %d  %g\n",  h, cPoints.pwx[h]); //
-    //                    pix to lon
-    //             for(int h=0 ; h < 10 ; h++)
-    //                    printf("east to pix %d  %g\n",  h, cPoints.wpx[h]); //
-    //                    lon to pix
-
-    /*
-                 if ((0 != m_Chart_DU ) && (0 != m_Chart_Scale))
-                 {
-                       double m_ppm_avg1 = m_Chart_DU * 39.37 / m_Chart_Scale;
-                       m_ppm_avg1 *= cos(m_proj_lat * PI / 180.); // correct to
-       chart centroid
-
-                       printf("BSB chart ppm_avg:%g ppm_avg1:%g\n", m_ppm_avg,
-       m_ppm_avg1); m_ppm_avg = m_ppm_avg1;
-                 }
-    */
   }
 
   else if (m_projection == PROJECTION_POLYCONIC) {
@@ -4687,13 +4665,6 @@ int ChartBaseBSB::AnalyzeRefpoints(bool b_testSolution) {
 
     m_ppm_avg = sqrt(dx2 + dy2) / sqrt(dn2 + de2);
 
-    // Sanity check
-    //             double ref_dist = DistGreatCircle(pRefTable[imax].latr,
-    //             pRefTable[imax].lonr, pRefTable[jmax].latr,
-    //             pRefTable[jmax].lonr); ref_dist *= 1852; //To Meters double
-    //             ref_dist_transform = sqrt(dn2 + de2);         //Also meters
-    //             double error = (ref_dist - ref_dist_transform)/ref_dist;
-
     //  Set up and solve polynomial solution for pix<->cartesian east/north as
     //  projected
     // Fill the cpoints structure with pixel points and transformed lat/lon
@@ -4702,18 +4673,10 @@ int ChartBaseBSB::AnalyzeRefpoints(bool b_testSolution) {
       double easting, northing;
       toPOLY(pRefTable[nN].latr, pRefTable[nN].lonr, m_proj_lat, m_proj_lon, &easting, &northing);
 
-      //   Round trip check for debugging....
-      //                   double lat, lon;
-      //                   fromPOLY(easting, northing, m_proj_lat, m_proj_lon,
-      //                   &lat, &lon);
-
       cPoints.tx[nN] = pRefTable[nN].xr;
       cPoints.ty[nN] = pRefTable[nN].yr;
       cPoints.lon[nN] = easting;
       cPoints.lat[nN] = northing;
-      //                   printf(" x: %g  y: %g  east: %g  north:
-      //                   %g\n",pRefTable[n].xr, pRefTable[n].yr, easting,
-      //                   northing);
     }
 
     //      Helper parameters
@@ -4721,20 +4684,10 @@ int ChartBaseBSB::AnalyzeRefpoints(bool b_testSolution) {
     cPoints.txmin = plonmin;
     cPoints.tymax = platmax;
     cPoints.tymin = platmin;
-    toPOLY(latmax, lonmax, m_proj_lat, m_proj_lon, &cPoints.lonmax,
-           &cPoints.latmax);
-    toPOLY(latmin, lonmin, m_proj_lat, m_proj_lon, &cPoints.lonmin,
-           &cPoints.latmin);
+    toPOLY(latmax, lonmax, m_proj_lat, m_proj_lon, &cPoints.lonmax, &cPoints.latmax);
+    toPOLY(latmin, lonmin, m_proj_lat, m_proj_lon, &cPoints.lonmin, &cPoints.latmin);
 
     Georef_Calculate_Coefficients_Proj(&cPoints);
-
-    //              for(int h=0 ; h < 10 ; h++)
-    //                    printf("pix to east %d  %g\n",  h, cPoints.pwx[h]); //
-    //                    pix to lon
-    //              for(int h=0 ; h < 10 ; h++)
-    //                    printf("east to pix %d  %g\n",  h, cPoints.wpx[h]); //
-    //                    lon to pix
-
   }
 
   //   Any other projection had better have embedded coefficients

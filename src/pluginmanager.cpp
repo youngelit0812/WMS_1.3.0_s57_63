@@ -2539,6 +2539,10 @@ wxString* GetpSharedDataLocation(void) {
   return g_Platform->GetSharedDataDirPtr();
 }
 
+wxString GetpStdPaths() {
+	return g_Platform->GetSharedDataDir();
+}
+
 wxString* GetpPrivateApplicationDataLocation(void) {
   return g_Platform->GetPrivateDataDirPtr();
 }
@@ -4635,11 +4639,8 @@ bool ChartPlugInWrapper::RenderRegionViewOnGLNoText(
     const OCPNRegion& RectRegion, const LLRegion& Region) {
 #ifdef ocpnUSE_GL
   if (m_ppicb) {
-    //        printf("\nCPIW::RRVOGLNT  %d %d \n", indexrr++, m_Chart_Scale);
-
     gs_plib_flags = 0;  // reset the CAPs flag
-    PlugInChartBaseExtended* ppicb_x =
-        dynamic_cast<PlugInChartBaseExtended*>(m_ppicb);
+    PlugInChartBaseExtended* ppicb_x = dynamic_cast<PlugInChartBaseExtended*>(m_ppicb);
     PlugInChartBaseGL* ppicb = dynamic_cast<PlugInChartBaseGL*>(m_ppicb);
     if (!Region.Empty() && ppicb_x) {
       // Start with a clean slate
@@ -4652,9 +4653,7 @@ bool ChartPlugInWrapper::RenderRegionViewOnGLNoText(
       PlugIn_ViewPort pivp = CreatePlugInViewport(VPoint);
       wxRegion* r = RectRegion.GetNew_wxRegion();
 
-      ppicb_x->RenderRegionViewOnGLNoText(glc, pivp, *r,
-                                          glChartCanvas::s_b_useStencil);
-
+      ppicb_x->RenderRegionViewOnGLNoText(glc, pivp, *r, glChartCanvas::s_b_useStencil);
       // Undo rotation
       UndoRenderRotateToViewPort(VPoint);
 
@@ -4679,9 +4678,7 @@ bool ChartPlugInWrapper::RenderRegionViewOnGLNoText(
           RenderRotateToViewPort(VPoint);
 
           PlugIn_ViewPort pivp = CreatePlugInViewport(cvp);
-          ppicb->RenderRegionViewOnGL(glc, pivp, *r,
-                                      glChartCanvas::s_b_useStencil);
-
+          ppicb->RenderRegionViewOnGL(glc, pivp, *r, glChartCanvas::s_b_useStencil);
           // Undo rotation
           UndoRenderRotateToViewPort(VPoint);
 

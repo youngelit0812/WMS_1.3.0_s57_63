@@ -534,10 +534,6 @@ void OCPN_AUIManager::SetDockSize(wxAuiDockInfo* dock, int size) {
 
 bool OCPN_AUIManager::ProcessDockResult(wxAuiPaneInfo& target,
                                         const wxAuiPaneInfo& new_pos) {
-  // printf("DockResult direction: %d   layer: %d   position: %d %d\n" ,
-  // new_pos.dock_direction, new_pos.dock_layer, new_pos.dock_pos,
-  // GetCanvasIndexUnderMouse());
-
   // If we are docking a Dashboard window, we restrict the spots that can accept
   // the docking action
   if (new_pos.window->GetName().IsSameAs(_T("panel"))) {

@@ -113,9 +113,6 @@ void SENCThreadManager::StartTopJob() {
 
     // Found one?
     if (startCandidate) {
-      // printf("Starting job:  %s\n", (const
-      // char*)startCandidate->m_FullPath000.mb_str());
-
       SENCBuildThread *thread = new SENCBuildThread(startCandidate, this);
       startCandidate->m_thread = thread;
       startCandidate->m_status = THREAD_STARTED;
@@ -135,18 +132,10 @@ void SENCThreadManager::StartTopJob() {
 }
 
 void SENCThreadManager::FinishJob(SENCJobTicket *ticket) {
-  // printf("Finishing job:  %s\n", (const
-  // char*)ticket->m_FullPath000.mb_str());
-
   // Find and remove the ticket from the list
   for (size_t i = 0; i < ticket_list.size(); i++) {
     if (ticket_list[i] == ticket) {
-      // printf("   Removing job:  %s\n", (const
-      // char*)ticket->m_FullPath000.mb_str());
-
       ticket_list.erase(ticket_list.begin() + i);
-      // printf("Job count:  %d\n", ticket_list.size());
-
       break;
     }
   }
@@ -197,13 +186,11 @@ void SENCThreadManager::OnEvtThread(OCPN_BUILDSENC_ThreadEvent &event) {
 
   switch (event.type) {
     case SENC_BUILD_STARTED:
-      // printf("SENC build started\n");
       Sevent.type = SENC_BUILD_STARTED;
       Sevent.m_ticket = event.m_ticket;
 
       break;
     case SENC_BUILD_DONE_NOERROR:
-      // printf("SENC build done no error\n");
       Sevent.type = SENC_BUILD_DONE_NOERROR;
       Sevent.m_ticket = event.m_ticket;
       FinishJob(event.m_ticket);
@@ -211,7 +198,6 @@ void SENCThreadManager::OnEvtThread(OCPN_BUILDSENC_ThreadEvent &event) {
 
       break;
     case SENC_BUILD_DONE_ERROR:
-      // printf("SENC build done ERROR\n");
       Sevent.type = SENC_BUILD_DONE_ERROR;
       Sevent.m_ticket = event.m_ticket;
       FinishJob(event.m_ticket);

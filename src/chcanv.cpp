@@ -2970,15 +2970,7 @@ bool ChartCanvas::SetViewPoint(double lat, double lon, double scale_ppm,
   VPoint.view_scale_ppm = scale_ppm;
   if (projection != PROJECTION_UNKNOWN) VPoint.SetProjectionType(projection);
   else if (VPoint.m_projection_type == PROJECTION_UNKNOWN) VPoint.SetProjectionType(PROJECTION_MERCATOR);
-
-  // don't allow latitude above 88 for mercator (90 is infinity)
-  /* if (VPoint.m_projection_type == PROJECTION_MERCATOR || VPoint.m_projection_type == PROJECTION_TRANSVERSE_MERCATOR) {
-    if (VPoint.clat > 89.5)
-      VPoint.clat = 89.5;
-    else if (VPoint.clat < -89.5)
-      VPoint.clat = -89.5;
-  } */
-
+  
   // don't zoom out too far for transverse mercator polyconic until we resolve
   // issues
   if (VPoint.m_projection_type == PROJECTION_POLYCONIC ||
@@ -2993,8 +2985,7 @@ bool ChartCanvas::SetViewPoint(double lat, double lon, double scale_ppm,
     return false;
 
   bool bwasValid = VPoint.IsValid();
-  VPoint.Validate();  // Mark this ViewPoint as OK
-  //printf("chcanv: SetViewPoint : screen width:%d, height:%d\n", VPoint.pix_width, VPoint.pix_height);
+  VPoint.Validate();  // Mark this ViewPoint as OK  
   //  Has the Viewport scale changed?  If so, invalidate the vp
   if (last_vp.view_scale_ppm != scale_ppm) {
     m_cache_vp.Invalidate();
@@ -3154,8 +3145,7 @@ bool ChartCanvas::SetViewPoint(double lat, double lon, double scale_ppm,
         m_pQuilt->SetReferenceChart(new_ref_index);  // maybe???
       }
 
-      if (!g_bopengl) {
-		  //printf("chcanv : SetViewPoint : g_bOpenGL false\n");
+      if (!g_bopengl) {		  
         // Preset the VPoint projection type to match what the quilt projection
         // type will be
         int ref_db_index = m_pQuilt->GetRefChartdbIndex(), proj;
@@ -4073,7 +4063,6 @@ void ChartCanvas::ResizeChCanvasWH(int nWidth, int nHeight) {
 	//  Rescale again, to capture all the changes for new canvas size
 	SetVPScale(GetVPScale());
 
-	//printf("s57chart : onSize : ReloadVP\n");
 	FormatPianoKeys();
 	//  Invalidate the whole window
 	ReloadVP();
@@ -4605,9 +4594,6 @@ void ChartCanvas::DrawCanvasData(LLBBox &llbBox, int nWidth, int nHeight, std::v
 
 #if defined ocpnUSE_GL
 	if (!g_bdisable_opengl && g_bopengl && m_glcc) {
-#ifdef PRINTLOG_DEBUG
-		printf("chcanv: DrawCD\n");
-#endif
 #if defined(_WIN32) || defined(_WIN64)
 		m_glcc->SetSize(nWidth, nHeight);
 #else
@@ -5084,64 +5070,52 @@ void ChartCanvas::DrawCanvasData(LLBBox &llbBox, int nWidth, int nHeight, std::v
 	m_b_paint_enable = true;
 }
 
-void ChartCanvas::GenerateImageFile(std::string& sIMGFilePath, bool bPNGFlag) {
-	wxMemoryDC dc;
-	int nWidth, nHeight;
-
-	nWidth = GetVP().pix_width;
-	nHeight = GetVP().pix_height;
-
-	wxBitmap bmp(nWidth, nHeight, -1);
-	dc.SelectObject(bmp);
-
-	glFlush();
-	m_glcc->SwapBuffers();
-	wxClientDC cdc(this);
-	dc.Blit(0, 0, nWidth, nHeight, &cdc, 0, 0);
-	bmp.SaveFile(sIMGFilePath, wxBITMAP_TYPE_PNG);
-}
-
 void ChartCanvas::GenerateImageFile(wxMemoryDC* pMemDC, std::string& sIMGFilePath, bool bPNGFlag) {	
 	int i, j, r, g, b;
 	int nDCWidth, nDCHeight;
-	nDCWidth = pMemDC->GetSize().GetWidth();
-	nDCHeight = pMemDC->GetSize().GetHeight();
 
-	if (nDCWidth < 1 || nDCHeight < 1) return;
-	wxBitmap xbTargetBitmap(nDCWidth, nDCHeight, -1);
-	wxMemoryDC xMemDC;
-	xMemDC.SelectObject(xbTargetBitmap);
+	try {
+		nDCWidth = pMemDC->GetSize().GetWidth();
+		nDCHeight = pMemDC->GetSize().GetHeight();
 
-	if (nDCHeight > 1) {
-		xMemDC.Blit(0, 0, nDCWidth, nDCHeight, pMemDC, 0, 0);
-	}
-	xMemDC.SelectObject(wxNullBitmap);
+		if (nDCWidth < 1 || nDCHeight < 1) return;
+		wxBitmap xbTargetBitmap(nDCWidth, nDCHeight, -1);
+		wxMemoryDC xMemDC;
+		xMemDC.SelectObject(xbTargetBitmap);
 
-	wxImage xImage;
-	if (xbTargetBitmap.IsOk()) {
-		xImage = xbTargetBitmap.ConvertToImage();
-		
-		for (i = 0; i < xImage.GetWidth(); i++) {
-			for (j = 0; j < xImage.GetHeight(); j++) {
-				r = (xImage.GetRed(i, j) - 128) * 1.3 + 128;
-				g = (xImage.GetGreen(i, j) - 128) * 1.3 + 128;
-				b = (xImage.GetBlue(i, j) - 128) * 1.3 + 128;
+		if (nDCHeight > 1) {
+			xMemDC.Blit(0, 0, nDCWidth, nDCHeight, pMemDC, 0, 0);
+		}
+		xMemDC.SelectObject(wxNullBitmap);
 
-				r = wxMin(255, wxMax(0, r));
-				g = wxMin(255, wxMax(0, g));
-				b = wxMin(255, wxMax(0, b));
+		wxImage xImage;
+		if (xbTargetBitmap.IsOk()) {
+			xImage = xbTargetBitmap.ConvertToImage();
 
-				xImage.SetRGB(i, j, r, g, b);
+			for (i = 0; i < xImage.GetWidth(); i++) {
+				for (j = 0; j < xImage.GetHeight(); j++) {
+					r = (xImage.GetRed(i, j) - 128) * 1.3 + 128;
+					g = (xImage.GetGreen(i, j) - 128) * 1.3 + 128;
+					b = (xImage.GetBlue(i, j) - 128) * 1.3 + 128;
+
+					r = wxMin(255, wxMax(0, r));
+					g = wxMin(255, wxMax(0, g));
+					b = wxMin(255, wxMax(0, b));
+
+					xImage.SetRGB(i, j, r, g, b);
+				}
 			}
-		}
 
-		xImage.Blur(3);		
-		wxFileOutputStream xFileOutput(sIMGFilePath);
-		if (xFileOutput.IsOk()) {
-			xImage.SaveFile(xFileOutput, wxBITMAP_TYPE_JPEG);			
-		}
+			xImage.Blur(3);
+			wxFileOutputStream xFileOutput(sIMGFilePath);
+			if (xFileOutput.IsOk()) {
+				xImage.SaveFile(xFileOutput, wxBITMAP_TYPE_JPEG);
+			}
 
-		xImage.Destroy();
+			xImage.Destroy();
+		}
+	}
+	catch (std::exception& e) {
 	}
 }
 
@@ -6850,8 +6824,7 @@ void ChartCanvas::RemoveChartFromQuilt(int dbIndex) {
 
 bool ChartCanvas::UpdateS52State() {
   bool retval = false;
-  //    printf("    update %d\n", IsPrimaryCanvas());
-
+  
   if (ps52plib) {
     ps52plib->SetShowS57Text(m_encShowText);
     ps52plib->SetDisplayCategory((DisCat)m_encDisplayCategory);

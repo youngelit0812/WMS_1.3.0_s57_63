@@ -444,7 +444,13 @@ public:
 };
 
 // the types of the class factories used to create PlugIn instances
-typedef opencpn_plugin *create_t(void *);
+typedef opencpn_plugin *create_t(void *, std::string&, std::string&);
+typedef void set_install_permit(std::string&);
+typedef void set_user_permit(std::string&);
+typedef void set_certification(opencpn_plugin*, std::string&);
+typedef void set_FRFile(opencpn_plugin*, std::string&);
+typedef void set_import_cellpermit(opencpn_plugin*, std::string&, bool);
+typedef void import_cells_manually(opencpn_plugin*, std::string&, bool);
 typedef void destroy_t(opencpn_plugin *);
 
 #ifdef __clang__
@@ -747,6 +753,8 @@ extern "C" DECL_EXP wxWindow *GetOCPNCanvasWindow();
 extern "C" DECL_EXP wxFont *OCPNGetFont(wxString TextElement, int default_size);
 
 extern "C" DECL_EXP wxString *GetpSharedDataLocation();
+
+extern "C" DECL_EXP wxString GetpStdPaths();
 
 extern "C" DECL_EXP wxAuiManager *GetFrameAuiManager(void);
 

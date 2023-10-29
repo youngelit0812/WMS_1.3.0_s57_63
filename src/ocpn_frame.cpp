@@ -597,11 +597,9 @@ MyFrame::~MyFrame() {
 void MyFrame::OnSENCEvtThread(OCPN_BUILDSENC_ThreadEvent &event) {
   s57chart *chart;
   switch (event.type) {
-    case SENC_BUILD_STARTED:
-      // printf("Myframe SENC build started\n");
+    case SENC_BUILD_STARTED:      
       break;
-    case SENC_BUILD_DONE_NOERROR:
-      // printf("Myframe SENC build done no error\n");
+    case SENC_BUILD_DONE_NOERROR:      
       chart = event.m_ticket->m_chart;
       if (chart) {
         chart->PostInit(FULL_INIT, global_color_scheme);
@@ -615,8 +613,7 @@ void MyFrame::OnSENCEvtThread(OCPN_BUILDSENC_ThreadEvent &event) {
       ReloadAllVP();
       delete event.m_ticket;
       break;
-    case SENC_BUILD_DONE_ERROR:
-      // printf("Myframe SENC build done ERROR\n");
+    case SENC_BUILD_DONE_ERROR:      
       break;
     default:
       break;

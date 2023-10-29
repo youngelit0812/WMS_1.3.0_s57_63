@@ -14,7 +14,7 @@ project(WMSServer)
 
 set(OPENGLES_FOUND "NO")
 set(OPENGL_FOUND "YES")
-add_definitions(-DPRINTLOG_DEBUG)
+#add_definitions(-DPRINTLOG_DEBUG)
 # Global properties
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
@@ -97,7 +97,8 @@ if (MSVC)
   file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/Release/ENCs)
   file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/Release/env)
   file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/Release/tools)
-  file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/Release/ENC_IMGs)  
+  file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/Release/ENC_IMGs)
+  file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/Release/s63_files)
   file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/Debug)  
   file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/Debug/gshhs)
   file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/Debug/tcdata)
@@ -107,7 +108,8 @@ if (MSVC)
   file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/Debug/ENCs)
   file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/Debug/env)
   file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/Debug/tools)
-  file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/Debug/ENC_IMGs)  
+  file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/Debug/ENC_IMGs)
+  file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/Debug/s63_files)
 
   execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_SOURCE_DIR}/Append_libs/Release
@@ -136,6 +138,10 @@ if (MSVC)
   execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_SOURCE_DIR}/Append_data/tools
         ${CMAKE_BINARY_DIR}/Release/tools)
+  
+  execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_SOURCE_DIR}/Append_data/s63_files
+        ${CMAKE_BINARY_DIR}/Release/s63_files)
 
   file(COPY ${CMAKE_SOURCE_DIR}/Append_data/navobj.xml DESTINATION ${CMAKE_BINARY_DIR}/Release)
   file(COPY ${CMAKE_SOURCE_DIR}/Append_data/wmsserver.conf DESTINATION ${CMAKE_BINARY_DIR}/Release)
@@ -170,6 +176,10 @@ if (MSVC)
         ${CMAKE_SOURCE_DIR}/Append_data/tools
         ${CMAKE_BINARY_DIR}/Debug/tools)
   
+  execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_SOURCE_DIR}/Append_data/s63_files
+        ${CMAKE_BINARY_DIR}/Debug/s63_files)
+
   file(COPY ${CMAKE_SOURCE_DIR}/Append_data/navobj.xml DESTINATION ${CMAKE_BINARY_DIR}/Debug)
   file(COPY ${CMAKE_SOURCE_DIR}/Append_data/wmsserver.conf DESTINATION ${CMAKE_BINARY_DIR}/Debug)
   file(COPY ${CMAKE_SOURCE_DIR}/Append_data/MMSINAME.CSV DESTINATION ${CMAKE_BINARY_DIR}/Debug)
@@ -212,6 +222,12 @@ file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/tools)
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_SOURCE_DIR}/Append_data/tools
         ${CMAKE_BINARY_DIR}/tools)
+
+file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/s63_files)
+
+execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_SOURCE_DIR}/Append_data/s63_files
+        ${CMAKE_BINARY_DIR}/s63_files)
 
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/SENC)
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/ENCs)
@@ -1729,6 +1745,7 @@ if(NOT CPPSERVER_MODULE)
   set_target_properties(WMSServer PROPERTIES COMPILE_FLAGS "${PEDANTIC_COMPILE_FLAGS}")
   target_link_libraries(WMSServer PUBLIC ${LINKLIBS})
   
+  add_subdirectory(plugins)
   # Install *.pdb files
   if(MSVC)
     foreach(INSTALL_TARGET_PDB ${INSTALL_TARGETS_PDB})

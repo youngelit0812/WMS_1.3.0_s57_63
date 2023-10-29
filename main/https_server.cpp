@@ -275,6 +275,9 @@ void loadEnvironment(char* szEnvFilePath, Environments& envConfig)
 		envConfig.rebuildCharts = jsonData.value("rebuildCharts", 0) == 0 ? false : true;
 		envConfig.sENCDirPath = jsonData.value("ENCDirPath", "");
 		envConfig.sIMGDirPath = jsonData.value("IMGDirPath", "");
+		envConfig.sInstallPermit = jsonData.value("InstallPermit", "");
+		envConfig.sUserPermit = jsonData.value("UserPermit", "");
+		envConfig.sS63DirPath = jsonData.value("S63DirPath", "");		
 	}
 	catch (nlohmann::json::parse_error & e)
 	{
@@ -376,7 +379,7 @@ int main(int argc, char** argv)
 #endif
 
 	MainApp* pAppForService = new MainApp();
-	if (!pAppForService->OnInit(envConfig.sENCDirPath, envConfig.rebuildCharts, envConfig.sIMGDirPath)) {
+	if (!pAppForService->OnInit(envConfig.sENCDirPath, envConfig.rebuildCharts, envConfig.sIMGDirPath, envConfig.sInstallPermit, envConfig.sUserPermit, envConfig.sS63DirPath)) {
 		delete pAppForService;
 		return 1;
 	}

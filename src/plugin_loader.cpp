@@ -1438,7 +1438,7 @@ PlugInContainer* PluginLoader::LoadPlugIn(const wxString& plugin_file,
   }
 
   // create an instance of the plugin class
-  opencpn_plugin* plug_in = create_plugin(this);
+  opencpn_plugin* plug_in = create_plugin(this, std::string(""), std::string(""));
 
   int api_major = plug_in->GetAPIVersionMajor();
   int api_minor = plug_in->GetAPIVersionMinor();

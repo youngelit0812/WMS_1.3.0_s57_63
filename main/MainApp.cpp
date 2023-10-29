@@ -128,6 +128,12 @@ void RedirectIOToConsole();
 
 WX_DEFINE_OBJARRAY(ArrayOfCDI);
 
+#define S63_PLUGIN_FILEPATH    "./s63_pi.dll"
+#define S63_CERT_FILENAME	   "IHO.PUB"
+
+opencpn_plugin* g_S63Plugin;
+wxDynamicLibrary *g_pLibrary;
+
 OCPNPlatform* g_Platform;
 BasePlatform* g_BasePlatform;
 MyFrame* gFrame;
@@ -805,7 +811,7 @@ MainApp::MainApp()
 #endif   // __linux__
 }
 
-bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart, std::string& sIMGDirPath) {
+bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart, std::string& sIMGDirPath, std::string& sInstallPermit, std::string& sUserPermit, std::string& sS63DirPath) {
 	if (!wxApp::OnInit()) return false;
 
 	g_unit_test_2 = 0;
@@ -861,20 +867,20 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart, std::string& 
 	temp_font.SetDefaultEncoding(wxFONTENCODING_SYSTEM);
 
   //      Establish Log File location
-  if (!g_Platform->InitializeLogFile()) return false;
+	if (!g_Platform->InitializeLogFile()) return false;
 
-  wxPlatformInfo platforminfo = wxPlatformInfo::Get();
+	wxPlatformInfo platforminfo = wxPlatformInfo::Get();
 
-  wxString os_name;
-  os_name = platforminfo.GetOperatingSystemIdName();
+	wxString os_name;
+	os_name = platforminfo.GetOperatingSystemIdName();
 
-  ::wxGetOsVersion(&osMajor, &osMinor);
-  OCPN_OSDetail *detail = g_Platform->GetOSDetail();
+	::wxGetOsVersion(&osMajor, &osMinor);
+	OCPN_OSDetail *detail = g_Platform->GetOSDetail();
   
-  //    Initialize embedded PNG icon graphics
-  ::wxInitAllImageHandlers();
+	//    Initialize embedded PNG icon graphics
+	::wxInitAllImageHandlers();
 
-  g_Platform->GetSharedDataDir();
+	g_Platform->GetSharedDataDir();
   
 #ifdef __WXQT__
   //  Now we can configure the Qt StyleSheets, if present
@@ -901,7 +907,7 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart, std::string& 
 #endif
 #endif
 
-  bool b_initial_load = false;
+	bool b_initial_load = false;
 
 	wxFileName config_test_file_name(g_Platform->GetConfigFileName());
 	if (config_test_file_name.FileExists()) {
@@ -1206,16 +1212,16 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart, std::string& 
 	////  Most likely installations have no ownship heading information
 	g_bVAR_Rx = false;
 
-  Yield();
+	Yield();
 
-  gFrame->DoChartUpdate();
+	gFrame->DoChartUpdate();
 
-  FontMgr::Get().ScrubList();  // Clean the font list, removing nonsensical entries
+	FontMgr::Get().ScrubList();  // Clean the font list, removing nonsensical entries
 
-  gFrame->ReloadAllVP();  // once more, and good to go
+	gFrame->ReloadAllVP();  // once more, and good to go
 
-  gFrame->Refresh(false);
-  gFrame->Raise();
+	gFrame->Refresh(false);
+	gFrame->Raise();
 
 	gFrame->GetPrimaryCanvas()->Enable();
 	gFrame->GetPrimaryCanvas()->SetFocus();
@@ -1254,6 +1260,33 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart, std::string& 
 	printf("Wait for minutes to prepare... \n");
 	gFrame->UpdateDB_Canvas();	
 	printf("pre-initialize finished! \n");
+
+	g_pLibrary = new wxDynamicLibrary();
+	if (g_pLibrary->IsLoaded()) g_pLibrary->Unload();
+	g_pLibrary->Load(S63_PLUGIN_FILEPATH);
+
+	if (!g_pLibrary->IsLoaded()) {
+		printf("   PluginLoader: Cannot load library\n");
+		delete g_pLibrary;
+		return false;
+	}
+
+	create_t* create_plugin = (create_t*)g_pLibrary->GetSymbol("create_pi");
+	set_install_permit* setInstallPermit = (set_install_permit*)g_pLibrary->GetSymbol("set_install_permit");
+	set_user_permit* setUserPermit = (set_user_permit*)g_pLibrary->GetSymbol("set_user_permit");
+	set_certification* setCert = (set_certification*)g_pLibrary->GetSymbol("set_certification"); //IHO.PUB
+	set_FRFile* setFRFile = (set_FRFile*)g_pLibrary->GetSymbol("set_FRFile");
+	set_import_cellpermit* setImportCellPermit = (set_import_cellpermit*)g_pLibrary->GetSymbol("set_import_cellpermit");
+	import_cells_manually* ImportCellsManually = (import_cells_manually*)g_pLibrary->GetSymbol("import_cells_manually");
+
+	std::string sSharedPath = (const char *)g_Platform->GetStdPaths().GetExecutablePath().mb_str(wxConvUTF8);
+	g_S63Plugin = create_plugin(this, sS63DirPath, sSharedPath);
+	setInstallPermit(sInstallPermit);
+	setUserPermit(sUserPermit);
+	setCert(g_S63Plugin, sS63DirPath + S63_CERT_FILENAME);
+	setFRFile(g_S63Plugin, sS63DirPath + "fpr03W_1697524604.fpr");
+	setImportCellPermit(g_S63Plugin, sS63DirPath, bRebuildChart);
+	ImportCellsManually(g_S63Plugin, sS63DirPath, bRebuildChart);
 
 	return true;
 }
@@ -1312,6 +1345,13 @@ int MainApp::OnExit(std::string& sIMGDirPath) {
 	}
 
 	if (g_pGLcontext) delete g_pGLcontext;
+
+	if (g_S63Plugin) delete g_S63Plugin;
+	
+	if (g_pLibrary) {
+		if (g_pLibrary->IsLoaded()) g_pLibrary->Unload();
+		delete g_pLibrary;
+	}
 
 	return true;
 }
