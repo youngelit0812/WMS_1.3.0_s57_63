@@ -79,9 +79,11 @@
 #endif
 
 extern BasePlatform* g_BasePlatform;
+extern OCPNPlatform* g_Platform;
 extern wxWindow* gFrame;
 extern ChartDB* ChartData;
 extern bool g_bportable;
+extern std::string g_sS63DataDirPath;
 
 static const std::vector<std::string> SYSTEM_PLUGINS = {
     "chartdownloader", "wmm", "dashboard", "grib", "s63"};
@@ -391,7 +393,7 @@ void PluginLoader::SortPlugins(int (*cmp_func)(PlugInContainer**,
   plugin_array.Sort(ComparePlugins);
 }
 
-bool PluginLoader::LoadAllPlugIns(bool load_enabled) {
+bool PluginLoader::LoadAllPlugIns(bool load_enabled, std::string sS63DataDirPath) {
   using namespace std;
 
   static const wxString sep = wxFileName::GetPathSeparator();
@@ -555,6 +557,8 @@ bool PluginLoader::LoadPluginCandidate(const wxString& file_name,
       pic->m_long_description = pic->m_pplugin->GetLongDescription();
       pic->m_version_major = pic->m_pplugin->GetPlugInVersionMajor();
       pic->m_version_minor = pic->m_pplugin->GetPlugInVersionMinor();
+
+
 
       auto pbm0 = pic->m_pplugin->GetPlugInBitmap();
       if (!pbm0->IsOk()) {
@@ -1437,8 +1441,9 @@ PlugInContainer* PluginLoader::LoadPlugIn(const wxString& plugin_file,
     return nullptr;
   }
 
-  // create an instance of the plugin class
-  opencpn_plugin* plug_in = create_plugin(this, std::string(""), std::string(""));
+  // create an instance of the plugin class  
+  std::string sSharedPath = (const char*)g_Platform->GetStdPaths().GetExecutablePath().mb_str(wxConvUTF8);
+  opencpn_plugin* plug_in = create_plugin(this, g_sS63DataDirPath, sSharedPath);
 
   int api_major = plug_in->GetAPIVersionMajor();
   int api_minor = plug_in->GetAPIVersionMinor();

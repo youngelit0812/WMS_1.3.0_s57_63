@@ -197,7 +197,7 @@ public:
    * @param enabled_plugins If true, only load enabled plugins
    * @return false on load errors, else true.
    */
-  bool LoadAllPlugIns(bool enabled_plugins);
+  bool LoadAllPlugIns(bool enabled_plugins, std::string sS63DataDirPath="");
 
   const wxBitmap* GetPluginDefaultIcon();
   void SetPluginDefaultIcon(const wxBitmap* bitmap);
@@ -240,7 +240,7 @@ public:
   /** Update m_toolbox_panel state for plugin with given name. */
   void SetToolboxPanel(const wxString& common_name, bool value);
 
-private:
+public:
   PluginLoader();
   bool LoadPlugInDirectory(const wxString& plugin_dir, bool load_enabled);
   bool LoadPluginCandidate(const wxString& file_name, bool load_enabled);

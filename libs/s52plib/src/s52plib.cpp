@@ -8192,8 +8192,8 @@ int s52plib::RenderToGLAC_GLSL(ObjRazRules *rzRules, Rules *rules) {
       } else
         box = p_tp->tri_box;
 
-      if (!BBView.IntersectOut(box)) {
-        glDrawArrays(p_tp->type, VBO_offset_index, p_tp->nVert);
+      if (!BBView.IntersectOut(box)) {        
+        //glDrawArrays(p_tp->type, VBO_offset_index, p_tp->nVert);
       }
 
       VBO_offset_index += p_tp->nVert;

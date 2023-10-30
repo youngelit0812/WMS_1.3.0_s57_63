@@ -395,6 +395,10 @@ ChartBase *ChartDB::GetChart(const wxChar *theFilePath,
     //printf("GetChart: LoadS57\n");
     LoadS57();
     pch = new s57chart;
+  } else if (chart_desc.m_descriptor_type == PLUGIN_DESCRIPTOR) {
+    LoadS57();
+    ChartPlugInWrapper *cpiw = new ChartPlugInWrapper(chart_desc.m_class_name);
+    pch = (ChartBase *)cpiw;  
   } else {
 	  printf("GetChart: No ENC Format\n");    
   }
@@ -1105,7 +1109,46 @@ ChartBase *ChartDB::OpenChartUsingCache(int dbindex, ChartInitFlag init_flag) {
       ext.WLON = cte.GetLonMin();
       ext.ELON = cte.GetLonMax();
       Chs57->SetFullExtent(ext);
-    } else {
+    }
+    else if (chart_type == CHART_TYPE_PLUGIN) {
+      wxFileName fn(ChartFullPath);
+      wxString ext = fn.GetExt();
+      ext.Prepend(_T("*."));
+      wxString ext_upper = ext.MakeUpper();
+      wxString ext_lower = ext.MakeLower();
+      wxString chart_class_name;
+
+      //    Search the array of chart class descriptors to find a match
+      //    bewteen the search mask and the the chart file extension
+
+      for (unsigned int i = 0; i < m_ChartClassDescriptorArray.GetCount();
+           i++) {
+        if (m_ChartClassDescriptorArray[i].m_descriptor_type ==
+            PLUGIN_DESCRIPTOR) {
+          if (m_ChartClassDescriptorArray[i].m_search_mask == ext_upper) {
+            chart_class_name = m_ChartClassDescriptorArray[i].m_class_name;
+            break;
+          }
+          if (m_ChartClassDescriptorArray[i].m_search_mask == ext_lower) {
+            chart_class_name = m_ChartClassDescriptorArray[i].m_class_name;
+            break;
+          }
+          if (ChartFullPath.Matches(
+                  m_ChartClassDescriptorArray.Item(i).m_search_mask)) {
+            chart_class_name = m_ChartClassDescriptorArray.Item(i).m_class_name;
+            break;
+          }
+        }
+      }
+
+      //                chart_class_name = cte.GetChartClassName();
+      if (chart_class_name.Len()) {
+        ChartPlugInWrapper *cpiw = new ChartPlugInWrapper(chart_class_name);
+        Ch = (ChartBase *)cpiw;
+        if (chart_family == CHART_FAMILY_VECTOR) LoadS57();
+      }
+    }
+    else {
       Ch = NULL;
     }
 

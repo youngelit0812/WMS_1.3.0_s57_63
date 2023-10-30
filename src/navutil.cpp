@@ -425,6 +425,7 @@ void appendOSDirSlash(wxString *pString);
 MyConfig::MyConfig(const wxString &LocalFileName)
     : wxFileConfig(_T (""), _T (""), LocalFileName, _T (""), wxCONFIG_USE_LOCAL_FILE) {
 	m_sENCDirPath = "";
+	m_sS63ENCDirPath = "";
 	wxFileName config_file(LocalFileName);
 	m_sNavObjSetFile = config_file.GetPath(wxPATH_GET_VOLUME | wxPATH_GET_SEPARATOR);
 	m_sNavObjSetFile += _T ( "navobj.xml" );
@@ -484,11 +485,12 @@ void MyConfig::CreateRotatingNavObjBackup() {
       break;
 }
 
-int MyConfig::LoadMyConfig(std::string& sENCDirPath) {
+int MyConfig::LoadMyConfig(std::string& sENCDirPath, std::string& sS63ENCDirPath) {
   int display_width, display_height;
   wxDisplaySize(&display_width, &display_height);
 
   m_sENCDirPath = sENCDirPath;
+  m_sS63ENCDirPath = sS63ENCDirPath;
   //  Set up any defaults not set elsewhere
   g_useMUI = false;
   g_TalkerIdText = _T("EC");
@@ -1546,8 +1548,11 @@ bool MyConfig::LoadChartDirArray(ArrayOfCDI &ChartDirArray) {
 	ChartDirInfo cdi;
 	cdi.fullpath = m_sENCDirPath;
 	cdi.magic_number = "";
-
 	ChartDirArray.Add(cdi);    
+
+	cdi.fullpath = m_sS63ENCDirPath;
+	cdi.magic_number = "";
+	ChartDirArray.Add(cdi);
 
 	return true;
 }

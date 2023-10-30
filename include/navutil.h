@@ -93,7 +93,7 @@ public:
   MyConfig(const wxString &LocalFileName);
   ~MyConfig();
 
-  int LoadMyConfig(std::string&);
+  int LoadMyConfig(std::string&, std::string&);
   void LoadS57Config();
   void LoadNavObjects();  
 
@@ -114,6 +114,8 @@ public:
   virtual void UpdateNavObjOnly();
   virtual bool IsChangesFileDirty();
 
+  void SetOS63DirPath(std::string& sOS63DirPath) { m_sS63ENCDirPath = sOS63DirPath; }
+
   bool LoadLayers(wxString &path);
   int LoadMyConfigRaw(bool bAsTemplate = false);
 
@@ -122,6 +124,7 @@ public:
   wxString m_sNavObjSetFile;
   wxString m_sNavObjSetChangesFile;
   std::string m_sENCDirPath;
+  std::string m_sS63ENCDirPath;
   NavObjectChanges *m_pNavObjectChangesSet;
   NavObjectCollection1 *m_pNavObjectInputSet;
 };

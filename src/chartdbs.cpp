@@ -40,6 +40,7 @@
 
 #include "chartdbs.h"
 #include "chartbase.h"
+#include "pluginmanager.h"
 #include "mygeom.h"  // For DouglasPeucker();
 #include "FlexHash.h"
 #include "LOD_reduce.h"
@@ -51,6 +52,7 @@
 #define UINT32 unsigned int
 #endif
 
+extern PlugInManager *g_pi_manager;
 extern wxString gWorldMapLocation;
 
 static int s_dbVersion;  //    Database version currently in use at runtime
@@ -1070,6 +1072,30 @@ void ChartDatabase::UpdateChartClassDescriptorArray(void) {
   pcd =
       new ChartClassDescriptor(_T("s57chart"), _T("*.s57"), BUILTIN_DESCRIPTOR);
   m_ChartClassDescriptorArray.Add(pcd);  
+  pcd = new ChartClassDescriptor(_T("cm93compchart"), _T("00300000.a"),
+                                 BUILTIN_DESCRIPTOR);
+  m_ChartClassDescriptorArray.Add(pcd);
+  if (g_pi_manager) {
+    wxArrayString array = g_pi_manager->GetPlugInChartClassNameArray();
+    for (unsigned int j = 0; j < array.GetCount(); j++) {
+      //    Instantiate a blank chart to retrieve the directory search mask for
+      //    this chart type
+      wxString class_name = array[j];
+      ChartPlugInWrapper *cpiw = new ChartPlugInWrapper(class_name);
+      if (cpiw) {
+        wxString mask = cpiw->GetFileSearchMask();
+
+        //    Create a new descriptor
+        ChartClassDescriptor *picd =
+            new ChartClassDescriptor(class_name, mask, PLUGIN_DESCRIPTOR);
+
+        //    Add descriptor to the database array member
+        m_ChartClassDescriptorArray.Add(picd);
+
+        delete cpiw;
+      }
+    }
+  }
 }
 
 const ChartTableEntry &ChartDatabase::GetChartTableEntry(int index) const {
@@ -2436,6 +2462,32 @@ bool ChartDatabase::IsChartAvailable(int dbIndex) {
 
     //      If not PLugIn chart, assume always available
     if (pentry->GetChartType() != CHART_TYPE_PLUGIN) return true;
+    wxString *path = pentry->GetpsFullPath();
+    wxFileName fn(*path);
+    wxString ext = fn.GetExt();
+    ext.Prepend(_T("*."));
+    wxString ext_upper = ext.MakeUpper();
+    wxString ext_lower = ext.MakeLower();
+
+    //    Search the array of chart class descriptors to find a match
+    //    between the search mask and the the chart file extension
+
+    for (unsigned int i = 0; i < m_ChartClassDescriptorArray.GetCount(); i++) {
+      if (m_ChartClassDescriptorArray[i].m_descriptor_type ==
+          PLUGIN_DESCRIPTOR) {
+        wxString search_mask = m_ChartClassDescriptorArray[i].m_search_mask;
+
+        if (search_mask == ext_upper) {
+          return true;
+        }
+        if (search_mask == ext_lower) {
+          return true;
+        }
+        if (path->Matches(search_mask)) {
+          return true;
+        }
+      }
+    }
   }
 
   return false;

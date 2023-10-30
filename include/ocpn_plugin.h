@@ -450,7 +450,7 @@ typedef void set_user_permit(std::string&);
 typedef void set_certification(opencpn_plugin*, std::string&);
 typedef void set_FRFile(opencpn_plugin*, std::string&);
 typedef void set_import_cellpermit(opencpn_plugin*, std::string&, bool);
-typedef void import_cells_manually(opencpn_plugin*, std::string&, bool);
+typedef void import_cells_manually(opencpn_plugin*, std::string&, bool, std::string*);
 typedef void destroy_t(opencpn_plugin *);
 
 #ifdef __clang__

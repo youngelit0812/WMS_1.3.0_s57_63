@@ -128,8 +128,9 @@ void RedirectIOToConsole();
 
 WX_DEFINE_OBJARRAY(ArrayOfCDI);
 
-#define S63_PLUGIN_FILEPATH    "./s63_pi.dll"
-#define S63_CERT_FILENAME	   "IHO.PUB"
+#define S63_PLUGIN_FILEPATH     "./plugins/s63_pi.dll"
+#define S63_CERT_FILENAME	    "IHO.PUB"
+#define FR_FILE_EXTENSION		".fpr"
 
 opencpn_plugin* g_S63Plugin;
 wxDynamicLibrary *g_pLibrary;
@@ -148,6 +149,7 @@ wxString g_uiStyle;
 wxString ChartListFileName;
 wxString* pInit_Chart_Dir;
 wxString g_winPluginDir;  // Base plugin directory on Windows.
+std::string g_sS63DataDirPath;
 
 ThumbWin* pthumbwin;
 S57ClassRegistrar* g_poRegistrar;
@@ -811,7 +813,7 @@ MainApp::MainApp()
 #endif   // __linux__
 }
 
-bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart, std::string& sIMGDirPath, std::string& sInstallPermit, std::string& sUserPermit, std::string& sS63DirPath) {
+bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart, std::string& sIMGDirPath, std::string& sInstallPermit, std::string& sUserPermit, std::string& sS63DirPath, std::string& sS63ENCDirPath) {
 	if (!wxApp::OnInit()) return false;
 
 	g_unit_test_2 = 0;
@@ -830,38 +832,38 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart, std::string& 
   // program aborts before startup
   // this hack forces cairo to load right now by rendering some text
 
-  wxBitmap bmp(10, 10, -1);
-  wxMemoryDC dc;
-  dc.SelectObject(bmp);
-  dc.DrawText(_T("X"), 0, 0);
+	wxBitmap bmp(10, 10, -1);
+	wxMemoryDC dc;
+	dc.SelectObject(bmp);
+	dc.DrawText(_T("X"), 0, 0);
 #endif
-  m_checker = 0;
+	m_checker = 0;
 
-  // Instantiate the global OCPNPlatform class
-  g_Platform = new OCPNPlatform;
-  g_BasePlatform = g_Platform;
+	// Instantiate the global OCPNPlatform class
+	g_Platform = new OCPNPlatform;
+	g_BasePlatform = g_Platform;
 
-  g_Platform->GetPrivateDataDir();
+	g_Platform->GetPrivateDataDir();
 
-  OCPNPlatform::Initialize_1();
+	OCPNPlatform::Initialize_1();
 
-  //  Seed the random number generator
-  wxDateTime x = wxDateTime::UNow();
-  long seed = x.GetMillisecond();
-  seed *= x.GetTicks();
-  srand(seed);
+	//  Seed the random number generator
+	wxDateTime x = wxDateTime::UNow();
+	long seed = x.GetMillisecond();
+	seed *= x.GetTicks();
+	srand(seed);
 
-  // Fulup: force floating point to use dot as separation.
-  // This needs to be set early to catch numerics in config file.
-  setlocale(LC_NUMERIC, "C");
+	// Fulup: force floating point to use dot as separation.
+	// This needs to be set early to catch numerics in config file.
+	setlocale(LC_NUMERIC, "C");
 
-  g_start_time = wxDateTime::Now();
+	g_start_time = wxDateTime::Now();
 
-  AnchorPointMinDist = 5.0;
-  malloc_max = 0;
+	AnchorPointMinDist = 5.0;
+	malloc_max = 0;
 
-  //      Record initial memory status
-  GetMemoryStatus(&g_mem_total, &g_mem_initial);
+	//      Record initial memory status
+	GetMemoryStatus(&g_mem_total, &g_mem_initial);
 
 	wxFont temp_font(10, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, FALSE, wxString(_T("")), wxFONTENCODING_SYSTEM);
 	temp_font.SetDefaultEncoding(wxFONTENCODING_SYSTEM);
@@ -884,26 +886,23 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart, std::string& 
   
 #ifdef __WXQT__
   //  Now we can configure the Qt StyleSheets, if present
-  prepareAndroidStyleSheets();
+	prepareAndroidStyleSheets();
 #endif
+	//      Create some static strings
+	pInit_Chart_Dir = new wxString();
+	g_pGroupArray = new ChartGroupArray;
+	g_Platform->GetPrivateDataDir();  
 
-  //      Create some static strings
-  pInit_Chart_Dir = new wxString();
-
-  g_pGroupArray = new ChartGroupArray;
-
-  g_Platform->GetPrivateDataDir();  
-
-  //      Create an array string to hold repeating messages, so they don't
-  //      overwhelm the log
-  pMessageOnceArray = new wxArrayString;
-  g_bShowAIS = true;
-  pLayerList = new LayerList;
+	//      Create an array string to hold repeating messages, so they don't
+	//      overwhelm the log
+	pMessageOnceArray = new wxArrayString;
+	g_bShowAIS = true;
+	pLayerList = new LayerList;
   
 #ifndef __WXMSW__
 #ifdef PROBE_PORTS__WITH_HELPER
-  user_user_id = getuid();
-  file_user_id = geteuid();
+	user_user_id = getuid();
+	file_user_id = geteuid();
 #endif
 #endif
 
@@ -926,7 +925,7 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart, std::string& 
 
 	pConfig = g_Platform->GetConfigObject();
 	InitBaseConfig(pConfig);
-	pConfig->LoadMyConfig(sENCDirPath);
+	pConfig->LoadMyConfig(sENCDirPath, sS63ENCDirPath);
 
 	if (b_initial_load) g_Platform->SetDefaultOptions();
 	
@@ -1047,23 +1046,22 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart, std::string& 
 
 	InitializeUserColors();
 
-  auto style = g_StyleManager->GetCurrentStyle();
+	auto style = g_StyleManager->GetCurrentStyle();
 
-  g_nframewin_x = cw;
-  g_nframewin_y = ch;  
+	g_nframewin_x = cw;
+	g_nframewin_y = ch;  
 
-  g_lastClientRectx = cx;
-  g_lastClientRecty = cy;
-  g_lastClientRectw = cw;
-  g_lastClientRecth = ch;
+	g_lastClientRectx = cx;
+	g_lastClientRecty = cy;
+	g_lastClientRectw = cw;
+	g_lastClientRecth = ch;
 #ifdef PRINTLOG_DEBUG
   printf("last client rect : %d,%d\n", g_lastClientRectw, g_lastClientRecth);  
 #endif
   
-  if ((g_nframewin_x > 100) && (g_nframewin_y > 100) && (g_nframewin_x <= cw) && (g_nframewin_y <= ch))
-    new_frame_size.Set(g_nframewin_x, g_nframewin_y);
-  else
-    new_frame_size.Set(cw * 7 / 10, ch * 7 / 10);
+	if ((g_nframewin_x > 100) && (g_nframewin_y > 100) && (g_nframewin_x <= cw) && (g_nframewin_y <= ch))
+		new_frame_size.Set(g_nframewin_x, g_nframewin_y);
+	else new_frame_size.Set(cw * 7 / 10, ch * 7 / 10);
 
 	if ((g_lastClientRectx != cx) || (g_lastClientRecty != cy) ||
 		(g_lastClientRectw != cw) || (g_lastClientRecth != ch)) {
@@ -1110,19 +1108,19 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart, std::string& 
 	g_nframewin_posx = position.x;
 	g_nframewin_posy = position.y;
 
-  //  For Windows and GTK, provide the expected application Minimize/Close bar
-  long app_style = wxDEFAULT_FRAME_STYLE;
-  app_style |= wxWANTS_CHARS;
-  app_style |= wxNO_BORDER;
-  app_style |= wxFRAME_NO_TASKBAR;
-  app_style |= wxSTAY_ON_TOP;
+	//  For Windows and GTK, provide the expected application Minimize/Close bar
+	long app_style = wxDEFAULT_FRAME_STYLE;
+	app_style |= wxWANTS_CHARS;
+	app_style |= wxNO_BORDER;
+	app_style |= wxFRAME_NO_TASKBAR;
+	app_style |= wxSTAY_ON_TOP;
 
 #ifdef PRINTLOG_DEBUG
-  printf("Create frame with pos:%d,%d", g_nframewin_posx, g_nframewin_posy);
+	printf("Create frame with pos:%d,%d", g_nframewin_posx, g_nframewin_posy);
 #endif
-  try {
-    gFrame = new MyFrame(NULL, "", position, new_frame_size, app_style);
-  } catch (std::exception & ex) {
+	try {
+		gFrame = new MyFrame(NULL, "", position, new_frame_size, app_style);
+	} catch (std::exception & ex) {
 		printf("Create Frame Failed! : %s\n", ex.what());
 		return false;
 	}
@@ -1130,6 +1128,7 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart, std::string& 
 	g_Platform->Initialize_3();
 
 	gFrame->Hide();
+	g_pi_manager = new PlugInManager(gFrame);
 	g_pauimgr = new OCPN_AUIManager;
 	g_pauidockart = new wxAuiDefaultDockArt;
 	g_pauimgr->SetArtProvider(g_pauidockart);
@@ -1143,36 +1142,93 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart, std::string& 
 	g_sash_color_default = g_pauidockart->GetColour(wxAUI_DOCKART_SASH_COLOUR);
 	g_background_color_default = g_pauidockart->GetColour(wxAUI_DOCKART_BACKGROUND_COLOUR);
 
-  // tell wxAuiManager to manage the frame
-  g_pauimgr->SetManagedWindow(gFrame);
+	// tell wxAuiManager to manage the frame
+	g_pauimgr->SetManagedWindow(gFrame);
 
-  gFrame->CreateCanvasLayout();
+	gFrame->CreateCanvasLayout();
   
-  gFrame->SetChartUpdatePeriod();  // Reasonable default
+	gFrame->SetChartUpdatePeriod();  // Reasonable default
 
-  gFrame->Enable();
+	gFrame->Enable();
 
-  gFrame->GetPrimaryCanvas()->SetFocus();
+	gFrame->GetPrimaryCanvas()->SetFocus();
 
-  pthumbwin = new ThumbWin(gFrame->GetPrimaryCanvas());
+	pthumbwin = new ThumbWin(gFrame->GetPrimaryCanvas());
 
-  gFrame->ApplyGlobalSettings(false);  // done once on init with resize
+	gFrame->ApplyGlobalSettings(false);  // done once on init with resize
   
-  gFrame->SetAndApplyColorScheme(global_color_scheme);
+	gFrame->SetAndApplyColorScheme(global_color_scheme);
 
-  Yield();
+	g_sS63DataDirPath = sS63DirPath;
+	auto pPluginLoader = PluginLoader::getInstance(); 
+	pPluginLoader->LoadAllPlugIns(true);
+	PlugInContainer *pPluginContainer = pPluginLoader->plugin_array[0];
 
-  //   Build the initial chart dir array
-  ArrayOfCDI ChartDirArray;
-  pConfig->LoadChartDirArray(ChartDirArray);
+	if (!pPluginContainer->m_library.IsLoaded()) {
+		pPluginContainer->m_library.Load(S63_PLUGIN_FILEPATH);
+	}	
+
+	if (!pPluginContainer->m_library.IsLoaded()) {
+		printf("   PluginLoader: Cannot load library\n");		
+		return false;
+	}
+
+	set_install_permit* setInstallPermit = (set_install_permit*)pPluginContainer->m_library.GetSymbol("set_install_permit");
+	set_user_permit* setUserPermit = (set_user_permit*)pPluginContainer->m_library.GetSymbol("set_user_permit");
+	set_certification* setCert = (set_certification*)pPluginContainer->m_library.GetSymbol("set_certification"); //IHO.PUB
+	set_FRFile* setFRFile = (set_FRFile*)pPluginContainer->m_library.GetSymbol("set_FRFile");
+	set_import_cellpermit* setImportCellPermit = (set_import_cellpermit*)pPluginContainer->m_library.GetSymbol("set_import_cellpermit");
+	import_cells_manually* ImportCellsManually = (import_cells_manually*)pPluginContainer->m_library.GetSymbol("import_cells_manually");
+
+	setInstallPermit(sInstallPermit);
+	setUserPermit(sUserPermit);
+
+	std::string sCertPath = sS63DirPath + S63_CERT_FILENAME;
+	setCert(pPluginContainer->m_pplugin, sCertPath);
+
+	std::string sFRPath("");
+
+	wxDir xS63Dir(sS63DirPath);
+	if (!xS63Dir.IsOpened()) return false;
+
+	wxString sFoundFilePath;
+	bool bFoundFlag = xS63Dir.GetFirst(&sFoundFilePath);
+	while (bFoundFlag) {
+		size_t nPos = sFoundFilePath.rfind(FR_FILE_EXTENSION);
+		if (nPos > 0 && nPos < sFoundFilePath.length()) {
+			break;
+		}
+
+		bFoundFlag = xS63Dir.GetNext(&sFoundFilePath);
+	}
+
+	if (sFoundFilePath.IsEmpty() || !bFoundFlag) {
+		printf("There is no finger print file in the given s63 data directory.\n");
+		return false;
+	}
+
+	sFRPath = sS63DirPath + (const char*)sFoundFilePath.mb_str(wxConvUTF8);
+	setFRFile(pPluginContainer->m_pplugin, sFRPath);
+	setImportCellPermit(pPluginContainer->m_pplugin, sS63DirPath, bRebuildChart);
+
+	LoadS57();
+	std::string sOS63DirPath("");
+	ImportCellsManually(pPluginContainer->m_pplugin, sS63DirPath, bRebuildChart, &sOS63DirPath);
+
+	Yield();
+
+	//   Build the initial chart dir array
+	ArrayOfCDI ChartDirArray;
+	pConfig->SetOS63DirPath(sOS63DirPath);
+	pConfig->LoadChartDirArray(ChartDirArray);
 
 	if (!ChartDirArray.GetCount()) {
 		if (::wxFileExists(ChartListFileName)) ::wxRemoveFile(ChartListFileName);
 	}
 
-	if (bRebuildChart) {		
-		gFrame->RebuildChartDatabase();		
-		g_bNeedDBUpdate = false;		
+	if (bRebuildChart) {
+		gFrame->RebuildChartDatabase();
+		g_bNeedDBUpdate = false;
 	}
 	else {
 		ChartData = new ChartDB();
@@ -1181,7 +1237,7 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart, std::string& 
 			g_bNeedDBUpdate = false;
 		}
 	}
-	
+
 	//  Verify any saved chart database startup index
 	if (g_restore_dbindex >= 0) {
 		if (ChartData->GetChartTableEntries() == 0)
@@ -1190,9 +1246,10 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart, std::string& 
 		else if (g_restore_dbindex > (ChartData->GetChartTableEntries() - 1))
 			g_restore_dbindex = 0;
 	}
-
+	
 	//  Apply the inital Group Array structure to the chart data base
 	ChartData->ApplyGroupArray(g_pGroupArray);
+
 #ifdef ocpnUSE_GL
 	extern ocpnGLOptions g_GLOptions;
 
@@ -1260,33 +1317,6 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart, std::string& 
 	printf("Wait for minutes to prepare... \n");
 	gFrame->UpdateDB_Canvas();	
 	printf("pre-initialize finished! \n");
-
-	g_pLibrary = new wxDynamicLibrary();
-	if (g_pLibrary->IsLoaded()) g_pLibrary->Unload();
-	g_pLibrary->Load(S63_PLUGIN_FILEPATH);
-
-	if (!g_pLibrary->IsLoaded()) {
-		printf("   PluginLoader: Cannot load library\n");
-		delete g_pLibrary;
-		return false;
-	}
-
-	create_t* create_plugin = (create_t*)g_pLibrary->GetSymbol("create_pi");
-	set_install_permit* setInstallPermit = (set_install_permit*)g_pLibrary->GetSymbol("set_install_permit");
-	set_user_permit* setUserPermit = (set_user_permit*)g_pLibrary->GetSymbol("set_user_permit");
-	set_certification* setCert = (set_certification*)g_pLibrary->GetSymbol("set_certification"); //IHO.PUB
-	set_FRFile* setFRFile = (set_FRFile*)g_pLibrary->GetSymbol("set_FRFile");
-	set_import_cellpermit* setImportCellPermit = (set_import_cellpermit*)g_pLibrary->GetSymbol("set_import_cellpermit");
-	import_cells_manually* ImportCellsManually = (import_cells_manually*)g_pLibrary->GetSymbol("import_cells_manually");
-
-	std::string sSharedPath = (const char *)g_Platform->GetStdPaths().GetExecutablePath().mb_str(wxConvUTF8);
-	g_S63Plugin = create_plugin(this, sS63DirPath, sSharedPath);
-	setInstallPermit(sInstallPermit);
-	setUserPermit(sUserPermit);
-	setCert(g_S63Plugin, sS63DirPath + S63_CERT_FILENAME);
-	setFRFile(g_S63Plugin, sS63DirPath + "fpr03W_1697524604.fpr");
-	setImportCellPermit(g_S63Plugin, sS63DirPath, bRebuildChart);
-	ImportCellsManually(g_S63Plugin, sS63DirPath, bRebuildChart);
 
 	return true;
 }

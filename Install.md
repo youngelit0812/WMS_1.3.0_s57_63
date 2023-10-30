@@ -96,7 +96,9 @@ The "project_path" is path in which the "CMakeLists.txt" file exists.
 ## Test
 * Open the Web Browser.
 * If you need to rebuild Chart DB, you should set the "rebuildCharts" to "1". Otherwise, you should set the "rebuildCharts" to "0".
-* The "S63DirPath" should be ended with file splitter.
+* The "S63DirPath" should be ended with file separator.
+* The s63 chart directory "ENC_ROOT" should be located in the directory that specified at "S63DirPath".
+* Shouldn't modify the "S63ENCDirPath".
 * Test with the following URL
 
 For HTTP
