@@ -231,6 +231,7 @@ execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory
 
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/SENC)
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/ENCs)
+file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/lib/plugins)
 
 file(COPY ${CMAKE_SOURCE_DIR}/Append_data/navobj.xml DESTINATION ${CMAKE_BINARY_DIR})
 file(COPY ${CMAKE_SOURCE_DIR}/Append_data/wmsserver.conf DESTINATION ${CMAKE_BINARY_DIR})

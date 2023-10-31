@@ -6439,7 +6439,7 @@ int s52plib::DoRenderObjectTextOnly(wxDC *pdcin, ObjRazRules *rzRules) {
         RenderTE(rzRules, rules);
         break;  // TE
       case RUL_CND_SY: {
-        if (!rzRules->obj->bCS_Added || strncmp(rzRules->obj->FeatureName, "SOUNDG", 6) == 0) {
+        if (!rzRules->obj->bCS_Added) {
           rzRules->obj->CSrules = NULL;
           GetAndAddCSRules(rzRules, rules);
           if (strncmp(rzRules->obj->FeatureName, "SOUNDG", 6))
@@ -7874,7 +7874,6 @@ int s52plib::RenderToGLAC(ObjRazRules *rzRules, Rules *rules) {
 int n_areaObjs;
 int n_areaTris;
 
-
 int s52plib::RenderToGLAC_GLSL(ObjRazRules *rzRules, Rules *rules) {
   if (!ObjectRenderCheckPosReduced(rzRules))
     return false;
@@ -7904,7 +7903,7 @@ int s52plib::RenderToGLAC_GLSL(ObjRazRules *rzRules, Rules *rules) {
   BBView.EnLarge(margin);
 
   //  Use VBO if instructed by hardware renderer specification
-  bool b_useVBO = m_GLAC_VBO && !rzRules->obj->auxParm1;
+  bool b_useVBO = true;
 
   if (rzRules->obj->pPolyTessGeo) {
     bool b_temp_vbo = false;
@@ -7975,77 +7974,6 @@ int s52plib::RenderToGLAC_GLSL(ObjRazRules *rzRules, Rules *rules) {
         glGetError();  // clear it
 
         if (rzRules->obj->auxParm0 <= 0) {
-#ifdef xUSE_ANDROID_GLES2
-          if (ppg_vbo->data_type != DATA_TYPE_SHORT) {
-            // We convert the vertex data from FLOAT to GL_SHORT to make the VBO
-            // smaller, but still keeping enough precision
-            //  This requires a scale factor to reduce the range from existing
-            //  data to +/- 32K
-
-            size_t np = ppg_vbo->single_buffer_size / (2 * sizeof(float));
-            np--;
-
-            PolyTriGroup *ppg =
-                rzRules->obj->pPolyTessGeo->Get_PolyTriGroup_head();
-            TriPrim *p_tp = ppg->tri_prim_head;
-
-            size_t npp = 0;
-            while (p_tp) {
-              npp += p_tp->nVert;
-              p_tp = (TriPrim *)p_tp->p_next;
-            }
-
-            //  Get the data range
-            float *pRun = (float *)ppg_vbo->single_buffer;
-            float north_max = -1e8;
-            float north_min = 1e8;
-            float east_max = -1e8;
-            float east_min = 1e8;
-
-            for (size_t i = 0; i < np; i++) {
-              float east = *pRun++;
-              float north = *pRun++;
-              north_max = wxMax(north, north_max);
-              north_min = wxMin(north, north_min);
-              east_max = wxMax(east, east_max);
-              east_min = wxMin(east, east_min);
-            }
-
-            float cfactx = wxMax(fabs(east_max), fabs(east_min));
-            float cfacty = wxMax(fabs(north_max), fabs(north_min));
-            float cfact = wxMax(cfactx, cfacty);
-
-            float sfact = cfact / 32700.0;
-
-            sfact = wxMax(sfact, 1.0);
-
-            //  Copy/convert the data
-            unsigned char *new_buf =
-                (unsigned char *)malloc(np * 2 * sizeof(short));
-            pRun = (float *)ppg_vbo->single_buffer;
-            short *pd = (short *)new_buf;
-            for (size_t i = 0; i < np; i++) {
-              float east = *pRun++;
-              float north = *pRun++;
-              //                       short a = (east / sfact);
-              //                       short b = (north / sfact);
-              *pd++ = (east / sfact);
-              *pd++ = (north / sfact);
-            }
-
-            // replace the buffer
-            free(ppg_vbo->single_buffer);
-            ppg_vbo->single_buffer = new_buf;
-            ppg_vbo->single_buffer_size /= 2;
-
-            // Record the scale/offset factors
-            ppg_vbo->sfactor = sfact;
-            ppg_vbo->soffset = 0.;
-
-            ppg_vbo->data_type = DATA_TYPE_SHORT;
-          }
-
-#endif
           b_temp_vbo = (rzRules->obj->auxParm0 ==
                         -5);  // Must we use a temporary VBO?  Probably slower
                               // than simple glDrawArrays
@@ -8185,26 +8113,24 @@ int s52plib::RenderToGLAC_GLSL(ObjRazRules *rzRules, Rules *rules) {
    int VBO_offset_index = 0;
 
     while (p_tp) {
-      LLBBox box;
-      if (!rzRules->obj->m_chart_context->chart) {  // This is s63 PlugIn Chart
-        LegacyTriPrim *p_ltp = (LegacyTriPrim *)p_tp;
-        box.Set(p_ltp->miny, p_ltp->minx, p_ltp->maxy, p_ltp->maxx);
-      } else
-        box = p_tp->tri_box;
+        LLBBox box;
+        if (!rzRules->obj->m_chart_context->chart) {  // This is s63 PlugIn Chart
+          LegacyTriPrim *p_ltp = (LegacyTriPrim *)p_tp;
+          box.Set(p_ltp->miny, p_ltp->minx, p_ltp->maxy, p_ltp->maxx);
+        } else
+          box = p_tp->tri_box;
 
-      if (!BBView.IntersectOut(box)) {        
-        //glDrawArrays(p_tp->type, VBO_offset_index, p_tp->nVert);
-      }
+        if (!BBView.IntersectOut(box)) {
+          glDrawArrays(p_tp->type, VBO_offset_index, p_tp->nVert);
+        }
 
-      VBO_offset_index += p_tp->nVert;
+        VBO_offset_index += p_tp->nVert;
 
-      // pick up the next in chain
-      if (!rzRules->obj->m_chart_context->chart) {  // This is a PlugIn Chart
-        LegacyTriPrim *p_ltp = (LegacyTriPrim *)p_tp;
-        p_tp = (TriPrim *)p_ltp->p_next;
-      } else
-        p_tp = p_tp->p_next;
-
+        // pick up the next in chain
+        if (!rzRules->obj->m_chart_context->chart) {  // This is a PlugIn Chart
+          LegacyTriPrim *p_ltp = (LegacyTriPrim *)p_tp;
+          p_tp = (TriPrim *)p_ltp->p_next;
+        } else p_tp = p_tp->p_next;
     }  // while
 
     if (b_useVBO)
