@@ -485,12 +485,11 @@ void MyConfig::CreateRotatingNavObjBackup() {
       break;
 }
 
-int MyConfig::LoadMyConfig(std::string& sENCDirPath, std::string& sS63ENCDirPath) {
+int MyConfig::LoadMyConfig(std::string& sENCDirPath) {
   int display_width, display_height;
   wxDisplaySize(&display_width, &display_height);
 
-  m_sENCDirPath = sENCDirPath;
-  m_sS63ENCDirPath = sS63ENCDirPath;
+  m_sENCDirPath = sENCDirPath;  
   //  Set up any defaults not set elsewhere
   g_useMUI = false;
   g_TalkerIdText = _T("EC");
@@ -1550,9 +1549,11 @@ bool MyConfig::LoadChartDirArray(ArrayOfCDI &ChartDirArray) {
 	cdi.magic_number = "";
 	ChartDirArray.Add(cdi);    
 
-	cdi.fullpath = m_sS63ENCDirPath;
-	cdi.magic_number = "";
-	ChartDirArray.Add(cdi);
+	if (!m_sS63ENCDirPath.empty()) {
+		cdi.fullpath = m_sS63ENCDirPath;
+		cdi.magic_number = "";
+		ChartDirArray.Add(cdi);
+	}
 
 	return true;
 }

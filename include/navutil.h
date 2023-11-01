@@ -93,7 +93,7 @@ public:
   MyConfig(const wxString &LocalFileName);
   ~MyConfig();
 
-  int LoadMyConfig(std::string&, std::string&);
+  int LoadMyConfig(std::string&);
   void LoadS57Config();
   void LoadNavObjects();  
 

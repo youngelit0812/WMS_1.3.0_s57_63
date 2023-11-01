@@ -39,7 +39,7 @@ if (UNIX)
 	set(LINUX "1")
 endif ()
 
-set(CMAKE_BUILD_TYPE Release)  
+set(CMAKE_BUILD_TYPE Release)
 
 # CMake module path
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
@@ -372,7 +372,7 @@ if (LINUX)
 	option(OCPN_USE_LZMA "Use LZMA for chart compression" ON)
 	option(OCPN_CI_BUILD "Use CI build versioning rules" OFF)
 	option(OCPN_USE_SYSTEM_LIBARCHIVE "Use the libarchive version provided by the system on MacOS" ON)
-endif ()
+endif (LINUX)
 
 add_definitions(-D__OCPN_USE_GLEW__)
 

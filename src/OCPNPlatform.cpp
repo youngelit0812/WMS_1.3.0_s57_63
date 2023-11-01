@@ -539,10 +539,8 @@ void OCPNPlatform::Initialize_3(void) {
     pConfig->UpdateSettings();
   }
 
-
   // Try to automatically switch to guaranteed usable GL mode on an OCPN upgrade
   // or fresh install
-
   if ((g_bFirstRun || g_bUpgradeInProcess) && bcapable) {
     g_bopengl = true;
 

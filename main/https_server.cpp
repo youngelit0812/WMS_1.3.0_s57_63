@@ -274,11 +274,7 @@ void loadEnvironment(char* szEnvFilePath, Environments& envConfig)
 		envConfig.nPortForHTTPS = jsonData.value("PortForHTTPS", 0);
 		envConfig.rebuildCharts = jsonData.value("rebuildCharts", 0) == 0 ? false : true;
 		envConfig.sENCDirPath = jsonData.value("ENCDirPath", "");
-		envConfig.sIMGDirPath = jsonData.value("IMGDirPath", "");
-		envConfig.sInstallPermit = jsonData.value("InstallPermit", "");
-		envConfig.sUserPermit = jsonData.value("UserPermit", "");
-		envConfig.sS63DirPath = jsonData.value("S63DirPath", "");
-		envConfig.sS63ENCDirPath = jsonData.value("S63ENCDirPath", "");
+		envConfig.sIMGDirPath = jsonData.value("IMGDirPath", "");		
 	}
 	catch (nlohmann::json::parse_error & e)
 	{
@@ -380,7 +376,7 @@ int main(int argc, char** argv)
 #endif
 
 	MainApp* pAppForService = new MainApp();
-	if (!pAppForService->OnInit(envConfig.sENCDirPath, envConfig.rebuildCharts, envConfig.sIMGDirPath, envConfig.sInstallPermit, envConfig.sUserPermit, envConfig.sS63DirPath, envConfig.sS63ENCDirPath)) {
+	if (!pAppForService->OnInit(envConfig.sENCDirPath, envConfig.rebuildCharts, envConfig.sIMGDirPath)) {
 		pAppForService->OnExit(envConfig.sIMGDirPath);
 		delete pAppForService;
 

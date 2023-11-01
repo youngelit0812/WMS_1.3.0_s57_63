@@ -100,7 +100,7 @@ void PluginPaths::initLinuxPaths() {
 
   if (g_bportable) {
     m_userLibdir = g_BasePlatform->GetPrivateDataDir().ToStdString() +
-                   "/plugins/lib";  // m_home + "/.local/lib";
+                   "/lib/plugins";  // m_home + "/.local/lib";
     m_libdirs.push_back(m_userLibdir);
     m_userBindir = g_BasePlatform->GetPrivateDataDir().ToStdString() +
                    "/plugins/bin";  // m_home + "/.local/bin";

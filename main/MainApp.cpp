@@ -128,9 +128,13 @@ void RedirectIOToConsole();
 
 WX_DEFINE_OBJARRAY(ArrayOfCDI);
 
+#ifdef __MSVC__
 #define S63_PLUGIN_FILEPATH     "./plugins/s63_pi.dll"
-#define S63_CERT_FILENAME	    "IHO.PUB"
-#define FR_FILE_EXTENSION		".fpr"
+#else
+#define S63_PLUGIN_FILEPATH     "./lib/plugins/libs63_pi.so"
+#endif
+
+#define OS63_INNER_PATH			"/s63/s63charts/"
 
 opencpn_plugin* g_S63Plugin;
 wxDynamicLibrary *g_pLibrary;
@@ -149,7 +153,6 @@ wxString g_uiStyle;
 wxString ChartListFileName;
 wxString* pInit_Chart_Dir;
 wxString g_winPluginDir;  // Base plugin directory on Windows.
-std::string g_sS63DataDirPath;
 
 ThumbWin* pthumbwin;
 S57ClassRegistrar* g_poRegistrar;
@@ -813,7 +816,7 @@ MainApp::MainApp()
 #endif   // __linux__
 }
 
-bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart, std::string& sIMGDirPath, std::string& sInstallPermit, std::string& sUserPermit, std::string& sS63DirPath, std::string& sS63ENCDirPath) {
+bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart, std::string& sIMGDirPath) {
 	if (!wxApp::OnInit()) return false;
 
 	g_unit_test_2 = 0;
@@ -925,7 +928,7 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart, std::string& 
 
 	pConfig = g_Platform->GetConfigObject();
 	InitBaseConfig(pConfig);
-	pConfig->LoadMyConfig(sENCDirPath, sS63ENCDirPath);
+	pConfig->LoadMyConfig(sENCDirPath);
 
 	if (b_initial_load) g_Platform->SetDefaultOptions();
 	
@@ -1159,69 +1162,20 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart, std::string& 
   
 	gFrame->SetAndApplyColorScheme(global_color_scheme);
 
-	g_sS63DataDirPath = sS63DirPath;
+	ArrayOfCDI ChartDirArray;
+
 	auto pPluginLoader = PluginLoader::getInstance(); 
 	pPluginLoader->LoadAllPlugIns(true);
-	PlugInContainer *pPluginContainer = pPluginLoader->plugin_array[0];
 
-	if (!pPluginContainer->m_library.IsLoaded()) {
-		pPluginContainer->m_library.Load(S63_PLUGIN_FILEPATH);
-	}	
-
-	if (!pPluginContainer->m_library.IsLoaded()) {
-		printf("   PluginLoader: Cannot load library\n");		
-		return false;
+	if (pPluginLoader->plugin_array.GetCount() > 0) {		
+		wxString xsOS63FullPath = g_BasePlatform->GetPrivateDataDir() + OS63_INNER_PATH;
+		std::string sOS63FullPath = (const char*)xsOS63FullPath.mb_str(wxConvUTF8);
+		pConfig->SetOS63DirPath(sOS63FullPath);
 	}
-
-	set_install_permit* setInstallPermit = (set_install_permit*)pPluginContainer->m_library.GetSymbol("set_install_permit");
-	set_user_permit* setUserPermit = (set_user_permit*)pPluginContainer->m_library.GetSymbol("set_user_permit");
-	set_certification* setCert = (set_certification*)pPluginContainer->m_library.GetSymbol("set_certification"); //IHO.PUB
-	set_FRFile* setFRFile = (set_FRFile*)pPluginContainer->m_library.GetSymbol("set_FRFile");
-	set_import_cellpermit* setImportCellPermit = (set_import_cellpermit*)pPluginContainer->m_library.GetSymbol("set_import_cellpermit");
-	import_cells_manually* ImportCellsManually = (import_cells_manually*)pPluginContainer->m_library.GetSymbol("import_cells_manually");
-
-	setInstallPermit(sInstallPermit);
-	setUserPermit(sUserPermit);
-
-	std::string sCertPath = sS63DirPath + S63_CERT_FILENAME;
-	setCert(pPluginContainer->m_pplugin, sCertPath);
-
-	std::string sFRPath("");
-
-	wxDir xS63Dir(sS63DirPath);
-	if (!xS63Dir.IsOpened()) return false;
-
-	wxString sFoundFilePath;
-	bool bFoundFlag = xS63Dir.GetFirst(&sFoundFilePath);
-	while (bFoundFlag) {
-		size_t nPos = sFoundFilePath.rfind(FR_FILE_EXTENSION);
-		if (nPos > 0 && nPos < sFoundFilePath.length()) {
-			break;
-		}
-
-		bFoundFlag = xS63Dir.GetNext(&sFoundFilePath);
-	}
-
-	if (sFoundFilePath.IsEmpty() || !bFoundFlag) {
-		printf("There is no finger print file in the given s63 data directory.\n");
-		return false;
-	}
-
-	sFRPath = sS63DirPath + (const char*)sFoundFilePath.mb_str(wxConvUTF8);
-	setFRFile(pPluginContainer->m_pplugin, sFRPath);
-	setImportCellPermit(pPluginContainer->m_pplugin, sS63DirPath, bRebuildChart);
-
-	LoadS57();
-	std::string sOS63DirPath("");
-	ImportCellsManually(pPluginContainer->m_pplugin, sS63DirPath, bRebuildChart, &sOS63DirPath);
-
-	Yield();
-
-	//   Build the initial chart dir array
-	ArrayOfCDI ChartDirArray;
-	pConfig->SetOS63DirPath(sOS63DirPath);
+	//   Build the initial chart dir array		
 	pConfig->LoadChartDirArray(ChartDirArray);
 
+	Yield();	
 	if (!ChartDirArray.GetCount()) {
 		if (::wxFileExists(ChartListFileName)) ::wxRemoveFile(ChartListFileName);
 	}
@@ -1253,8 +1207,7 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart, std::string& 
 #ifdef ocpnUSE_GL
 	extern ocpnGLOptions g_GLOptions;
 
-	if (g_rebuild_gl_cache && g_bopengl && g_GLOptions.m_bTextureCompression &&
-		g_GLOptions.m_bTextureCompressionCaching) {
+	if (g_rebuild_gl_cache && g_bopengl && g_GLOptions.m_bTextureCompression && g_GLOptions.m_bTextureCompressionCaching) {
 		gFrame->ReloadAllVP();  //  Get a nice chart background loaded
 
     if (g_glTextureManager) g_glTextureManager->BuildCompressedCache();

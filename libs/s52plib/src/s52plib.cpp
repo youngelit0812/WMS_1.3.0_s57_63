@@ -7904,7 +7904,6 @@ int s52plib::RenderToGLAC_GLSL(ObjRazRules *rzRules, Rules *rules) {
 
   //  Use VBO if instructed by hardware renderer specification
   bool b_useVBO = true;
-
   if (rzRules->obj->pPolyTessGeo) {
     bool b_temp_vbo = false;
     bool b_transform = false;

@@ -444,13 +444,7 @@ public:
 };
 
 // the types of the class factories used to create PlugIn instances
-typedef opencpn_plugin *create_t(void *, std::string&, std::string&);
-typedef void set_install_permit(std::string&);
-typedef void set_user_permit(std::string&);
-typedef void set_certification(opencpn_plugin*, std::string&);
-typedef void set_FRFile(opencpn_plugin*, std::string&);
-typedef void set_import_cellpermit(opencpn_plugin*, std::string&, bool);
-typedef void import_cells_manually(opencpn_plugin*, std::string&, bool, std::string*);
+typedef opencpn_plugin *create_t(void *);
 typedef void destroy_t(opencpn_plugin *);
 
 #ifdef __clang__

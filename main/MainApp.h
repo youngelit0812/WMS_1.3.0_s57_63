@@ -18,7 +18,7 @@ public:
 	MainApp();
 	~MainApp() {};
 
-	bool OnInit(std::string&, bool, std::string&, std::string&, std::string&, std::string&, std::string&);
+	bool OnInit(std::string&, bool, std::string&);
 	int OnExit(std::string&);
 	void OnInitCmdLine(wxCmdLineParser& parser);
 	bool OnCmdLineParsed(wxCmdLineParser& parser);

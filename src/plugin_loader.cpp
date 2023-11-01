@@ -55,9 +55,11 @@
 #include <wx/tokenzr.h>
 #include <wx/window.h>
 #include <wx/process.h>
+#include <wx/dynlib.h>
 
 #include "base_platform.h"
 #include "config_vars.h"
+#include "ocpn_frame.h"
 #include "ocpn_utils.h"
 #include "logger.h"
 #include "observable_confvar.h"
@@ -83,7 +85,6 @@ extern OCPNPlatform* g_Platform;
 extern wxWindow* gFrame;
 extern ChartDB* ChartData;
 extern bool g_bportable;
-extern std::string g_sS63DataDirPath;
 
 static const std::vector<std::string> SYSTEM_PLUGINS = {
     "chartdownloader", "wmm", "dashboard", "grib", "s63"};
@@ -398,12 +399,16 @@ bool PluginLoader::LoadAllPlugIns(bool load_enabled, std::string sS63DataDirPath
 
   static const wxString sep = wxFileName::GetPathSeparator();
   vector<string> dirs = PluginPaths::getInstance()->Libdirs();
-  wxLogMessage("PluginLoader: loading plugins from %s", ocpn::join(dirs, ';'));
+#ifdef PRINTLOG_DEBUG
+  printf("PluginLoader: loading plugins from %s\n", ocpn::join(dirs, ';').c_str());
+#endif
   setLoadPath();
   bool any_dir_loaded = false;
   for (const auto& dir : dirs) {
     wxString wxdir(dir);
-    wxLogMessage("Loading plugins from dir: %s", wxdir.mb_str().data());
+#ifdef PRINTLOG_DEBUG
+    printf("PluginLoader: Loading plugins from dir: %s\n", wxdir.mb_str().data());
+#endif
     if (LoadPlugInDirectory(wxdir, load_enabled)) any_dir_loaded = true;
   }
 
@@ -424,7 +429,9 @@ bool PluginLoader::LoadAllPlugIns(bool load_enabled, std::string sS63DataDirPath
 bool PluginLoader::LoadPluginCandidate(const wxString& file_name,
                                        bool load_enabled) {
   wxString plugin_file = wxFileName(file_name).GetFullName();
-  wxLogMessage("Checking plugin candidate: %s", file_name.mb_str().data());
+#ifdef PRINTLOG_DEBUG
+  printf("PluginLoader: Checking plugin candidate: %s\n", file_name.mb_str().data());
+#endif
   wxDateTime plugin_modification = wxFileName(file_name).GetModificationTime();
   wxLog::FlushActive();
 
@@ -489,17 +496,17 @@ bool PluginLoader::LoadPluginCandidate(const wxString& file_name,
     return false;
   }
 
-  auto msg =
-      std::string("Checking plugin compatibility: ") + file_name.ToStdString();
-  wxLogMessage(msg.c_str());
+#ifdef PRINTLOG_DEBUG
+  printf("PluginLoader: Checking plugin compatibility: %s\n", (const char*)file_name.mb_str(wxConvUTF8));
+#endif  
   wxLog::FlushActive();
 
   bool b_compat = CheckPluginCompatibility(file_name);
 
   if (!b_compat) {
-    msg =
-        std::string("Incompatible plugin detected: ") + file_name.ToStdString();
-    wxLogMessage(msg.c_str());
+#ifdef PRINTLOG_DEBUG
+	  printf("PluginLoader: Incompatible plugin detected: %s\n", (const char*)file_name.mb_str(wxConvUTF8));
+#endif    
     if (m_blacklist->mark_unloadable(file_name.ToStdString())) {
       LoadError le(LoadError::Type::Unloadable, file_name.ToStdString());
       load_errors.push_back(le);
@@ -516,7 +523,9 @@ bool PluginLoader::LoadPluginCandidate(const wxString& file_name,
   ConfigVar<bool> enabled(path, "bEnabled", TheBaseConfig());
   if (load_enabled && !enabled.Get(true)) {
     delete pic;
-    wxLogMessage("Skipping not enabled candidate.");
+#ifdef PRINTLOG_DEBUG
+    printf("PluginLoader: Skipping not enabled candidate.\n");
+#endif
     return true;
   }
 
@@ -535,12 +544,18 @@ bool PluginLoader::LoadPluginCandidate(const wxString& file_name,
         pic->m_enabled = false;
         enabled.Set(false);
       }
+	  printf("PluginLoader: Init 1.\n");
 #ifndef CLIAPP
+	  printf("PluginLoader: Init 2.\n");
       // The CLI has no graphics context, but plugins assumes there is.
       if (pic->m_enabled) {
-        pic->m_cap_flag = pic->m_pplugin->Init();
-        pic->m_init_state = true;
-        evt_load_plugin.Notify(pic);
+		LoadS57();
+#ifdef PRINTLOG_DEBUG
+		printf("PluginLoader: try to call Init.\n");
+#endif		
+		pic->m_cap_flag = pic->m_pplugin->Init();
+		pic->m_init_state = true;
+		evt_load_plugin.Notify(pic);
       }
 #endif
       wxLog::FlushActive();
@@ -552,20 +567,18 @@ bool PluginLoader::LoadPluginCandidate(const wxString& file_name,
           break;
         }
       }
+
       pic->m_version_str = found_version;
       pic->m_short_description = pic->m_pplugin->GetShortDescription();
       pic->m_long_description = pic->m_pplugin->GetLongDescription();
       pic->m_version_major = pic->m_pplugin->GetPlugInVersionMajor();
       pic->m_version_minor = pic->m_pplugin->GetPlugInVersionMinor();
 
-
-
       auto pbm0 = pic->m_pplugin->GetPlugInBitmap();
       if (!pbm0->IsOk()) {
         pbm0 = (wxBitmap *)GetPluginDefaultIcon();
       }
-      pic->m_bitmap = wxBitmap(pbm0->GetSubBitmap(
-          wxRect(0, 0, pbm0->GetWidth(), pbm0->GetHeight())));
+      pic->m_bitmap = wxBitmap(pbm0->GetSubBitmap(wxRect(0, 0, pbm0->GetWidth(), pbm0->GetHeight())));
 
       if (!pic->m_enabled && pic->m_destroy_fn) {
         pic->m_destroy_fn(pic->m_pplugin);
@@ -576,9 +589,9 @@ bool PluginLoader::LoadPluginCandidate(const wxString& file_name,
       }
 
     } else {  //  No pic->m_pplugin
-      wxLogMessage(
-          "    PluginLoader: Unloading invalid PlugIn, API version %d ",
-          pic->m_api_version);
+#ifdef PRINTLOG_DEBUG
+      printf("PluginLoader: Unloading invalid PlugIn, API version %d \n", pic->m_api_version);
+#endif
       pic->m_destroy_fn(pic->m_pplugin);
 
       LoadError le(LoadError::Type::Unloadable, file_name.ToStdString());
@@ -598,9 +611,9 @@ bool PluginLoader::LoadPlugInDirectory(const wxString& plugin_dir,
   evt_load_directory.Notify();
   m_plugin_location = plugin_dir;
 
-  wxString msg("PluginLoader searching for PlugIns in location ");
-  msg += m_plugin_location;
-  wxLogMessage(msg);
+#ifdef PRINTLOG_DEBUG
+  printf("PluginLoader: searching for PlugIns in location: %s\n", (const char*)m_plugin_location.mb_str(wxConvUTF8));  
+#endif
 
 #ifdef __WXMSW__
   wxString pispec = "*_pi.dll";
@@ -611,10 +624,9 @@ bool PluginLoader::LoadPlugInDirectory(const wxString& plugin_dir,
 #endif
 
   if (!::wxDirExists(m_plugin_location)) {
-    msg = m_plugin_location;
-    msg.Prepend("   Directory ");
-    msg.Append(" does not exist.");
-    wxLogMessage(msg);
+#ifdef PRINTLOG_DEBUG
+	  printf("PluginLoader: %s Directory does not exist.\n", (const char*)m_plugin_location.mb_str(wxConvUTF8));
+#endif    
     return false;
   }
 
@@ -629,16 +641,12 @@ bool PluginLoader::LoadPlugInDirectory(const wxString& plugin_dir,
 #endif
 #endif
 
-#ifdef __ANDROID__
-  get_flags = wxDIR_FILES;  // No subdirs, especially "/files" where PlugIns are
-                            // initially placed in APK
-#endif
-
-  bool ret =
-      false;  // return true if at least one new plugins gets loaded/unloaded
+  bool ret = false;  // return true if at least one new plugins gets loaded/unloaded
   wxDir::GetAllFiles(m_plugin_location, &file_list, pispec, get_flags);
 
-  wxLogMessage("Found %d candidates", (int)file_list.GetCount());
+#ifdef PRINTLOG_DEBUG
+  printf("PluginLoader: Found %d candidates\n", (int)file_list.GetCount());
+#endif
   for (unsigned int i = 0; i < file_list.GetCount(); i++) {
     wxLog::FlushActive();
 
@@ -1354,43 +1362,62 @@ PlugInContainer* PluginLoader::LoadPlugIn(const wxString& plugin_file) {
 
 PlugInContainer* PluginLoader::LoadPlugIn(const wxString& plugin_file,
                                           PlugInContainer* pic) {
-  wxLogMessage(wxString("PluginLoader: Loading PlugIn: ") + plugin_file);
-
+#ifdef PRINTLOG_DEBUG
+  printf("PluginLoader: Loading PlugIn: %s\n", (const char *)plugin_file.mb_str(wxConvUTF8));
+#endif
   if (plugin_file.empty()) {
-    wxLogMessage("Ignoring loading of empty path");
+    printf("Ignoring loading of empty path\n");
     return nullptr;
   }
 
   if (!wxIsReadable(plugin_file)) {
-    wxLogMessage("Ignoring unreadable plugin %s",
-                 plugin_file.ToStdString().c_str());
+    printf("Ignoring unreadable plugin %s\n", plugin_file.ToStdString().c_str());
     LoadError le(LoadError::Type::Unreadable, plugin_file.ToStdString());
     load_errors.push_back(le);
     return nullptr;
   }
 
   // Check if blacklisted, exit if so.
-  auto sts =
-      m_blacklist->get_status(pic->m_common_name.ToStdString(),
+  auto sts = m_blacklist->get_status(pic->m_common_name.ToStdString(),
                               pic->m_version_major, pic->m_version_minor);
   if (sts != plug_status::unblocked) {
-    wxLogDebug("Refusing to load blacklisted plugin: %s",
-               pic->m_common_name.ToStdString().c_str());
+#ifdef PRINTLOG_DEBUG
+    printf("Refusing to load blacklisted plugin: %s\n", pic->m_common_name.ToStdString().c_str());
+#endif
     return nullptr;
   }
   auto data = m_blacklist->get_library_data(plugin_file.ToStdString());
   if (!data.name.empty()) {
-    wxLogDebug("Refusing to load blacklisted library: %s",
-               plugin_file.ToStdString().c_str());
+#ifdef PRINTLOG_DEBUG
+    printf("Refusing to load blacklisted library: %s\n", plugin_file.ToStdString().c_str());
+#endif
     return nullptr;
   }
   pic->m_plugin_file = plugin_file;
-  pic->m_status =
-      PluginStatus::Unmanaged;  // Status is updated later, if necessary
+  pic->m_status = PluginStatus::Unmanaged;  // Status is updated later, if necessary
 
   // load the library
   if (pic->m_library.IsLoaded()) pic->m_library.Unload();
-  pic->m_library.Load(plugin_file);
+  if (!pic->m_library.Load(plugin_file)) {
+	  printf("PluginLoader: Load plugin failed.\n");
+	std::string sLoadError;
+#ifdef _WIN32
+	DWORD lastError = GetLastError();
+	LPSTR buffer = NULL;
+	size_t size = FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+		NULL, lastError, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)& buffer, 0, NULL);
+	sLoadError = buffer;
+	LocalFree(buffer);
+	printf("PluginLoader: Error loading library: %s\n", sLoadError.c_str());
+#else
+	char *pErrorStr = dlerror();
+	if (pErrorStr != NULL) {
+		printf("PluginLoader: Error loading library: %s\n", pErrorStr);
+	}
+#endif	
+
+	return nullptr;
+  }
 
   if (!pic->m_library.IsLoaded()) {
     //  Look in the Blacklist, try to match a filename, to give some kind of
@@ -1399,7 +1426,9 @@ PlugInContainer* PluginLoader::LoadPlugIn(const wxString& plugin_file,
     std::string name = fn.GetName().ToStdString();
     auto found = m_blacklist->get_library_data(name);
     if (m_blacklist->mark_unloadable(plugin_file.ToStdString())) {
-      wxLogMessage("Ignoring blacklisted plugin %s", name.c_str());
+#ifdef PRINTLOG_DEBUG
+      printf("Ignoring blacklisted plugin %s\n", name.c_str());
+#endif
       if (!found.name.empty()) {
         SemanticVersion v(found.major, found.minor);
         LoadError le(LoadError::Type::Unloadable, name, v);
@@ -1409,18 +1438,19 @@ PlugInContainer* PluginLoader::LoadPlugIn(const wxString& plugin_file,
         load_errors.push_back(le);
       }
     }
-    wxLogMessage(wxString("   PluginLoader: Cannot load library: ") +
-                 plugin_file);
+#ifdef PRINTLOG_DEBUG
+    printf("   PluginLoader: Cannot load library: %s\n", (const char *)plugin_file.mb_str(wxConvUTF8));
+#endif
     return nullptr;
   }
 
   // load the factory symbols
-  const char* const FIX_LOADING =
-      _("\n    Install/uninstall plugin or remove file to mute message");
+  const char* const FIX_LOADING = _("\n    Install/uninstall plugin or remove file to mute message");
   create_t* create_plugin = (create_t*)pic->m_library.GetSymbol("create_pi");
   if (nullptr == create_plugin) {
-    std::string msg(_("   PluginLoader: Cannot load symbol create_pi: "));
-    wxLogMessage(msg + plugin_file);
+#ifdef PRINTLOG_DEBUG
+    printf("   PluginLoader: Cannot load symbol create_pi: %s\n", (const char *)plugin_file.mb_str(wxConvUTF8));    
+#endif
     if (m_blacklist->mark_unloadable(plugin_file.ToStdString())) {
       LoadError le(LoadError::Type::NoCreate, plugin_file.ToStdString());
       load_errors.push_back(le);
@@ -1428,12 +1458,12 @@ PlugInContainer* PluginLoader::LoadPlugIn(const wxString& plugin_file,
     return nullptr;
   }
 
-  destroy_t* destroy_plugin =
-      (destroy_t*)pic->m_library.GetSymbol("destroy_pi");
+  destroy_t* destroy_plugin = (destroy_t*)pic->m_library.GetSymbol("destroy_pi");
   pic->m_destroy_fn = destroy_plugin;
   if (nullptr == destroy_plugin) {
-    wxLogMessage("   PluginLoader: Cannot load symbol destroy_pi: " +
-                 plugin_file);
+#ifdef PRINTLOG_DEBUG
+    printf("   PluginLoader: Cannot load symbol destroy_pi: %s\n", (const char *)plugin_file.mb_str(wxConvUTF8));
+#endif
     if (m_blacklist->mark_unloadable(plugin_file.ToStdString())) {
       LoadError le(LoadError::Type::NoDestroy, plugin_file.ToStdString());
       load_errors.push_back(le);
@@ -1441,9 +1471,8 @@ PlugInContainer* PluginLoader::LoadPlugIn(const wxString& plugin_file,
     return nullptr;
   }
 
-  // create an instance of the plugin class  
-  std::string sSharedPath = (const char*)g_Platform->GetStdPaths().GetExecutablePath().mb_str(wxConvUTF8);
-  opencpn_plugin* plug_in = create_plugin(this, g_sS63DataDirPath, sSharedPath);
+  // create an instance of the plugin class    
+  opencpn_plugin* plug_in = create_plugin(this);
 
   int api_major = plug_in->GetAPIVersionMajor();
   int api_minor = plug_in->GetAPIVersionMinor();
@@ -1455,13 +1484,15 @@ PlugInContainer* PluginLoader::LoadPlugIn(const wxString& plugin_file,
   SemanticVersion pi_ver(pi_major, pi_minor, -1);
 
   wxString pi_name = plug_in->GetCommonName();
-
-  wxLogDebug("blacklist: Get status for %s %d %d",
-             pi_name.ToStdString().c_str(), pi_major, pi_minor);
+#ifdef PRINTLOG_DEBUG
+  printf("blacklist: Get status for %s %d %d\n", pi_name.ToStdString().c_str(), pi_major, pi_minor);
+#endif
   const auto status =
       m_blacklist->get_status(pi_name.ToStdString(), pi_major, pi_minor);
   if (status != plug_status::unblocked) {
-    wxLogDebug("Ignoring blacklisted plugin.");
+#ifdef PRINTLOG_DEBUG
+    printf("Ignoring blacklisted plugin.\n");
+#endif
     if (status != plug_status::unloadable) {
       SemanticVersion v(pi_major, pi_minor);
       LoadError le(LoadError::Type::Blacklisted, pi_name.ToStdString(), v);
@@ -1470,6 +1501,9 @@ PlugInContainer* PluginLoader::LoadPlugIn(const wxString& plugin_file,
     return nullptr;
   }
 
+#ifdef PRINTLOG_DEBUG
+  printf("PluginLoader: Plugin API Version:%d.\n", api_ver);
+#endif
   switch (api_ver) {
     case 105:
       pic->m_pplugin = dynamic_cast<opencpn_plugin*>(plug_in);
@@ -1544,12 +1578,12 @@ PlugInContainer* PluginLoader::LoadPlugIn(const wxString& plugin_file,
   }
 
   if (!pic->m_pplugin) {
-    INFO_LOG << _("Incompatible plugin detected: ") << plugin_file << "\n";
-    INFO_LOG << _("        API Version detected: ");
-    INFO_LOG << api_major << "." << api_minor << "\n";
-    INFO_LOG << _("        PlugIn Version detected: ") << pi_ver << "\n";
-    if (m_blacklist->mark_unloadable(pi_name.ToStdString(), pi_ver.major,
-                                     pi_ver.minor)) {
+#ifdef PRINTLOG_DEBUG
+    printf("Incompatible plugin detected: %s\n", (const char *)plugin_file.mb_str(wxConvUTF8));
+    printf("        API Version detected: \n");
+	printf("%d.%d\n", api_major, api_minor);
+#endif
+    if (m_blacklist->mark_unloadable(pi_name.ToStdString(), pi_ver.major, pi_ver.minor)) {
       LoadError le(LoadError::Type::Incompatible, pi_name.ToStdString(),
                    pi_ver);
       load_errors.push_back(le);
