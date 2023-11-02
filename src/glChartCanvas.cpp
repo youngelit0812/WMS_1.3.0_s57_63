@@ -2791,9 +2791,9 @@ void glChartCanvas::DrawGLCanvasData(std::string& sIMGFilePath, bool bPNGFlag, i
 	m_pParentCanvas->UpdateCanvasS52PLIBConfig();
 
 	m_in_glpaint++;
-	glViewport(0, 0, nWidth, nHeight);
+	glViewport(0, 0, nWidth, nHeight);	
 	Refresh();
-	Render();
+	Render();	
 	m_in_glpaint--;
 
 	GenerateImageFile(sIMGFilePath, bPNGFlag);

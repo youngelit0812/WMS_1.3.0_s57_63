@@ -4602,6 +4602,10 @@ void ChartCanvas::DrawCanvasData(LLBBox &llbBox, int nWidth, int nHeight, std::v
 		m_glcc->SetManualSize(nWidth, nHeight);
 #endif
 		m_glcc->DrawGLCanvasData(sIMGFilePath, bPNGFlag, nWidth, nHeight);
+#ifdef __linux__
+		usleep(100 * 1000);
+		m_glcc->DrawGLCanvasData(sIMGFilePath, bPNGFlag, nWidth, nHeight);
+#endif
 		return;
 	}
 #endif
