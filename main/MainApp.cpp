@@ -840,8 +840,7 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart, std::string& 
 	dc.SelectObject(bmp);
 	dc.DrawText(_T("X"), 0, 0);
 #endif
-	m_checker = 0;
-
+	m_checker = 0;	
 	// Instantiate the global OCPNPlatform class
 	g_Platform = new OCPNPlatform;
 	g_BasePlatform = g_Platform;
@@ -913,11 +912,14 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart, std::string& 
 
 	wxFileName config_test_file_name(g_Platform->GetConfigFileName());
 	if (config_test_file_name.FileExists()) {
+#ifdef PRINTLOG_DEBUG
 		printf("Using existing Config_File: %s\n", (const char*)(g_Platform->GetConfigFileName().mb_str(wxConvUTF8)));
+#endif
 	}
 	else {
+#ifdef PRINTLOG_DEBUG
 		printf("Creating new Config_File: %s\n", (const char*)(g_Platform->GetConfigFileName().mb_str(wxConvUTF8)));
-
+#endif
 		b_initial_load = true;
 		if (true != config_test_file_name.DirExists(config_test_file_name.GetPath())) {
 			if (!config_test_file_name.Mkdir(config_test_file_name.GetPath())) {
@@ -943,7 +945,9 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart, std::string& 
 
 	if ((g_config_display_size_mm > 0) && (g_config_display_size_manual)) {
 		g_display_size_mm = g_config_display_size_mm;
+#ifdef PRINTLOG_DEBUG
 		printf("Display size (horizontal) config override: %d mm\n", (int)g_display_size_mm);
+#endif
 		g_Platform->SetDisplaySizeMM(g_display_size_mm);
 	}
 
@@ -953,26 +957,24 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart, std::string& 
 
 #if wxUSE_XLOCALE || !wxCHECK_VERSION(3, 0, 0)
 	g_Platform->SetLocaleSearchPrefixes();
-
+#ifdef PRINTLOG_DEBUG
 	printf("Config file language: %s\n", (const char*)g_locale.mb_str(wxConvUTF8));  
-
+#endif
 	//  Make any adjustments necessary
 	g_locale = g_Platform->GetAdjustedAppLocale();
+#ifdef PRINTLOG_DEBUG
 	printf("Adjusted App language: %s\n", (const char*)g_locale.mb_str(wxConvUTF8));  
-
+#endif
 	g_Platform->ChangeLocale(g_locale, plocale_def_lang, &plocale_def_lang);
-
 	if (g_locale == _T("fr_FR")) g_b_assume_azerty = true;
 #endif
-
+	printf("Wait for minutes to prepare... \n");
 	ConfigMgr::Get();
 	wxString vs = wxString("Version ") + VERSION_FULL + " Build " + VERSION_DATE;
 	g_bUpgradeInProcess = (vs != g_config_version_string);
 
 	g_Platform->SetUpgradeOptions(vs, g_config_version_string);
-
 #ifdef ocpnUSE_GL
-
 #ifdef __WXMSW__
 #if !wxCHECK_VERSION( \
     2, 9, 0)  // The OpenGL test app only runs on wx 2.8, unavailable on wx3.x
@@ -1169,8 +1171,11 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart, std::string& 
 
 	if (pPluginLoader->plugin_array.GetCount() > 0) {		
 		wxString xsOS63FullPath = g_BasePlatform->GetPrivateDataDir() + OS63_INNER_PATH;
-		std::string sOS63FullPath = (const char*)xsOS63FullPath.mb_str(wxConvUTF8);
-		pConfig->SetOS63DirPath(sOS63FullPath);
+		wxDir xOS63Dir(xsOS63FullPath);
+		if (xOS63Dir.IsOpened()) {
+			std::string sOS63FullPath = (const char*)xsOS63FullPath.mb_str(wxConvUTF8);
+			pConfig->SetOS63DirPath(sOS63FullPath);
+		}
 	}
 	//   Build the initial chart dir array		
 	pConfig->LoadChartDirArray(ChartDirArray);
@@ -1267,7 +1272,6 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart, std::string& 
 	pConfig->UpdateSettings();
 	g_pauimgr->Update();	
 
-	printf("Wait for minutes to prepare... \n");
 	gFrame->UpdateDB_Canvas();	
 	printf("pre-initialize finished! \n");
 
@@ -1427,7 +1431,7 @@ bool MainApp::UpdateFrameCanvas(std::string& sBBox, int nWidth, int nHeight, std
 	ChartCanvas* pTCC = gFrame->GetPrimaryCanvas();
 	gFrame->CenterView(pTCC, llbBox);
 	gFrame->DoChartUpdate();
-	gFrame->ChartsRefresh();
+	gFrame->ChartsRefresh();	
 	
 	pTCC->m_b_paint_enable = true;
 	pTCC->RescaleCanvas(llbBox);

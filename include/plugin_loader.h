@@ -197,7 +197,7 @@ public:
    * @param enabled_plugins If true, only load enabled plugins
    * @return false on load errors, else true.
    */
-  bool LoadAllPlugIns(bool enabled_plugins, std::string sS63DataDirPath="");
+  bool LoadAllPlugIns(bool enabled_plugins);
 
   const wxBitmap* GetPluginDefaultIcon();
   void SetPluginDefaultIcon(const wxBitmap* bitmap);

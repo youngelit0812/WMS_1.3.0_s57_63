@@ -778,7 +778,9 @@ void ChartCanvas::SetupGlCanvas() {
 #ifdef ocpnUSE_GL
   if (!g_bdisable_opengl) {
     if (g_bopengl) {
+#ifdef PRINTLOG_DEBUG
       printf("Creating glChartCanvas\n");
+#endif
       m_glcc = new glChartCanvas(this);
 
       // We use one context for all GL windows, so that textures etc will be
@@ -4599,7 +4601,7 @@ void ChartCanvas::DrawCanvasData(LLBBox &llbBox, int nWidth, int nHeight, std::v
 #else
 		m_glcc->SetManualSize(nWidth, nHeight);
 #endif
-		m_glcc->DrawGLCanvasData(sIMGFilePath, bPNGFlag);
+		m_glcc->DrawGLCanvasData(sIMGFilePath, bPNGFlag, nWidth, nHeight);
 		return;
 	}
 #endif

@@ -630,7 +630,9 @@ void MyFrame::RebuildChartDatabase() {
   if (ChartDirArray.GetCount()) {
     //              Create and Save a new Chart Database based on the hints
     //              given in the config file
+#ifdef PRINTLOG_DEBUG
 	  printf("OpenCPN needs to update the chart database from config file \n");
+#endif
 
     delete ChartData;
     ChartData = new ChartDB();

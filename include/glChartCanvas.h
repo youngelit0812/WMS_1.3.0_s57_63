@@ -68,7 +68,7 @@ class ChartBaseBSB;
 
 class glChartCanvas : public wxGLCanvas {
 public:
-  void DrawGLCanvasData(std::string& sIMGFilePath, bool bPNGFlag);
+  void DrawGLCanvasData(std::string& sIMGFilePath, bool bPNGFlag, int nWidth, int nHeight);
   void GenerateImageFile(std::string& sIMGFilePath, bool bPNGFlag);
 
   static bool CanClipViewport(const ViewPort &vp);

@@ -201,12 +201,13 @@ ChartDB::ChartDB() {
   m_ticks = 0;
 
   //    Report cache policy
+#ifdef PRINTLOG_DEBUG
   if (g_memCacheLimit) {
 	  printf("ChartDB Cache policy:  Application target is %d MBytes\n", g_memCacheLimit / 1024);    
   } else {
 	  printf("ChartDB Cache policy:  Max open chart limit is %d.\n", g_nCacheLimit);    
   }
-
+#endif
   m_checkGroupIndex[0] = m_checkGroupIndex[1] = -1;
   m_checkedTileOnly[0] = m_checkedTileOnly[1] = false;
 }

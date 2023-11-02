@@ -58,21 +58,15 @@ SENCThreadManager::SENCThreadManager() {
   if (nCPU < 1) nCPU = 1;
 
   m_max_jobs = wxMax(nCPU - 1, 1);
-  // m_max_jobs = 1;
-
-  //    if(bthread_debug)
+#ifdef PRINTLOG_DEBUG  
   printf(" SENC: nCPU: %d    m_max_jobs :%d\n", nCPU, m_max_jobs);
-
+#endif
   //  Create/connect a dynamic event handler slot for messages from the worker
   //  threads
-  Connect(wxEVT_OCPN_BUILDSENCTHREAD, (wxObjectEventFunction)(wxEventFunction)&SENCThreadManager::OnEvtThread);
-
-  //     m_timer.Connect(wxEVT_TIMER, wxTimerEventHandler(
-  //     glTextureManager::OnTimer ), NULL, this); m_timer.Start(500);
+  Connect(wxEVT_OCPN_BUILDSENCTHREAD, (wxObjectEventFunction)(wxEventFunction)&SENCThreadManager::OnEvtThread);  
 }
 
-SENCThreadManager::~SENCThreadManager() {
-  //    ClearJobList();
+SENCThreadManager::~SENCThreadManager() {  
 }
 
 SENCThreadStatus SENCThreadManager::ScheduleJob(SENCJobTicket *ticket) {

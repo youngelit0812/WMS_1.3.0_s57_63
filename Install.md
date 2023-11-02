@@ -41,7 +41,7 @@
   - make -j4
 * Execute the "build/WMSServer".
   Wait until the message "Press Enter to stop the server or '!' to restart the server..." is displayed.
-  
+
 ### NOTE:
 	Opencpn uses a lot of packages(GUI components too) and those packages were integrated complicatedly into source.
 
@@ -56,6 +56,9 @@ The "project_path" is path in which the "CMakeLists.txt" file exists.
 * Should modify the port number for HTTP and HTTPS in "config.json" file.
 * The default result image directory is specified at "IMGDirPath" in "config.json" file.
   If you want to change it, remove the directory and make a new directory. Specify the new directory path into "config.json" file.
+* To use s63 Cell Charts, do as follows.
+  In "Append_data/wmsserver.conf", edit "Userpermit", "Installpermit", "PermitDir", "ENCROOT" with the data appropriate to your computer.
+  Copy the "PermitDir", "ENCROOT" and fingerprint file for your computer into the "Append_data/s63_files/" directory.
 
 ## Close Step
 * To close the server, should press "Enter".

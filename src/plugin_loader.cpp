@@ -394,7 +394,7 @@ void PluginLoader::SortPlugins(int (*cmp_func)(PlugInContainer**,
   plugin_array.Sort(ComparePlugins);
 }
 
-bool PluginLoader::LoadAllPlugIns(bool load_enabled, std::string sS63DataDirPath) {
+bool PluginLoader::LoadAllPlugIns(bool load_enabled) {
   using namespace std;
 
   static const wxString sep = wxFileName::GetPathSeparator();
@@ -544,9 +544,7 @@ bool PluginLoader::LoadPluginCandidate(const wxString& file_name,
         pic->m_enabled = false;
         enabled.Set(false);
       }
-	  printf("PluginLoader: Init 1.\n");
 #ifndef CLIAPP
-	  printf("PluginLoader: Init 2.\n");
       // The CLI has no graphics context, but plugins assumes there is.
       if (pic->m_enabled) {
 		LoadS57();

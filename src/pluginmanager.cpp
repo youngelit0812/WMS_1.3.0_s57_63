@@ -2539,10 +2539,6 @@ wxString* GetpSharedDataLocation(void) {
   return g_Platform->GetSharedDataDirPtr();
 }
 
-wxString GetpStdPaths() {
-	return g_Platform->GetSharedDataDir();
-}
-
 wxString* GetpPrivateApplicationDataLocation(void) {
   return g_Platform->GetPrivateDataDirPtr();
 }

@@ -17,7 +17,7 @@
 #endif
 #include <cassert>
 
-#define DELAY_FOR_RESPONSE		10
+#define DELAY_FOR_RESPONSE		15
 
 namespace CppServer {
 namespace HTTP {

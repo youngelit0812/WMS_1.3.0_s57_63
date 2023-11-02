@@ -1516,8 +1516,9 @@ bool ChartDatabase::Update(ArrayOfCDI &dir_array, bool bForce) {
   }
 
   m_nentries = active_chartTable.GetCount();
+#ifdef PRINTLOG_DEBUG
   printf("Update: chart table entry count : %d\n", m_nentries);
-
+#endif
   bValid = true;
   m_b_busy = false;
 
@@ -1633,7 +1634,9 @@ int ChartDatabase::TraverseDirAndAddCharts(ChartDirInfo &dir_info, wxString &dir
 
   //    Look for all possible defined chart classes
   for (unsigned int i = 0; i < m_ChartClassDescriptorArray.GetCount(); i++) {
+#ifdef PRINTLOG_DEBUG
     printf("TraverseDirAndAddCharts : search dir with classindex: %d\n", i);
+#endif
     nAdd += SearchDirAndAddCharts(dir_info.fullpath, m_ChartClassDescriptorArray.Item(i));
   }
 
@@ -1642,7 +1645,9 @@ int ChartDatabase::TraverseDirAndAddCharts(ChartDirInfo &dir_info, wxString &dir
 
 bool ChartDatabase::DetectDirChange(const wxString &dir_path, const wxString &prog_label,
                                     const wxString &magic, wxString &new_magic) {
+#ifdef PRINTLOG_DEBUG
   printf("DetectDirChange : ENC Directory Scan....\n");
+#endif
 
   //    parse the magic number
   long long unsigned int nmagic;
@@ -1663,7 +1668,9 @@ bool ChartDatabase::DetectDirChange(const wxString &dir_path, const wxString &pr
   // accumulator
   for (int ifile = 0; ifile < n_files; ifile++) {
 	  if ((ifile % (n_files / 60 + 1)) == 0) {
+#ifdef PRINTLOG_DEBUG
 		  printf("DetectDirChange: label:%s, percent:%d\n", (const char *)prog_label.mb_str(wxConvUTF8), wxMin((ifile * 100) / n_files, 100));
+#endif
 	  }
 
     wxFileName file(FileList[ifile]);
@@ -1887,11 +1894,11 @@ int ChartDatabase::SearchDirAndAddCharts(wxString &dir_name_base, ChartClassDesc
 		wprintf(_T("SearchDirAndAddCharts :\n FileSpec test failed for:%s\n."), file_name.wc_str());      
       continue;
     }
-
+#ifdef PRINTLOG_DEBUG
 	if ((ifile % nFileProgressQuantum) == 0) {
 		printf("SearchDirAndAddCharts: progress:%d\n", (int)(ifile* rFileProgressRatio));
 	}
-
+#endif
     ChartTableEntry *pnewChart = NULL;
     bool bAddFinal = true;
     int b_add_msg = 0;

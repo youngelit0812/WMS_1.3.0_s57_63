@@ -402,7 +402,7 @@ void glChartCanvas::SetManualSize(int nWidth, int nHeight) {
 		SetCurrent(*m_pcontext);
 	}
 
-	//SetSize(m_pParentCanvas->GetClientSize());
+	SetSize(0, 0, nWidth, nHeight);
 	if (m_bsetup) {
 		wxLogMessage(_T("BuildFBO 3"));
 		BuildFBO();
@@ -2768,7 +2768,7 @@ void glChartCanvas::PreSetupGL() {
 	}
 }
 
-void glChartCanvas::DrawGLCanvasData(std::string& sIMGFilePath, bool bPNGFlag) {
+void glChartCanvas::DrawGLCanvasData(std::string& sIMGFilePath, bool bPNGFlag, int nWidth, int nHeight) {
 	wxClientDC dc(this);
 
 	if (!m_pcontext) return;
@@ -2791,6 +2791,8 @@ void glChartCanvas::DrawGLCanvasData(std::string& sIMGFilePath, bool bPNGFlag) {
 	m_pParentCanvas->UpdateCanvasS52PLIBConfig();
 
 	m_in_glpaint++;
+	glViewport(0, 0, nWidth, nHeight);
+	Refresh();
 	Render();
 	m_in_glpaint--;
 
@@ -2928,7 +2930,9 @@ void glChartCanvas::Render() {
 
   OCPNRegion screen_region(wxRect(0, 0, gl_width, gl_height));
   glViewport(0, 0, (GLint)gl_width, (GLint)gl_height);
+#ifdef PRINTLOG_DEBUG
   printf("glCC : render : screen_region:%d,%d\n", gl_width, gl_height);
+#endif
 
 //#ifndef USE_ANDROID_GLES2
 #if !defined(USE_ANDROID_GLES2)
