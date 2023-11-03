@@ -1384,7 +1384,7 @@ int MainApp::GetLayerIndex(std::string& sLayerCaption) {
 
 bool MainApp::UpdateFrameCanvas(std::string& sBBox, int nWidth, int nHeight, std::string& sLayers, std::string& sIMGFilePath, bool bPNGFlag)
 {
-	if (nWidth % 2 > 0) nWidth--;	
+	if (nWidth % 2 > 0) nWidth++;	
 
 	if (!gFrame || sBBox.empty() || sLayers.empty() || nWidth < 1 || nWidth > 5000 || nHeight < 1 || nHeight > 5000) return false;
 

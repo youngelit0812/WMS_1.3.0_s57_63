@@ -4927,6 +4927,7 @@ void MyFrame::UpdateDB_Canvas() {
 	SendSizeEvent();
 
 	RefreshAllCanvas(true);
-
-	g_focusCanvas->GetglCanvas()->Show(g_bopengl);	
+	if (g_bopengl) {
+		g_focusCanvas->GetglCanvas()->Show(g_bopengl);
+	}
 }

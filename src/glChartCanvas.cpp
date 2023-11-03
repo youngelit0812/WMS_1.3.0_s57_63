@@ -3218,8 +3218,14 @@ void glChartCanvas::Render() {
          color.Blue()/ 256. ,1.0 );
         glClear(GL_COLOR_BUFFER_BIT);
 
-        OCPNRegion rscreen_region(VPoint.rv_rect);
-		printf("glCC : render chart 2 : %d,%d,%d,%d", VPoint.rv_rect.GetLeft(), VPoint.rv_rect.GetTop(), VPoint.rv_rect.GetRight(), VPoint.rv_rect.GetBottom());
+		int nVRScrLeft = VPoint.rv_rect.GetLeft();
+		int nVRScrTop = VPoint.rv_rect.GetTop();
+		int nVRScrRight = VPoint.rv_rect.GetRight();
+		int nVRScrBottm = VPoint.rv_rect.GetBottom();
+		
+		if ((nVRScrRight - nVRScrLeft) % 2 > 0) nVRScrRight++;
+        OCPNRegion rscreen_region(nVRScrLeft, nVRScrTop, nVRScrRight, nVRScrBottm);
+		printf("glCC : render chart 2 : %d,%d,%d,%d", nVRScrLeft, nVRScrTop, nVRScrRight, nVRScrBottm);
         RenderCharts(m_gldc, rscreen_region);
 
         m_cache_page = !m_cache_page; /* page flip */
