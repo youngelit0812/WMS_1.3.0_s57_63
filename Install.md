@@ -50,6 +50,7 @@
 * The rendered image file prefix must be typed at "IMGFilePath" in "project_path/env/config.json" file.
 * The ssl certificate files should be located in "project_path/Append_data/tools/certificates/" directory.
 The "project_path" is path in which the "CMakeLists.txt" file exists.
+* In Ubuntu system, before you execute the command "cmake ..", you should execute "sudo chmod -R 777 OCPNsenc" in "/Append_data/s63_files/".
 
 ## Pre-Run Steps
 * Copy all ENC files into the directory indicated in "config.json" file.
