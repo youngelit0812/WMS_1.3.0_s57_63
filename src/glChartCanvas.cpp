@@ -3223,7 +3223,7 @@ void glChartCanvas::Render() {
 		int nVRScrRight = VPoint.rv_rect.GetRight();
 		int nVRScrBottm = VPoint.rv_rect.GetBottom();
 		
-		if ((nVRScrRight - nVRScrLeft) % 2 > 0) nVRScrRight++;
+		//if ((nVRScrRight - nVRScrLeft) % 2 > 0) nVRScrRight++;
         OCPNRegion rscreen_region(nVRScrLeft, nVRScrTop, nVRScrRight, nVRScrBottm);
 		printf("glCC : render chart 2 : %d,%d,%d,%d", nVRScrLeft, nVRScrTop, nVRScrRight, nVRScrBottm);
         RenderCharts(m_gldc, rscreen_region);

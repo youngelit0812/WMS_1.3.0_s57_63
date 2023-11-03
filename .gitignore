@@ -1,3 +1,11 @@
-build/
-modules/
-cache/
+/source/.vscode
+/s57processor/.vs
+/s57reader/s57_reader/.vs
+/build
+/modules
+/cache
+*.buildinfo
+*.changes
+/bin
+/Append_data/s63_files/*.fpr
+/.vs
