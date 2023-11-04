@@ -2811,8 +2811,8 @@ void glChartCanvas::GenerateImageFile(std::string& sIMGFilePath, bool bPNGFlag) 
 	  SwapBuffers();
 
 	  int bufferSize = nWidth * nHeight * 3; // 3 components per pixel
-	  GLubyte* pixels = new GLubyte[bufferSize];
-	  glReadnPixels(0, 0, nWidth, nHeight, GL_RGB, GL_UNSIGNED_BYTE, bufferSize, pixels);
+	  GLubyte* pixels = new GLubyte[bufferSize];	  
+	  glReadPixels(0, 0, nWidth, nHeight, GL_RGB, GL_UNSIGNED_BYTE, pixels);
 
 	  if (pixels) {
 		  wxImage xImage(nWidth, nHeight, pixels, true);
