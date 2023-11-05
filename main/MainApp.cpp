@@ -135,6 +135,7 @@ WX_DEFINE_OBJARRAY(ArrayOfCDI);
 #endif
 
 #define OS63_INNER_PATH			"/s63/s63charts/"
+#define S63_SENC_INNER_PATH		"/s63/s63SENC/"
 
 opencpn_plugin* g_S63Plugin;
 wxDynamicLibrary *g_pLibrary;
@@ -1195,11 +1196,19 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart, std::string& 
 	pPluginLoader->LoadAllPlugIns(true);
 
 	if (pPluginLoader->plugin_array.GetCount() > 0) {		
-		wxString xsOS63FullPath = g_BasePlatform->GetPrivateDataDir() + OS63_INNER_PATH;
-		wxDir xOS63Dir(xsOS63FullPath);
-		if (xOS63Dir.IsOpened()) {
-			std::string sOS63FullPath = (const char*)xsOS63FullPath.mb_str(wxConvUTF8);
-			pConfig->SetOS63DirPath(sOS63FullPath);
+		wxString xsS63SENCFullPath = g_BasePlatform->GetPrivateDataDir() + S63_SENC_INNER_PATH;
+		wxDir xS63SENCDir(xsS63SENCFullPath);
+		if (xS63SENCDir.IsOpened()) {
+			wxString xsFileName;
+			bool bHasFiles = xS63SENCDir.GetFirst(&xsFileName, "*.es57", wxDIR_FILES);
+			if (bHasFiles) {
+				wxString xsOS63FullPath = g_BasePlatform->GetPrivateDataDir() + OS63_INNER_PATH;
+				wxDir xOS63Dir(xsOS63FullPath);
+				if (xOS63Dir.IsOpened()) {
+					std::string sOS63FullPath = (const char*)xsOS63FullPath.mb_str(wxConvUTF8);
+					pConfig->SetOS63DirPath(sOS63FullPath);
+				}
+			}
 		}
 	}
 	//   Build the initial chart dir array		
