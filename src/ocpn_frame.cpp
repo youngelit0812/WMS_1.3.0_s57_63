@@ -677,6 +677,14 @@ ColorScheme GetColorScheme() { return global_color_scheme; }
 ColorScheme MyFrame::GetColorScheme() { return global_color_scheme; }
 
 void MyFrame::ResizeFrameWH(int nWidth, int nHeight) {	
+#ifdef __linux__
+	if (g_bopengl) {
+		g_nframewin_x = nWidth;
+		g_nframewin_y = nHeight;
+		
+		SetSize(nWidth, nHeight);
+	}
+#endif
 	wxSize xSize(nWidth, nHeight);
 	SetCanvasSizes(xSize);
 
@@ -685,12 +693,9 @@ void MyFrame::ResizeFrameWH(int nWidth, int nHeight) {
 		ChartCanvas* cc = g_canvasArray.Item(i);
 		if (cc) cc->FormatPianoKeys();
 	}
-
-	//  If global toolbar is shown, reposition it...
-	//  Update the stored window size	
-	g_nframewin_x = nWidth;
-	g_nframewin_y = nHeight;
-
+#ifdef PRINTLOG_DEBUG
+	printf("ocpn_frame: ResizeFrameWH: %d,%d\n", nWidth, nHeight);
+#endif
 	//  Reset the options dialog size logic
 	options_lastWindowSize = wxSize(0, 0);
 	options_lastWindowPos = wxPoint(0, 0);
@@ -1440,11 +1445,22 @@ void MyFrame::OnSize(wxSizeEvent &event) { ODoSetSize(); }
 
 void MyFrame::ODoSetSize(void) {
   int x, y;
+#ifdef WIN32
   GetClientSize(&x, &y);
-  //      Resize the children
-  
   SetCanvasSizes(GetClientSize());
-
+#else
+  if (g_bopengl) {
+	x = g_nframewin_x;
+	y = g_nframewin_y;
+	
+    wxSize xClientSize(x, y);
+    SetCanvasSizes(xClientSize);
+    SetSize(x, y);
+  } else {
+  	GetClientSize(&x, &y);
+	SetCanvasSizes(GetClientSize());
+  }
+#endif
   // .. for each canvas...
   for (unsigned int i = 0; i < g_canvasArray.GetCount(); i++) {
     ChartCanvas *cc = g_canvasArray.Item(i);
@@ -1456,7 +1472,9 @@ void MyFrame::ODoSetSize(void) {
   GetSize(&x, &y);
   g_nframewin_x = x;
   g_nframewin_y = y;
-
+#ifdef PRINTLOG_DEBUG  
+  printf("ocpn_Frame: ODoSetSize:%d,%d\n", g_nframewin_x, g_nframewin_y);
+#endif
   if (g_pi_manager) g_pi_manager->SendResizeEventToAllPlugIns(x, y);
   // FIXME (dave)  Thumbwins are gone...
   // if (pthumbwin) pthumbwin->SetMaxSize(GetClientSize());
@@ -1483,10 +1501,9 @@ void MyFrame::ResizeManually(int nWidth, int nHeight) {
 	//  Update the stored window size
 	g_nframewin_x = nWidth;
 	g_nframewin_y = nHeight;
-
-	// FIXME (dave)  Thumbwins are gone...
-	// if (pthumbwin) pthumbwin->SetMaxSize(GetClientSize());
-
+#ifdef PRINTLOG_DEBUG	
+	printf("ocpn_frame:ResizeManually:%d,%d\n", g_nframewin_x, g_nframewin_y);
+#endif
 	//  Reset the options dialog size logic
 	options_lastWindowSize = wxSize(0, 0);
 	options_lastWindowPos = wxPoint(0, 0);
@@ -1927,7 +1944,10 @@ void MyFrame::CenterView(ChartCanvas *cc, const LLBBox &RBBox) {
     DistanceBearingMercator(RBBox.GetMinLat(), RBBox.GetMinLon(),
                             RBBox.GetMaxLat(), RBBox.GetMinLon(), NULL, &rh);
 
-    cc->GetSize(&ww, &wh);	
+    cc->GetSize(&ww, &wh);
+#ifdef PRINTLOG_DEBUG		
+    printf("MyFrame : centerView, w: %d, h :%d", ww, wh);
+#endif
 
     ppm = std::min(ww / (rw * 1852), wh / (rh * 1852)) * (100 - fabs(clat)) / 90;
     ppm = std::min(ppm, 1.0);

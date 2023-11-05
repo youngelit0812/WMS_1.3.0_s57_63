@@ -198,9 +198,11 @@ extern bool g_bresponsive;
 extern int g_chart_zoom_modifier_raster;
 extern int g_chart_zoom_modifier_vector;
 extern int g_ChartScaleFactor;
-
-
 #ifdef ocpnUSE_GL
+#ifdef __linux__
+extern int g_nframewin_x;
+extern int g_nframewin_y;
+#endif
 #endif
 
 extern bool g_bShowFPS;
@@ -1033,7 +1035,10 @@ void ChartCanvas::canvasChartsRefresh(int dbi_hint) {
   double old_scale = GetVPScale();
   InvalidateQuilt();
   SetQuiltRefChart(-1);
-
+#ifdef PRINTLOG_DEBUG
+  wxSize xCanvasSize = GetSize();
+  printf("chcanv: canvasChartsRefresh: %d,%d\n", xCanvasSize.GetWidth(), xCanvasSize.GetHeight());
+#endif
   m_singleChart = NULL;
   //    Build a new ChartStack
   if (!m_pCurrentStack) {
@@ -1080,7 +1085,9 @@ void ChartCanvas::canvasChartsRefresh(int dbi_hint) {
     m_singleChart = pDummyChart;
     SetVPScale(old_scale);
   }
-
+#ifdef PRINTLOG_DEBUG
+  printf("chcanv: canvasChartsRefresh : ReloadVP\n");
+#endif  
   ReloadVP();
 
   UpdateCanvasControlBar();  
@@ -2044,7 +2051,9 @@ bool ChartCanvas::DoCanvasCOGSet(void) {
 
   SetVPRotation(m_VPRotate);
   bool bnew_chart = DoCanvasUpdate();
-
+#ifdef PRINTLOG_DEBUG
+  printf("chcanv: DoCanvasCOGSet : ReloadVP\n");
+#endif
   if ((bnew_chart) || (old_VPRotate != m_VPRotate)) ReloadVP();
 
   return true;
@@ -2281,7 +2290,9 @@ void ChartCanvas::SetColorScheme(ColorScheme cs) {
 #endif
   SetbTCUpdate(true);  // force re-render of tide/current locators
   m_brepaint_piano = true;
-
+#ifdef PRINTLOG_DEBUG
+  printf("chcanv: SetColorScheme : ReloadVP\n");
+#endif  
   ReloadVP();
 
   m_cs = cs;
@@ -2311,6 +2322,9 @@ wxBitmap ChartCanvas::CreateDimBitmap(wxBitmap &Bitmap, double factor) {
 
 void ChartCanvas::RotateTimerEvent(wxTimerEvent &event) {
   m_b_rot_hidef = true;
+#ifdef PRINTLOG_DEBUG  
+  printf("chcanv: RotateTimerEvent : ReloadVP\n");
+#endif
   ReloadVP();
 }
 
@@ -2642,6 +2656,9 @@ void ChartCanvas::ClearbFollow(void) {
   m_bFollow = false;  // update the follow flag
 
   DoCanvasUpdate();
+#ifdef PRINTLOG_DEBUG  
+  printf("chcanv: ClearbFollow : ReloadVP\n");
+#endif  
   ReloadVP();
   parent_frame->SetChartUpdatePeriod();
 }
@@ -2657,6 +2674,9 @@ void ChartCanvas::SetbFollow(void) {
   }
 
   DoCanvasUpdate();
+#ifdef PRINTLOG_DEBUG  
+  printf("chcanv: SetbFollow : ReloadVP\n");
+#endif  
   ReloadVP();
   parent_frame->SetChartUpdatePeriod();
 }
@@ -2768,7 +2788,10 @@ bool ChartCanvas::PanCanvas(double dx, double dy) {
 
 void ChartCanvas::ReloadVP(bool b_adjust) {
   if (g_brightness_init) SetScreenBrightness(g_nbrightness);
-
+#ifdef PRINTLOG_DEBUG  
+  wxSize xCurrentSize = GetSize();       
+  printf("chcanv: ReLoadVP: %d, %d\n", xCurrentSize.GetWidth(), xCurrentSize.GetHeight());
+#endif	  
   LoadVP(VPoint, b_adjust);
 }
 
@@ -2777,7 +2800,10 @@ void ChartCanvas::LoadVP(ViewPort &vp, bool b_adjust) {
   if (g_bopengl && m_glcc) {
     m_glcc->Invalidate();
     if (m_glcc->GetSize() != GetSize()) {
-      wxSize xCurrentSize = GetSize();     
+      wxSize xCurrentSize = GetSize();
+#ifdef PRINTLOG_DEBUG	  
+      printf("chcanv: LoadVP: %d, %d\n", xCurrentSize.GetWidth(), xCurrentSize.GetHeight());
+#endif
       m_glcc->SetSize(xCurrentSize);
     }
   } else
@@ -3942,10 +3968,25 @@ void ChartCanvas::ToggleCPAWarn() {
   }
 }
 
-void ChartCanvas::OnActivate(wxActivateEvent &event) { ReloadVP(); }
+void ChartCanvas::OnActivate(wxActivateEvent &event) {
+#ifdef PRINTLOG_DEBUG 
+	printf("chcanv: OnActivate : ReloadVP\n");
+#endif	
+	ReloadVP(); 
+}
 
 void ChartCanvas::OnSize(wxSizeEvent &event) {
+#ifdef WIN32
   GetClientSize(&m_canvas_width, &m_canvas_height);
+#else
+  if (g_bopengl) {
+	m_canvas_width = g_nframewin_x;
+	m_canvas_height = g_nframewin_y;
+	SetSize(m_canvas_width, m_canvas_height);
+  } else {
+    GetClientSize(&m_canvas_width, &m_canvas_height);
+  }
+#endif
 
 #ifdef __WXOSX__
   // Support scaled HDPI displays.
@@ -4008,6 +4049,9 @@ void ChartCanvas::OnSize(wxSizeEvent &event) {
 
   FormatPianoKeys();
   //  Invalidate the whole window
+#ifdef PRINTLOG_DEBUG  
+  printf("chcanv: OnSize : ReloadVP\n");
+#endif
   ReloadVP();
 }
 
@@ -4015,6 +4059,15 @@ void ChartCanvas::ResizeChCanvasWH(int nWidth, int nHeight) {
 	wxSize xSize(nWidth, nHeight);
 	m_canvas_width = nWidth;
 	m_canvas_height = nHeight;
+#ifdef PRINTLOG_DEBUG	
+	printf("chcanv : size: %d,%d", m_canvas_width, m_canvas_height);
+#endif
+
+#ifdef __linux__
+	if (g_bopengl) {	
+		SetSize(m_canvas_width, m_canvas_height);
+	}
+#endif
 
 #ifdef __WXOSX__
 	// Support scaled HDPI displays.
@@ -4067,6 +4120,9 @@ void ChartCanvas::ResizeChCanvasWH(int nWidth, int nHeight) {
 
 	FormatPianoKeys();
 	//  Invalidate the whole window
+#ifdef PRINTLOG_DEBUG	
+	printf("chcanv: ResizeCHCanvasWH : ReloadVP\n");
+#endif
 	ReloadVP();
 }
 
@@ -6186,7 +6242,9 @@ void ChartCanvas::DoCanvasStackDelta(int direction) {
   }
 
   SetQuiltChartHiLiteIndex(-1);
-
+#ifdef PRINTLOG_DEBUG  
+  printf("chcanv: DoCanvasStackDelta : ReloadVP\n");
+#endif
   ReloadVP();
 }
 
@@ -6410,7 +6468,9 @@ void ChartCanvas::selectCanvasChartDisplay(int type, int family) {
   }
 
   SetQuiltChartHiLiteIndex(-1);
-
+#ifdef PRINTLOG_DEBUG
+  printf("chcanv: selectCanvasChartDisplay : ReloadVP\n");
+#endif
   ReloadVP();
 }
 
@@ -6550,6 +6610,9 @@ void ChartCanvas::HandlePianoClick(int selected_index, int selected_dbIndex) {
   SetQuiltChartHiLiteIndex(-1);
   HideChartInfoWindow();
   DoCanvasUpdate();
+#ifdef PRINTLOG_DEBUG  
+  printf("chcanv: HandlePianoClick : ReloadVP\n");
+#endif
   ReloadVP();  // Pick up the new selections
 }
 
@@ -6759,7 +6822,9 @@ void ChartCanvas::PianoPopupMenu(int x, int y, int selected_index,
   m_Piano->ResetRollover();
 
   SetQuiltChartHiLiteIndex(-1);
-
+#ifdef PRINTLOG_DEBUG
+  printf("chcanv: PianoPopupMenu : ReloadVP\n");
+#endif
   ReloadVP();
 }
 

@@ -1053,26 +1053,50 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart, std::string& 
 
 	auto style = g_StyleManager->GetCurrentStyle();
 
-	g_nframewin_x = cw;
-	g_nframewin_y = ch;  
-
 	g_lastClientRectx = cx;
 	g_lastClientRecty = cy;
 	g_lastClientRectw = cw;
 	g_lastClientRecth = ch;
+	
+#ifdef __linux__
+	if (g_bopengl) {
+		g_lastClientRectw = g_nframewin_x;
+		g_lastClientRecth = g_nframewin_y;
+	} else {
+		g_nframewin_x = cw;
+		g_nframewin_y = ch;  		
+	}
+#else
+	g_nframewin_x = cw;
+	g_nframewin_y = ch;  
+#endif
 #ifdef PRINTLOG_DEBUG
   printf("last client rect : %d,%d\n", g_lastClientRectw, g_lastClientRecth);  
 #endif
-  
-	if ((g_nframewin_x > 100) && (g_nframewin_y > 100) && (g_nframewin_x <= cw) && (g_nframewin_y <= ch))
-		new_frame_size.Set(g_nframewin_x, g_nframewin_y);
-	else new_frame_size.Set(cw * 7 / 10, ch * 7 / 10);
 
-	if ((g_lastClientRectx != cx) || (g_lastClientRecty != cy) ||
-		(g_lastClientRectw != cw) || (g_lastClientRecth != ch)) {
+#ifdef __linux__
+	if (g_bopengl) {
+		new_frame_size.Set(g_nframewin_x, g_nframewin_y);
+	} else {
+		if ((g_nframewin_x > 100) && (g_nframewin_y > 100) && (g_nframewin_x <= cw) && (g_nframewin_y <= ch)) {
+			new_frame_size.Set(g_nframewin_x, g_nframewin_y);
+		} else new_frame_size.Set(cw * 7 / 10, ch * 7 / 10);
+
+		if ((g_lastClientRectx != cx) || (g_lastClientRecty != cy) || (g_lastClientRectw != cw) || (g_lastClientRecth != ch)) {
+			new_frame_size.Set(cw * 7 / 10, ch * 7 / 10);
+			g_bframemax = false;
+		}	
+	}
+#else
+	if ((g_nframewin_x > 100) && (g_nframewin_y > 100) && (g_nframewin_x <= cw) && (g_nframewin_y <= ch)) {
+		new_frame_size.Set(g_nframewin_x, g_nframewin_y);
+	} else new_frame_size.Set(cw * 7 / 10, ch * 7 / 10);
+
+	if ((g_lastClientRectx != cx) || (g_lastClientRecty != cy) || (g_lastClientRectw != cw) || (g_lastClientRecth != ch)) {
 		new_frame_size.Set(cw * 7 / 10, ch * 7 / 10);
 		g_bframemax = false;
 	}
+#endif
 #ifdef PRINTLOG_DEBUG
 	printf("new frame size:%d,%d\n", new_frame_size.GetWidth(), new_frame_size.GetHeight());
 #endif
@@ -1094,7 +1118,7 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart, std::string& 
 	frame_rect.top = position.y;
 	frame_rect.right = position.x + new_frame_size.x;
 	frame_rect.bottom = position.y + new_frame_size.y;
-
+	
 	//  If the requested frame window does not intersect any installed monitor,
 	//  then default to simple primary monitor positioning.
 	if (NULL == MonitorFromRect(&frame_rect, MONITOR_DEFAULTTONULL)) position = wxPoint(10, 10);
@@ -1120,11 +1144,12 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart, std::string& 
 	app_style |= wxFRAME_NO_TASKBAR;
 	app_style |= wxSTAY_ON_TOP;
 
-#ifdef PRINTLOG_DEBUG
-	printf("Create frame with pos:%d,%d", g_nframewin_posx, g_nframewin_posy);
-#endif
 	try {
 		gFrame = new MyFrame(NULL, "", position, new_frame_size, app_style);
+#ifdef PRINTLOG_DEBUG
+		wxSize xCurrentFrameSize = gFrame->GetSize();
+		printf("MainApp: OnInit : frame width:%d, height:%d\n", xCurrentFrameSize.GetWidth(), xCurrentFrameSize.GetHeight());
+#endif
 	} catch (std::exception & ex) {
 		printf("Create Frame Failed! : %s\n", ex.what());
 		return false;
@@ -1199,8 +1224,7 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart, std::string& 
 
 	//  Verify any saved chart database startup index
 	if (g_restore_dbindex >= 0) {
-		if (ChartData->GetChartTableEntries() == 0)
-			g_restore_dbindex = -1;
+		if (ChartData->GetChartTableEntries() == 0) g_restore_dbindex = -1;
 
 		else if (g_restore_dbindex > (ChartData->GetChartTableEntries() - 1))
 			g_restore_dbindex = 0;
@@ -1237,7 +1261,11 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart, std::string& 
 
 	gFrame->Refresh(false);
 	gFrame->Raise();
-
+#ifdef __linux__
+	if (g_bopengl) {
+		gFrame->SetSize(g_nframewin_x,g_nframewin_y);
+	}
+#endif
 	gFrame->GetPrimaryCanvas()->Enable();
 	gFrame->GetPrimaryCanvas()->SetFocus();
 #ifdef ocpnUSE_GL
@@ -1251,10 +1279,6 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart, std::string& 
     }
   }
 #endif
-
-  gFrame->Raise();
-  gFrame->GetPrimaryCanvas()->Enable();
-  gFrame->GetPrimaryCanvas()->SetFocus();
 
   OCPNPlatform::Initialize_4();
 
