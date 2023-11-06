@@ -1450,8 +1450,9 @@ void glChartCanvas::GridDraw() {
   float curved_step = wxMin(sqrt(5e-3 / vp.view_scale_ppm), 3);
 
   ocpnDC gldc(*this);
-  wxPen *pen = wxThePenList->FindOrCreatePen(GridColor, g_GLMinSymbolLineWidth,
-                                             wxPENSTYLE_SOLID);
+  wxPen* pen = 0;
+  if (!wxThePenList) pen = new wxPen(GridColor, g_GLMinSymbolLineWidth, wxPENSTYLE_SOLID);
+  else pen = wxThePenList->FindOrCreatePen(GridColor, g_GLMinSymbolLineWidth, wxPENSTYLE_SOLID);  
   gldc.SetPen(*pen);
 
   // Draw Major latitude grid lines and text
