@@ -1,10 +1,3 @@
-/*!
-    \file https_server.cpp
-    \brief HTTPS server example
-    \author Ivan Shynkarenka
-    \date 30.04.2019
-    \copyright MIT License
-*/
 #include "config.h"
 
 #ifdef __MINGW32__
@@ -36,6 +29,10 @@
 #include <queue>
 #include <signal.h>
 
+#ifdef __linux__
+#include <X11/Xlib.h>
+#endif
+
 #include "Json.hpp"
 #include "MainApp.h"
 
@@ -61,65 +58,69 @@ std::queue<std::string> g_messageQueue;
 std::mutex g_mtx;
 std::condition_variable g_cv;
 
+#ifdef __linux__
+Display* g_display = nullptr;
+#endif
+
 class Cache : public CppCommon::Singleton<Cache>
 {
-   friend CppCommon::Singleton<Cache>;
+	friend CppCommon::Singleton<Cache>;
 
 public:
-    std::string GetAllCache()
-    {
-        std::scoped_lock locker(_cache_lock);
-        std::string result;
-        result += "[\n";
-        for (const auto& item : _cache)
-        {
-            result += "  {\n";
-            result += "    \"key\": \"" + item.first + "\",\n";
-            result += "    \"value\": \"" + item.second + "\",\n";
-            result += "  },\n";
-        }
-        result += "]\n";
-        return result;
-    }
+	std::string GetAllCache()
+	{
+		std::scoped_lock locker(_cache_lock);
+		std::string result;
+		result += "[\n";
+		for (const auto& item : _cache)
+		{
+			result += "  {\n";
+			result += "    \"key\": \"" + item.first + "\",\n";
+			result += "    \"value\": \"" + item.second + "\",\n";
+			result += "  },\n";
+		}
+		result += "]\n";
+		return result;
+	}
 
-    bool GetCacheValue(std::string_view key, std::string& value)
-    {
-        std::scoped_lock locker(_cache_lock);
-        auto it = _cache.find(key);
-        if (it != _cache.end())
-        {
-            value = it->second;
-            return true;
-        }
-        else
-            return false;
-    }
+	bool GetCacheValue(std::string_view key, std::string& value)
+	{
+		std::scoped_lock locker(_cache_lock);
+		auto it = _cache.find(key);
+		if (it != _cache.end())
+		{
+			value = it->second;
+			return true;
+		}
+		else
+			return false;
+	}
 
-    void PutCacheValue(std::string_view key, std::string_view value)
-    {
-        std::scoped_lock locker(_cache_lock);
-        auto it = _cache.emplace(key, value);
-        if (!it.second)
-            it.first->second = value;
-    }
+	void PutCacheValue(std::string_view key, std::string_view value)
+	{
+		std::scoped_lock locker(_cache_lock);
+		auto it = _cache.emplace(key, value);
+		if (!it.second)
+			it.first->second = value;
+	}
 
-    bool DeleteCacheValue(std::string_view key, std::string& value)
-    {
-        std::scoped_lock locker(_cache_lock);
-        auto it = _cache.find(key);
-        if (it != _cache.end())
-        {
-            value = it->second;
-            _cache.erase(it);
-            return true;
-        }
-        else
-            return false;
-    }
+	bool DeleteCacheValue(std::string_view key, std::string& value)
+	{
+		std::scoped_lock locker(_cache_lock);
+		auto it = _cache.find(key);
+		if (it != _cache.end())
+		{
+			value = it->second;
+			_cache.erase(it);
+			return true;
+		}
+		else
+			return false;
+	}
 
 private:
-    std::mutex _cache_lock;
-    std::map<std::string, std::string, std::less<>> _cache;
+	std::mutex _cache_lock;
+	std::map<std::string, std::string, std::less<>> _cache;
 };
 
 class HTTPCacheSession : public CppServer::HTTP::HTTPSession
@@ -142,33 +143,28 @@ protected:
 
 			// Decode the key value
 			key = CppCommon::Encoding::URLDecode(key);
-			CppCommon::StringUtils::ReplaceFirst(key, "/api/cache", "");
-			CppCommon::StringUtils::ReplaceFirst(key, "?key=", "");
 
 			if (key.empty())
 			{
-				// Response with all cache values
-				SendResponseAsync(response().MakeGetResponse(Cache::GetInstance().GetAllCache(), "application/json; charset=UTF-8"));
+				SendResponseAsync(response().MakeErrorResponse("Unsupported HTTP method: " + std::string(request.method())));
 			}
-			// Get the cache value by the given key
 			else if (Cache::GetInstance().GetCacheValue(key, value))
 			{
-				// Response with the cache value
 				SendResponseAsync(response().MakeGetResponse(value));
 			}
 			else
 				SendResponseAsync(response().MakeErrorResponse(404, "Required URL doesn't exist (404 Page not found) : " + key));
-		}		
+		}
 		else
 			SendResponseAsync(response().MakeErrorResponse("Unsupported HTTP method: " + std::string(request.method())));
 	}
 
-	void onReceivedRequestError(const CppServer::HTTP::HTTPRequest & request, const std::string & error) override
+	void onReceivedRequestError(const CppServer::HTTP::HTTPRequest& request, const std::string& error) override
 	{
 		std::cout << "Request error: " << error << std::endl;
 	}
 
-	void onError(int error, const std::string & category, const std::string & message) override
+	void onError(int error, const std::string& category, const std::string& message) override
 	{
 		std::cout << "HTTP session caught an error with code " << error << " and category '" << category << "': " << message << std::endl;
 	}
@@ -195,71 +191,69 @@ protected:
 class HTTPSCacheSession : public CppServer::HTTP::HTTPSSession
 {
 public:
-    using CppServer::HTTP::HTTPSSession::HTTPSSession;
+	using CppServer::HTTP::HTTPSSession::HTTPSSession;
 
 protected:
-    void onReceivedRequest(const CppServer::HTTP::HTTPRequest& request) override
-    {
+	void onReceivedRequest(const CppServer::HTTP::HTTPRequest& request) override
+	{
 		printf("onReceivedRequest 1 \n");
-        // Show HTTP request content
-        std::cout << std::endl << request;
+		// Show HTTP request content
+		std::cout << std::endl << request;
 
-        // Process HTTP GET request methods
-        if (request.method() == "GET")
-        {
+		// Process HTTP GET request methods
+		if (request.method() == "GET")
+		{
 			std::string key(request.url());
-            std::string value;
+			std::string value;
 
 			// Decode the key value
-            key = CppCommon::Encoding::URLDecode(key);			
-            CppCommon::StringUtils::ReplaceFirst(key, "/api/cache", "");
-            CppCommon::StringUtils::ReplaceFirst(key, "?key=", "");
+			key = CppCommon::Encoding::URLDecode(key);
 
-            if (key.empty())
-            {
-                // Response with all cache values
-                SendResponseAsync(response().MakeGetResponse(Cache::GetInstance().GetAllCache(), "application/json; charset=UTF-8"));
-            }
-            // Get the cache value by the given key
-            else if (Cache::GetInstance().GetCacheValue(key, value))
-            {
-                // Response with the cache value
-                SendResponseAsync(response().MakeGetResponse(value));
-            }
-            else
-                SendResponseAsync(response().MakeErrorResponse(404, "Required URL doesn't exist (404 Page not found) : " + key));
-        }        
-        else
-            SendResponseAsync(response().MakeErrorResponse("Unsupported HTTP method: " + std::string(request.method())));
-    }
+			if (key.empty())
+			{
+				// Response with all cache values
+				SendResponseAsync(response().MakeErrorResponse("Unsupported HTTP method: " + std::string(request.method())));
+			}
+			// Get the cache value by the given key
+			else if (Cache::GetInstance().GetCacheValue(key, value))
+			{
+				// Response with the cache value
+				SendResponseAsync(response().MakeGetResponse(value));
+			}
+			else
+				SendResponseAsync(response().MakeErrorResponse(404, "Required URL doesn't exist (404 Page not found) : " + key));
+		}
+		else
+			SendResponseAsync(response().MakeErrorResponse("Unsupported HTTP method: " + std::string(request.method())));
+	}
 
-    void onReceivedRequestError(const CppServer::HTTP::HTTPRequest& request, const std::string& error) override
-    {
-        std::cout << "Request error: " << error << std::endl;
-    }
+	void onReceivedRequestError(const CppServer::HTTP::HTTPRequest& request, const std::string& error) override
+	{
+		std::cout << "Request error: " << error << std::endl;
+	}
 
-    void onError(int error, const std::string& category, const std::string& message) override
-    {
-        std::cout << "HTTPS session caught an error with code " << error << " and category '" << category << "': " << message << std::endl;
-    }
+	void onError(int error, const std::string& category, const std::string& message) override
+	{
+		std::cout << "HTTPS session caught an error with code " << error << " and category '" << category << "': " << message << std::endl;
+	}
 };
 
 class HTTPSCacheServer : public CppServer::HTTP::HTTPSServer
 {
 public:
-    using CppServer::HTTP::HTTPSServer::HTTPSServer;
+	using CppServer::HTTP::HTTPSServer::HTTPSServer;
 
 protected:
-    std::shared_ptr<CppServer::Asio::SSLSession> CreateSession(const std::shared_ptr<CppServer::Asio::SSLServer>& server) override
-    {
-        return std::make_shared<HTTPSCacheSession>(std::dynamic_pointer_cast<CppServer::HTTP::HTTPSServer>(server));
-    }
+	std::shared_ptr<CppServer::Asio::SSLSession> CreateSession(const std::shared_ptr<CppServer::Asio::SSLServer>& server) override
+	{
+		return std::make_shared<HTTPSCacheSession>(std::dynamic_pointer_cast<CppServer::HTTP::HTTPSServer>(server));
+	}
 
 protected:
-    void onError(int error, const std::string& category, const std::string& message) override
-    {
-        std::cout << "HTTPS server caught an error with code " << error << " and category '" << category << "': " << message << std::endl;
-    }
+	void onError(int error, const std::string& category, const std::string& message) override
+	{
+		std::cout << "HTTPS server caught an error with code " << error << " and category '" << category << "': " << message << std::endl;
+	}
 };
 
 void loadEnvironment(char* szEnvFilePath, Environments& envConfig)
@@ -274,9 +268,9 @@ void loadEnvironment(char* szEnvFilePath, Environments& envConfig)
 		envConfig.nPortForHTTPS = jsonData.value("PortForHTTPS", 0);
 		envConfig.rebuildCharts = jsonData.value("rebuildCharts", 0) == 0 ? false : true;
 		envConfig.sENCDirPath = jsonData.value("ENCDirPath", "");
-		envConfig.sIMGDirPath = jsonData.value("IMGDirPath", "");		
+		envConfig.sIMGDirPath = jsonData.value("IMGDirPath", "");
 	}
-	catch (nlohmann::json::parse_error & e)
+	catch (nlohmann::json::parse_error& e)
 	{
 		std::cerr << "Error parsing environment file " << szEnvFilePath << " with error : " << e.what() << std::endl;
 	}
@@ -284,7 +278,7 @@ void loadEnvironment(char* szEnvFilePath, Environments& envConfig)
 	json_file.close();
 }
 
-void signal_handler(int signal) 
+void signal_handler(int signal)
 {
 	g_isRunning = false; // Set the global flag to stop the server	
 	g_bMessageLoop = false;
@@ -299,7 +293,7 @@ void c_signal_handler(int signal)
 #ifdef _WIN32
 BOOL WINAPI ConsoleCtrlHandler(DWORD dwCtrlType) {
 	switch (dwCtrlType) {
-	case CTRL_C_EVENT:	
+	case CTRL_C_EVENT:
 		return TRUE;
 	default:
 		return FALSE;
@@ -350,14 +344,16 @@ int main(int argc, char** argv)
 	g_nCSignal = 0;
 	g_isRunning = true;
 	g_bUserInput = true;
-
+#ifdef __linux__
+	g_display = XOpenDisplay(NULL);	
+#endif
 	std::thread userInputThread(UserInputThreadProc);
 
 	signal(SIGINT, signal_handler);
 	signal(SIGILL, signal_handler);
 	signal(SIGFPE, signal_handler);
 	signal(SIGSEGV, signal_handler);
-	signal(SIGTERM, signal_handler);	
+	signal(SIGTERM, signal_handler);
 	signal(SIGABRT, signal_handler);
 #if defined(_WIN32) || defined(_WIN64)
 	signal(SIGBREAK, signal_handler);
@@ -405,97 +401,95 @@ int main(int argc, char** argv)
 
 	// Create a new HTTPS server
 	auto serverHTTPS = std::make_shared<HTTPSCacheServer>(service, context, nPortForHTTPS);
-	serverHTTPS->SetEnvironment((void*)& envConfig);
-	serverHTTPS->AddStaticContent(www, &envConfig, "/api");
+	serverHTTPS->SetEnvironment((void*)&envConfig);
 
 	// Start the server
 	std::cout << "Server starting..." << std::endl;
-	serverHTTPS->Start();	
+	serverHTTPS->Start();
 
 	//HTTP server
 	int nPortForHTTP = envConfig.nPortForHTTP;
 	std::cout << "HTTP server port: " << nPortForHTTP << std::endl;
-	
+
 	// Create a new HTTP server
 	auto serverHTTP = std::make_shared<HTTPCacheServer>(service, nPortForHTTP);
 	serverHTTP->SetEnvironment((void*)&envConfig);
-	serverHTTP->AddStaticContent(www, &envConfig, "/api");
 
 	// Start the server
 	std::cout << "Server starting..." << std::endl;
 	serverHTTP->Start();
 
 	printf("Press 'exit' to stop the server or '!' to restart the server...\n");
-    // Perform text input
-    std::string line;
+	// Perform text input
+	std::string line;
 	while (1) {
 		if (!g_isRunning || g_nCSignal > 0) break;
-		
+
 		if (g_bMessageLoop) {
 			try {
 				std::unique_lock<std::mutex> lock(g_mtx);
-				g_cv.wait(lock, [] { return !g_messageQueue.empty(); });				
+				g_cv.wait(lock, [] { return !g_messageQueue.empty(); });
 
-				std::string message = g_messageQueue.front();
-				g_messageQueue.pop();
+				if (!g_messageQueue.empty()) {
 
-				if (message == RESTART_MARK_STR) {
-					printf("Server restarting...\n");
-					serverHTTP->Restart();
-					serverHTTPS->Restart();
-					printf("Done!\n");					
-				}
-				else if (message == TERMINATE_MARK_STR) {
-					break;
-				} else if (message.at(0) == RENDER_SPLIT_MARK){
-					std::vector<std::string> substrings;
+					std::string message = g_messageQueue.front();
+					g_messageQueue.pop();
 
-					std::string delimiter("|");
-					size_t pos = 0;
-					std::string token;
-					while ((pos = message.find(delimiter)) != std::string::npos) {
-						token = message.substr(0, pos);
-						substrings.push_back(token);
-						message.erase(0, pos + delimiter.length());
+					if (message == RESTART_MARK_STR) {
+						printf("Server restarting...\n");
+						serverHTTP->Restart();
+						serverHTTPS->Restart();
+						printf("Done!\n");
 					}
-					substrings.push_back(message);
+					else if (message == TERMINATE_MARK_STR) {
+						break;
+					}
+					else if (message.at(0) == RENDER_SPLIT_MARK) {
+						std::vector<std::string> substrings;
 
-					if (substrings.size() == MAIN_PARAM_COUNT) {
-						pAppForService->UpdateFrameCanvas(substrings.at(1), std::stoi(substrings.at(2)), std::stoi(substrings.at(3)),
-							substrings.at(4), substrings.at(5), substrings.at(6) == "1" ? true : false);
+						std::string delimiter("|");
+						size_t pos = 0;
+						std::string token;
+						while ((pos = message.find(delimiter)) != std::string::npos) {
+							token = message.substr(0, pos);
+							substrings.push_back(token);
+							message.erase(0, pos + delimiter.length());
+						}
+						substrings.push_back(message);
+
+						if (substrings.size() == MAIN_PARAM_COUNT) {
+							pAppForService->UpdateFrameCanvas(substrings.at(1), std::stoi(substrings.at(2)), std::stoi(substrings.at(3)),
+								substrings.at(4), substrings.at(5), substrings.at(6) == "1" ? true : false);
+						}
 					}
 				}
 			}
-			catch (std::exception& e) {
-				continue;
+			catch (std::exception& e) {				
+				printf("msg loop exception.\n");
 			}
 		}
-#if defined(_WIN32) || defined(_WIN64)
-		::Sleep(0);
-#else
-		sleep(0);
-#endif
-    }
+	}
 
 	g_bUserInput = false;
 #if defined(_WIN32) || defined(_WIN64)
 	::Sleep(0);
 #else
 	sleep(0);
+	XCloseDisplay(g_display);
 #endif
-    // Stop the server
+	// Stop the server
 	std::cout << "Server stopping..." << std::endl;
 	if (pAppForService->OnExit(envConfig.sIMGDirPath)) delete pAppForService;
 
 	serverHTTPS->Stop();
-	serverHTTP->Stop();			
-    std::cout << "Done!" << std::endl;
+	serverHTTP->Stop();
+	std::cout << "Done!" << std::endl;
 
-    // Stop the Asio service
-    std::cout << "Asio service stopping..." << std::endl;
-    service->Stop();
-    std::cout << "Done!" << std::endl;
-	
+	// Stop the Asio service
+	std::cout << "Asio service stopping..." << std::endl;
+	service->Stop();
+	std::cout << "Done!" << std::endl;
+
 	userInputThread.join();
 
 	return 0;

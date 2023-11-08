@@ -138,7 +138,7 @@ WX_DEFINE_OBJARRAY(ArrayOfCDI);
 #define S63_SENC_INNER_PATH		"/s63/s63SENC/"
 
 opencpn_plugin* g_S63Plugin;
-wxDynamicLibrary *g_pLibrary;
+wxDynamicLibrary* g_pLibrary;
 
 OCPNPlatform* g_Platform;
 BasePlatform* g_BasePlatform;
@@ -176,7 +176,7 @@ ocpnStyle::StyleManager* g_StyleManager;
 bool g_bShowOutlines;
 bool g_bShowDepthUnits;
 bool g_bDisplayGrid;  // Flag indicating weather the lat/lon grid should be
-					  // displayed
+// displayed
 
 int g_sticky_chart;
 int g_sticky_projection;
@@ -237,7 +237,6 @@ bool g_b_overzoom_x = true;  // Allow high overzoom
 int g_click_stop;
 
 bool g_bPauseTest;
-bool g_bSleep;
 bool g_boptionsactive;
 
 bool g_bShowTrue = true;
@@ -476,7 +475,7 @@ PlugInManager* g_pi_manager;
 int g_nCOMPortCheck = 32;
 
 bool g_b_legacy_input_filter_behaviour;  // Support original input filter
-										 // process or new process
+// process or new process
 
 bool g_bbigred;
 
@@ -683,17 +682,9 @@ void InitializeUserColors(void);
 void DeInitializeUserColors(void);
 
 static bool LoadAllPlugIns(bool load_enabled) {
-  bool b = PluginLoader::getInstance()->LoadAllPlugIns(load_enabled);
-  return b;
+	bool b = PluginLoader::getInstance()->LoadAllPlugIns(load_enabled);
+	return b;
 }
-
-//------------------------------------------------------------------------------
-//    PNG Icon resources
-//------------------------------------------------------------------------------
-
-#if defined(__WXGTK__) || defined(__WXQT__)
-#include "../src/bitmaps/opencpn.xpm"
-#endif
 
 wxString newPrivateFileName(wxString home_locn, const char* name,
 	const char* windowsName) {
@@ -725,7 +716,7 @@ IMPLEMENT_APP(MainApp)
 #include <wx/dynlib.h>
 
 #if wxUSE_CMDLINE_PARSER
-void MainApp::OnInitCmdLine(wxCmdLineParser & parser) {
+void MainApp::OnInitCmdLine(wxCmdLineParser& parser) {
 	//    Add some OpenCPN specific command line options
 	parser.AddSwitch(_T("h"), _T("help"), _("Show usage syntax."),
 		wxCMD_LINE_OPTION_HELP);
@@ -755,7 +746,7 @@ void MainApp::OnInitCmdLine(wxCmdLineParser & parser) {
 }
 
 /** Parse --loglevel and set up logging, falling back to defaults. */
-static void ParseLoglevel(wxCmdLineParser & parser) {
+static void ParseLoglevel(wxCmdLineParser& parser) {
 	const char* strLevel = std::getenv("OPENCPN_LOGLEVEL");
 	strLevel = strLevel ? strLevel : "info";
 	wxString wxLevel;
@@ -771,7 +762,7 @@ static void ParseLoglevel(wxCmdLineParser & parser) {
 	wxLog::SetLogLevel(level);
 }
 
-bool MainApp::OnCmdLineParsed(wxCmdLineParser & parser) {
+bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser) {
 	long number;
 	wxString repo;
 	wxString plugin;
@@ -786,7 +777,7 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser & parser) {
 		g_unit_test_1 = static_cast<int>(number);
 		if (g_unit_test_1 == 0) g_unit_test_1 = -1;
 	}
-	
+
 	ParseLoglevel(parser);
 
 	for (size_t paramNr = 0; paramNr < parser.GetParamCount(); ++paramNr)
@@ -826,22 +817,22 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart, std::string& 
 	g_bdisable_opengl = false;
 	g_rebuild_gl_cache = false;
 	g_parse_all_enc = false;
-	g_unit_test_1 = 0;		
+	g_unit_test_1 = 0;
 	GpxDocument::SeedRandom();
 	last_own_ship_sog_cog_calc_ts = wxInvalidDateTime;
 
 #if defined(__WXGTK__) && defined(ocpnUSE_GLES) && defined(__ARM_ARCH)
-  // There is a race condition between cairo which is used for text rendering
-  // by gtk and EGL which without the below code causes a bus error and the
-  // program aborts before startup
-  // this hack forces cairo to load right now by rendering some text
+	// There is a race condition between cairo which is used for text rendering
+	// by gtk and EGL which without the below code causes a bus error and the
+	// program aborts before startup
+	// this hack forces cairo to load right now by rendering some text
 
 	wxBitmap bmp(10, 10, -1);
 	wxMemoryDC dc;
 	dc.SelectObject(bmp);
 	dc.DrawText(_T("X"), 0, 0);
 #endif
-	m_checker = 0;	
+	m_checker = 0;
 	// Instantiate the global OCPNPlatform class
 	g_Platform = new OCPNPlatform;
 	g_BasePlatform = g_Platform;
@@ -871,7 +862,7 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart, std::string& 
 	wxFont temp_font(10, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, FALSE, wxString(_T("")), wxFONTENCODING_SYSTEM);
 	temp_font.SetDefaultEncoding(wxFONTENCODING_SYSTEM);
 
-  //      Establish Log File location
+	//      Establish Log File location
 	if (!g_Platform->InitializeLogFile()) return false;
 
 	wxPlatformInfo platforminfo = wxPlatformInfo::Get();
@@ -880,28 +871,28 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart, std::string& 
 	os_name = platforminfo.GetOperatingSystemIdName();
 
 	::wxGetOsVersion(&osMajor, &osMinor);
-	OCPN_OSDetail *detail = g_Platform->GetOSDetail();
-  
+	OCPN_OSDetail* detail = g_Platform->GetOSDetail();
+
 	//    Initialize embedded PNG icon graphics
 	::wxInitAllImageHandlers();
 
 	g_Platform->GetSharedDataDir();
-  
+
 #ifdef __WXQT__
-  //  Now we can configure the Qt StyleSheets, if present
+	//  Now we can configure the Qt StyleSheets, if present
 	prepareAndroidStyleSheets();
 #endif
 	//      Create some static strings
 	pInit_Chart_Dir = new wxString();
 	g_pGroupArray = new ChartGroupArray;
-	g_Platform->GetPrivateDataDir();  
+	g_Platform->GetPrivateDataDir();
 
 	//      Create an array string to hold repeating messages, so they don't
 	//      overwhelm the log
 	pMessageOnceArray = new wxArrayString;
 	g_bShowAIS = true;
 	pLayerList = new LayerList;
-  
+
 #ifndef __WXMSW__
 #ifdef PROBE_PORTS__WITH_HELPER
 	user_user_id = getuid();
@@ -924,7 +915,7 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart, std::string& 
 		b_initial_load = true;
 		if (true != config_test_file_name.DirExists(config_test_file_name.GetPath())) {
 			if (!config_test_file_name.Mkdir(config_test_file_name.GetPath())) {
-				printf("Cannot create config file directory for %s\n", (const char *)(g_Platform->GetConfigFileName().mb_str(wxConvUTF8)));
+				printf("Cannot create config file directory for %s\n", (const char*)(g_Platform->GetConfigFileName().mb_str(wxConvUTF8)));
 			}
 		}
 	}
@@ -934,7 +925,7 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart, std::string& 
 	pConfig->LoadMyConfig(sENCDirPath);
 
 	if (b_initial_load) g_Platform->SetDefaultOptions();
-	
+
 	g_StyleManager = new ocpnStyle::StyleManager();
 	g_StyleManager->SetStyle(_T("MUI_flat"));
 	if (!g_StyleManager->IsOK()) {
@@ -959,12 +950,12 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart, std::string& 
 #if wxUSE_XLOCALE || !wxCHECK_VERSION(3, 0, 0)
 	g_Platform->SetLocaleSearchPrefixes();
 #ifdef PRINTLOG_DEBUG
-	printf("Config file language: %s\n", (const char*)g_locale.mb_str(wxConvUTF8));  
+	printf("Config file language: %s\n", (const char*)g_locale.mb_str(wxConvUTF8));
 #endif
 	//  Make any adjustments necessary
 	g_locale = g_Platform->GetAdjustedAppLocale();
 #ifdef PRINTLOG_DEBUG
-	printf("Adjusted App language: %s\n", (const char*)g_locale.mb_str(wxConvUTF8));  
+	printf("Adjusted App language: %s\n", (const char*)g_locale.mb_str(wxConvUTF8));
 #endif
 	g_Platform->ChangeLocale(g_locale, plocale_def_lang, &plocale_def_lang);
 	if (g_locale == _T("fr_FR")) g_b_assume_azerty = true;
@@ -995,7 +986,7 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart, std::string& 
 #else
 	g_bdisable_opengl = true;
 #endif
-	
+
 	if (g_bdisable_opengl) g_bopengl = false;
 
 #if defined(__UNIX__) && !defined(__WXOSX__)
@@ -1058,40 +1049,44 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart, std::string& 
 	g_lastClientRecty = cy;
 	g_lastClientRectw = cw;
 	g_lastClientRecth = ch;
-	
+
 #ifdef __linux__
 	if (g_bopengl) {
 		g_lastClientRectw = g_nframewin_x;
 		g_lastClientRecth = g_nframewin_y;
-	} else {
+	}
+	else {
 		g_nframewin_x = cw;
-		g_nframewin_y = ch;  		
+		g_nframewin_y = ch;
 	}
 #else
 	g_nframewin_x = cw;
-	g_nframewin_y = ch;  
+	g_nframewin_y = ch;
 #endif
 #ifdef PRINTLOG_DEBUG
-  printf("last client rect : %d,%d\n", g_lastClientRectw, g_lastClientRecth);  
+	printf("last client rect : %d,%d\n", g_lastClientRectw, g_lastClientRecth);
 #endif
 
 #ifdef __linux__
 	if (g_bopengl) {
 		new_frame_size.Set(g_nframewin_x, g_nframewin_y);
-	} else {
+	}
+	else {
 		if ((g_nframewin_x > 100) && (g_nframewin_y > 100) && (g_nframewin_x <= cw) && (g_nframewin_y <= ch)) {
 			new_frame_size.Set(g_nframewin_x, g_nframewin_y);
-		} else new_frame_size.Set(cw * 7 / 10, ch * 7 / 10);
+		}
+		else new_frame_size.Set(cw * 7 / 10, ch * 7 / 10);
 
 		if ((g_lastClientRectx != cx) || (g_lastClientRecty != cy) || (g_lastClientRectw != cw) || (g_lastClientRecth != ch)) {
 			new_frame_size.Set(cw * 7 / 10, ch * 7 / 10);
 			g_bframemax = false;
-		}	
+		}
 	}
 #else
 	if ((g_nframewin_x > 100) && (g_nframewin_y > 100) && (g_nframewin_x <= cw) && (g_nframewin_y <= ch)) {
 		new_frame_size.Set(g_nframewin_x, g_nframewin_y);
-	} else new_frame_size.Set(cw * 7 / 10, ch * 7 / 10);
+	}
+	else new_frame_size.Set(cw * 7 / 10, ch * 7 / 10);
 
 	if ((g_lastClientRectx != cx) || (g_lastClientRecty != cy) || (g_lastClientRectw != cw) || (g_lastClientRecth != ch)) {
 		new_frame_size.Set(cw * 7 / 10, ch * 7 / 10);
@@ -1119,7 +1114,7 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart, std::string& 
 	frame_rect.top = position.y;
 	frame_rect.right = position.x + new_frame_size.x;
 	frame_rect.bottom = position.y + new_frame_size.y;
-	
+
 	//  If the requested frame window does not intersect any installed monitor,
 	//  then default to simple primary monitor positioning.
 	if (NULL == MonitorFromRect(&frame_rect, MONITOR_DEFAULTTONULL)) position = wxPoint(10, 10);
@@ -1151,7 +1146,8 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart, std::string& 
 		wxSize xCurrentFrameSize = gFrame->GetSize();
 		printf("MainApp: OnInit : frame width:%d, height:%d\n", xCurrentFrameSize.GetWidth(), xCurrentFrameSize.GetHeight());
 #endif
-	} catch (std::exception & ex) {
+	}
+	catch (std::exception& ex) {
 		printf("Create Frame Failed! : %s\n", ex.what());
 		return false;
 	}
@@ -1177,7 +1173,7 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart, std::string& 
 	g_pauimgr->SetManagedWindow(gFrame);
 
 	gFrame->CreateCanvasLayout();
-  
+
 	gFrame->SetChartUpdatePeriod();  // Reasonable default
 
 	gFrame->Enable();
@@ -1187,15 +1183,15 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart, std::string& 
 	pthumbwin = new ThumbWin(gFrame->GetPrimaryCanvas());
 
 	gFrame->ApplyGlobalSettings(false);  // done once on init with resize
-  
+
 	gFrame->SetAndApplyColorScheme(global_color_scheme);
 
 	ArrayOfCDI ChartDirArray;
 
-	auto pPluginLoader = PluginLoader::getInstance(); 
+	auto pPluginLoader = PluginLoader::getInstance();
 	pPluginLoader->LoadAllPlugIns(true);
 
-	if (pPluginLoader->plugin_array.GetCount() > 0) {		
+	if (pPluginLoader->plugin_array.GetCount() > 0) {
 		wxString xsS63SENCFullPath = g_BasePlatform->GetPrivateDataDir() + S63_SENC_INNER_PATH;
 		wxDir xS63SENCDir(xsS63SENCFullPath);
 		if (xS63SENCDir.IsOpened()) {
@@ -1214,7 +1210,7 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart, std::string& 
 	//   Build the initial chart dir array		
 	pConfig->LoadChartDirArray(ChartDirArray);
 
-	Yield();	
+	Yield();
 	if (!ChartDirArray.GetCount()) {
 		if (::wxFileExists(ChartListFileName)) ::wxRemoveFile(ChartListFileName);
 	}
@@ -1238,7 +1234,7 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart, std::string& 
 		else if (g_restore_dbindex > (ChartData->GetChartTableEntries() - 1))
 			g_restore_dbindex = 0;
 	}
-	
+
 	//  Apply the inital Group Array structure to the chart data base
 	ChartData->ApplyGroupArray(g_pGroupArray);
 
@@ -1248,12 +1244,12 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart, std::string& 
 	if (g_rebuild_gl_cache && g_bopengl && g_GLOptions.m_bTextureCompression && g_GLOptions.m_bTextureCompressionCaching) {
 		gFrame->ReloadAllVP();  //  Get a nice chart background loaded
 
-    if (g_glTextureManager) g_glTextureManager->BuildCompressedCache();
-  }
+		if (g_glTextureManager) g_glTextureManager->BuildCompressedCache();
+	}
 #endif
-  
-  if ((gps_watchdog_timeout_ticks > 60) || (gps_watchdog_timeout_ticks <= 0))
-    gps_watchdog_timeout_ticks = (GPS_TIMEOUT_SECONDS * 1000) / TIMER_GFRAME_1;
+
+	if ((gps_watchdog_timeout_ticks > 60) || (gps_watchdog_timeout_ticks <= 0))
+		gps_watchdog_timeout_ticks = (GPS_TIMEOUT_SECONDS * 1000) / TIMER_GFRAME_1;
 
 	sat_watchdog_timeout_ticks = gps_watchdog_timeout_ticks;
 	g_priSats = 99;
@@ -1272,40 +1268,40 @@ bool MainApp::OnInit(std::string& sENCDirPath, bool bRebuildChart, std::string& 
 	gFrame->Raise();
 #ifdef __linux__
 	if (g_bopengl) {
-		gFrame->SetSize(g_nframewin_x,g_nframewin_y);
+		gFrame->SetSize(g_nframewin_x, g_nframewin_y);
 	}
 #endif
 	gFrame->GetPrimaryCanvas()->Enable();
 	gFrame->GetPrimaryCanvas()->SetFocus();
 #ifdef ocpnUSE_GL
-  if (!g_bdisable_opengl) {
-    glChartCanvas *pgl = (glChartCanvas *)gFrame->GetPrimaryCanvas()->GetglCanvas();
-    if (pgl && (pgl->GetRendererString().Find(_T("UniChrome")) != wxNOT_FOUND)) {
-      gFrame->m_defer_size = gFrame->GetSize();
-      gFrame->SetSize(gFrame->m_defer_size.x - 10, gFrame->m_defer_size.y);
-      g_pauimgr->Update();
-      gFrame->m_bdefer_resize = true;
-    }
-  }
+	if (!g_bdisable_opengl) {
+		glChartCanvas* pgl = (glChartCanvas*)gFrame->GetPrimaryCanvas()->GetglCanvas();
+		if (pgl && (pgl->GetRendererString().Find(_T("UniChrome")) != wxNOT_FOUND)) {
+			gFrame->m_defer_size = gFrame->GetSize();
+			gFrame->SetSize(gFrame->m_defer_size.x - 10, gFrame->m_defer_size.y);
+			g_pauimgr->Update();
+			gFrame->m_bdefer_resize = true;
+		}
+	}
 #endif
 
-  OCPNPlatform::Initialize_4();
+	OCPNPlatform::Initialize_4();
 
-  wxMilliSleep(500);
+	wxMilliSleep(500);
 
 	g_bHasHwClock = true;  // by default most computers do have a hwClock
 #if defined(__UNIX__)
 	struct stat buffer;
 	g_bHasHwClock =
 		((stat("/dev/rtc", &buffer) == 0) || (stat("/dev/rtc0", &buffer) == 0) ||
-		(stat("/dev/misc/rtc", &buffer) == 0));
+			(stat("/dev/misc/rtc", &buffer) == 0));
 #endif	
 	g_config_version_string = vs;
 
 	pConfig->UpdateSettings();
-	g_pauimgr->Update();	
+	g_pauimgr->Update();
 
-	gFrame->UpdateDB_Canvas();	
+	gFrame->UpdateDB_Canvas();
 	printf("pre-initialize finished! \n");
 
 	return true;
@@ -1331,7 +1327,7 @@ int MainApp::OnExit(std::string& sIMGDirPath) {
 	if (pMessageOnceArray) delete pMessageOnceArray;
 
 	DeInitializeUserColors();
-	
+
 	if (pLayerList) delete pLayerList;
 
 	if (g_StyleManager) delete g_StyleManager;
@@ -1367,7 +1363,7 @@ int MainApp::OnExit(std::string& sIMGDirPath) {
 	if (g_pGLcontext) delete g_pGLcontext;
 
 	if (g_S63Plugin) delete g_S63Plugin;
-	
+
 	if (g_pLibrary) {
 		if (g_pLibrary->IsLoaded()) g_pLibrary->Unload();
 		delete g_pLibrary;
@@ -1400,7 +1396,7 @@ std::string getCurrentDateTimeMicrosecond() {
 	return ss.str() + ".";
 }
 
-int MainApp::GetLayerIndex(std::string& sLayerCaption) {	
+int MainApp::GetLayerIndex(std::string& sLayerCaption) {
 	toLowerCase(sLayerCaption);
 
 	if (sLayerCaption.compare(LAYER_TEXT_CAPTION) == 0) return LAYER_TEXT;
@@ -1411,7 +1407,7 @@ int MainApp::GetLayerIndex(std::string& sLayerCaption) {
 	else if (sLayerCaption.compare(LAYER_AINFO_CAPTION) == 0) return LAYER_AINFO;
 	else if (sLayerCaption.compare(LAYER_SLVIS_CAPTION) == 0) return LAYER_SLVIS;
 	else if (sLayerCaption.compare(LAYER_GRID_CAPTION) == 0) return LAYER_GRID;
-	
+
 	return -1;
 }
 
@@ -1429,10 +1425,13 @@ bool MainApp::UpdateFrameCanvas(std::string& sBBox, int nWidth, int nHeight, std
 		case 1:
 			nWidth--;
 			break;
-		}		
+		}
 	}
 
-	if (!gFrame || sBBox.empty() || sLayers.empty() || nWidth < 1 || nWidth > 5000 || nHeight < 1 || nHeight > 5000) return false;
+	if (!gFrame || sBBox.empty() || sLayers.empty() || nWidth < 1 || nWidth > 5000 || nHeight < 1 || nHeight > 5000){
+		printf("Invalid parameters\n");
+		return false;	
+	} 
 
 	std::vector<std::string> bbox_parts;
 	std::string delimiter = ",";
@@ -1457,10 +1456,13 @@ bool MainApp::UpdateFrameCanvas(std::string& sBBox, int nWidth, int nHeight, std
 	LLBBox llbBox;
 	llbBox.Set(dMinLat, dMinLon, dMaxLat, dMaxLon);
 
-	if (dMinLat < -89.5 || dMinLat > 89.5 || dMaxLat < -89.5 || dMaxLat > 89.5) return false;
+	if (dMinLat < -89.5 || dMinLat > 89.5 || dMaxLat < -89.5 || dMaxLat > 89.5){
+		printf("invalid BBOX\n");
+		return false;
+	} 
 
 	std::vector<int> vnTLayers;
-	
+
 	pos = 0;
 	int nLayerIndex = -1;
 	while ((pos = sLayers.find(delimiter)) != std::string::npos) {
@@ -1472,17 +1474,17 @@ bool MainApp::UpdateFrameCanvas(std::string& sBBox, int nWidth, int nHeight, std
 
 	nLayerIndex = GetLayerIndex(sLayers);
 	if (nLayerIndex >= 0) vnTLayers.push_back(nLayerIndex);
-	
-	gFrame->ResizeFrameWH(nWidth, nHeight);
+
 	ChartCanvas* pTCC = gFrame->GetPrimaryCanvas();
+	gFrame->ResizeFrameWH(nWidth, nHeight);	
 	gFrame->CenterView(pTCC, llbBox);
 	gFrame->DoChartUpdate();
-	gFrame->ChartsRefresh();	
-	
+	gFrame->ChartsRefresh();
+
 	pTCC->m_b_paint_enable = true;
 	pTCC->RescaleCanvas(llbBox);
 	pTCC->GetVP().SetOldBBox(llbBox);
 	pTCC->DrawCanvasData(llbBox, nWidth, nHeight, vnTLayers, sIMGFilePath, bPNGFlag);
-	return true;	
+	return true;
 
 }

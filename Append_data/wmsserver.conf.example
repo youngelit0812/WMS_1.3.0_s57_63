@@ -579,8 +579,8 @@ bEnabled=0
 [PlugIns/S63]
 PermitDir=OPENCPN-VM00_DC35404_20230811.prm/
 Userpermit=1831A155A73D1C615004EB213147
-Installpermit=241A7FBF
-# Installpermit=64B810FC
+# Installpermit=241A7FBF
+Installpermit=64B810FC
 #Installpermit=ED274DCD
 ENCROOT=DC35404ACES_ORDER_23_32_00.S63/
 S63DATAPATH=./s63_files/

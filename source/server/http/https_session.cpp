@@ -106,8 +106,6 @@ void HTTPSSession::onReceivedRequestInternal(const HTTPRequest& request)
 				sMessage += "|" + umParameters.at("bbox") + "|" + umParameters.at("width") + "|" + umParameters.at("height")
 					+ "|" + umParameters.at("layers") + "|" + sIMGFilePath + "|" + (bPNGImageFlag ? "1" : "0");
 
-				std::unique_lock<std::mutex> lock(g_mtx);
-				lock.unlock();
 				g_messageQueue.push(sMessage);
 				g_cv.notify_one();
 #if defined(_WIN32) || defined(_WIN64)				
@@ -115,7 +113,7 @@ void HTTPSSession::onReceivedRequestInternal(const HTTPRequest& request)
 #else
 				usleep(5 * 1000);
 #endif
-				lock.lock();
+				std::unique_lock<std::mutex> lockNotifyHttps(g_mtx);
 
 				SendResponseAsync(response().MakeGetMapResponse(sIMGFilePath, bPNGImageFlag));
 			}

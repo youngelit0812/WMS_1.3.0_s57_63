@@ -14,30 +14,31 @@ project(WMSServer)
 
 set(OPENGLES_FOUND "NO")
 set(OPENGL_FOUND "YES")
-#add_definitions(-DPRINTLOG_DEBUG)
+
+# add_definitions(-DPRINTLOG_DEBUG)
 # Global properties
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
-macro (BUNDLE_DOCS_OPT onoff)
+macro(BUNDLE_DOCS_OPT onoff)
   option(OCPN_BUNDLE_DOCS "Include documentation in package" ${onoff})
-endmacro (BUNDLE_DOCS_OPT)
+endmacro(BUNDLE_DOCS_OPT)
 
-macro (BUNDLE_TCDATA_OPT onoff)
+macro(BUNDLE_TCDATA_OPT onoff)
   option(OCPN_BUNDLE_TCDATA "Include tide/current harmonics data in package" ${onoff})
-endmacro (BUNDLE_TCDATA_OPT)
+endmacro(BUNDLE_TCDATA_OPT)
 
-macro (BUNDLE_GSHHS_OPT onoff)
-    option(OCPN_BUNDLE_GSHHS "Bundle minimal GSHHS data files" ${onoff})
-endmacro (BUNDLE_GSHHS_OPT)
+macro(BUNDLE_GSHHS_OPT onoff)
+  option(OCPN_BUNDLE_GSHHS "Bundle minimal GSHHS data files" ${onoff})
+endmacro(BUNDLE_GSHHS_OPT)
 
 bundle_gshhs_opt("ON")
 bundle_tcdata_opt("ON")
 bundle_docs_opt("OFF")
 
-if (UNIX)
+if(UNIX)
   message("set Linux flag!!!")
-	set(LINUX "1")
-endif ()
+  set(LINUX "1")
+endif()
 
 set(CMAKE_BUILD_TYPE Release)
 
@@ -57,12 +58,13 @@ if(MSVC)
   set(OPENSSL_MSVC_STATIC_RT TRUE)
 endif()
 
-if (WIN32)
+if(WIN32)
   message("set x86 library----")
   set(FIND_LIBRARY_USE_LIB32_PATHS TRUE)
-endif ()
+endif()
 
 find_package(OpenSSL REQUIRED)
+
 if(WIN32)
   find_package(Crypt)
   find_package(WinSock)
@@ -71,23 +73,25 @@ endif()
 # Modules
 add_subdirectory("modules")
 
-if (MSVC)
+if(MSVC)
   target_compile_options(asio PUBLIC
     $<$<CONFIG:Debug>:/MDd>
     $<$<CONFIG:Release>:/MD>
     $<$<PLATFORM_ID:Win32>:/DWIN32_LEAN_AND_MEAN>
   )
-endif ()
+endif()
 
 # Link libraries
 list(APPEND LINKLIBS ${OPENSSL_LIBRARIES})
+
 if(WIN32)
   list(APPEND LINKLIBS ${CRYPT_LIBRARIES})
   list(APPEND LINKLIBS ${WINSOCK_LIBRARIES})
 endif()
+
 list(APPEND LINKLIBS cppcommon)
 
-if (MSVC)
+if(MSVC)
   file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/Release)
   file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/Release/gshhs)
   file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/Release/tcdata)
@@ -99,7 +103,7 @@ if (MSVC)
   file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/Release/tools)
   file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/Release/ENC_IMGs)
   file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/Release/s63_files)
-  file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/Debug)  
+  file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/Debug)
   file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/Debug/gshhs)
   file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/Debug/tcdata)
   file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/Debug/uidata)
@@ -112,36 +116,36 @@ if (MSVC)
   file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/Debug/s63_files)
 
   execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_SOURCE_DIR}/Append_libs/Release
-        ${CMAKE_BINARY_DIR}/Release)
+    ${CMAKE_SOURCE_DIR}/Append_libs/Release
+    ${CMAKE_BINARY_DIR}/Release)
 
   execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory
-          ${CMAKE_SOURCE_DIR}/env
-          ${CMAKE_BINARY_DIR}/Release/env)
+    ${CMAKE_SOURCE_DIR}/env
+    ${CMAKE_BINARY_DIR}/Release/env)
 
   execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_SOURCE_DIR}/Append_data/gshhs
-        ${CMAKE_BINARY_DIR}/Release/gshhs)
+    ${CMAKE_SOURCE_DIR}/Append_data/gshhs
+    ${CMAKE_BINARY_DIR}/Release/gshhs)
 
   execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_SOURCE_DIR}/Append_data/tcdata
-        ${CMAKE_BINARY_DIR}/Release/tcdata)
+    ${CMAKE_SOURCE_DIR}/Append_data/tcdata
+    ${CMAKE_BINARY_DIR}/Release/tcdata)
 
   execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_SOURCE_DIR}/Append_data/uidata
-        ${CMAKE_BINARY_DIR}/Release/uidata)
+    ${CMAKE_SOURCE_DIR}/Append_data/uidata
+    ${CMAKE_BINARY_DIR}/Release/uidata)
 
   execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_SOURCE_DIR}/Append_data/s57data
-        ${CMAKE_BINARY_DIR}/Release/s57data)
+    ${CMAKE_SOURCE_DIR}/Append_data/s57data
+    ${CMAKE_BINARY_DIR}/Release/s57data)
 
   execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_SOURCE_DIR}/Append_data/tools
-        ${CMAKE_BINARY_DIR}/Release/tools)
-  
+    ${CMAKE_SOURCE_DIR}/Append_data/tools
+    ${CMAKE_BINARY_DIR}/Release/tools)
+
   execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_SOURCE_DIR}/Append_data/s63_files
-        ${CMAKE_BINARY_DIR}/Release/s63_files)
+    ${CMAKE_SOURCE_DIR}/Append_data/s63_files
+    ${CMAKE_BINARY_DIR}/Release/s63_files)
 
   file(COPY ${CMAKE_SOURCE_DIR}/Append_data/navobj.xml DESTINATION ${CMAKE_BINARY_DIR}/Release)
   file(COPY ${CMAKE_SOURCE_DIR}/Append_data/wmsserver.conf DESTINATION ${CMAKE_BINARY_DIR}/Release)
@@ -149,36 +153,36 @@ if (MSVC)
   file(COPY ${CMAKE_SOURCE_DIR}/Append_data/crashrpt_lang.ini DESTINATION ${CMAKE_BINARY_DIR}/Release)
 
   execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_SOURCE_DIR}/Append_libs/Debug
-        ${CMAKE_BINARY_DIR}/Debug)
+    ${CMAKE_SOURCE_DIR}/Append_libs/Debug
+    ${CMAKE_BINARY_DIR}/Debug)
 
   execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_SOURCE_DIR}/env
-        ${CMAKE_BINARY_DIR}/Debug/env)
+    ${CMAKE_SOURCE_DIR}/env
+    ${CMAKE_BINARY_DIR}/Debug/env)
 
   execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_SOURCE_DIR}/Append_data/gshhs
-        ${CMAKE_BINARY_DIR}/Debug/gshhs)
+    ${CMAKE_SOURCE_DIR}/Append_data/gshhs
+    ${CMAKE_BINARY_DIR}/Debug/gshhs)
 
   execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_SOURCE_DIR}/Append_data/tcdata
-        ${CMAKE_BINARY_DIR}/Debug/tcdata)
+    ${CMAKE_SOURCE_DIR}/Append_data/tcdata
+    ${CMAKE_BINARY_DIR}/Debug/tcdata)
 
   execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_SOURCE_DIR}/Append_data/uidata
-        ${CMAKE_BINARY_DIR}/Debug/uidata)
-  
-  execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_SOURCE_DIR}/Append_data/s57data
-        ${CMAKE_BINARY_DIR}/Debug/s57data)
+    ${CMAKE_SOURCE_DIR}/Append_data/uidata
+    ${CMAKE_BINARY_DIR}/Debug/uidata)
 
   execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_SOURCE_DIR}/Append_data/tools
-        ${CMAKE_BINARY_DIR}/Debug/tools)
-  
+    ${CMAKE_SOURCE_DIR}/Append_data/s57data
+    ${CMAKE_BINARY_DIR}/Debug/s57data)
+
   execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_SOURCE_DIR}/Append_data/s63_files
-        ${CMAKE_BINARY_DIR}/Debug/s63_files)
+    ${CMAKE_SOURCE_DIR}/Append_data/tools
+    ${CMAKE_BINARY_DIR}/Debug/tools)
+
+  execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory
+    ${CMAKE_SOURCE_DIR}/Append_data/s63_files
+    ${CMAKE_BINARY_DIR}/Debug/s63_files)
 
   file(COPY ${CMAKE_SOURCE_DIR}/Append_data/navobj.xml DESTINATION ${CMAKE_BINARY_DIR}/Debug)
   file(COPY ${CMAKE_SOURCE_DIR}/Append_data/wmsserver.conf DESTINATION ${CMAKE_BINARY_DIR}/Debug)
@@ -186,48 +190,48 @@ if (MSVC)
   file(COPY ${CMAKE_SOURCE_DIR}/Append_data/crashrpt_lang.ini DESTINATION ${CMAKE_BINARY_DIR}/Debug)
 endif()
 
-file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/ENC_IMGs)  
-file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/env)  
+file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/ENC_IMGs)
+file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/env)
 
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_SOURCE_DIR}/env
-        ${CMAKE_BINARY_DIR}/env)
+  ${CMAKE_SOURCE_DIR}/env
+  ${CMAKE_BINARY_DIR}/env)
 
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/s57data)
 
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_SOURCE_DIR}/Append_data/s57data
-        ${CMAKE_BINARY_DIR}/s57data)
+  ${CMAKE_SOURCE_DIR}/Append_data/s57data
+  ${CMAKE_BINARY_DIR}/s57data)
 
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/gshhs)
 
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_SOURCE_DIR}/Append_data/gshhs
-        ${CMAKE_BINARY_DIR}/gshhs)
+  ${CMAKE_SOURCE_DIR}/Append_data/gshhs
+  ${CMAKE_BINARY_DIR}/gshhs)
 
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/tcdata)
 
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_SOURCE_DIR}/Append_data/tcdata
-        ${CMAKE_BINARY_DIR}/tcdata)
+  ${CMAKE_SOURCE_DIR}/Append_data/tcdata
+  ${CMAKE_BINARY_DIR}/tcdata)
 
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/uidata)
 
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_SOURCE_DIR}/Append_data/uidata
-        ${CMAKE_BINARY_DIR}/uidata)
+  ${CMAKE_SOURCE_DIR}/Append_data/uidata
+  ${CMAKE_BINARY_DIR}/uidata)
 
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/tools)
 
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_SOURCE_DIR}/Append_data/tools
-        ${CMAKE_BINARY_DIR}/tools)
+  ${CMAKE_SOURCE_DIR}/Append_data/tools
+  ${CMAKE_BINARY_DIR}/tools)
 
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/s63_files)
 
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_SOURCE_DIR}/Append_data/s63_files
-        ${CMAKE_BINARY_DIR}/s63_files)
+  ${CMAKE_SOURCE_DIR}/Append_data/s63_files
+  ${CMAKE_BINARY_DIR}/s63_files)
 
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/SENC)
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/ENCs)
@@ -244,30 +248,30 @@ message(STATUS "OpenSSL version: ${OPENSSL_VERSION} ${OPENSSL_INCLUDE_DIR} ${OPE
 # System directories
 include_directories(SYSTEM "${CMAKE_CURRENT_SOURCE_DIR}/modules")
 
-if (LINUX)
-  if (DEFINED DEB_VERSION)
-		add_definitions("-DDEB_VERSION=${DEB_VERSION}")
-	endif (DEFINED DEB_VERSION)
+if(LINUX)
+  if(DEFINED DEB_VERSION)
+    add_definitions("-DDEB_VERSION=${DEB_VERSION}")
+  endif(DEFINED DEB_VERSION)
 
-	if (NOT DEFINED OCPN_VERBOSE OR OCPN_VERBOSE)
-		set(CMAKE_VERBOSE_MAKEFILE ON)
-	endif ()
+  if(NOT DEFINED OCPN_VERBOSE OR OCPN_VERBOSE)
+    set(CMAKE_VERBOSE_MAKEFILE ON)
+  endif()
 
-	set(
-		CMAKE_MODULE_PATH
-		${CMAKE_SOURCE_DIR}/build
-		${CMAKE_SOURCE_DIR}/
-		${CMAKE_SOURCE_DIR}/cmake
-	)
+  set(
+    CMAKE_MODULE_PATH
+    ${CMAKE_SOURCE_DIR}/build
+    ${CMAKE_SOURCE_DIR}/
+    ${CMAKE_SOURCE_DIR}/cmake
+  )
 
-	set(CMAKE_CXX_VISIBILITY_PRESET=hidden)
+  set(CMAKE_CXX_VISIBILITY_PRESET=hidden)
 
-	include(FindPkgConfig)
-	include(CMakeDependentOption)
-	include(CheckSymbolExists)
-endif ()
+  include(FindPkgConfig)
+  include(CMakeDependentOption)
+  include(CheckSymbolExists)
+endif()
 
-option(OCPN_VERBOSE "Make verbose builds"  ON)
+option(OCPN_VERBOSE "Make verbose builds" ON)
 option(OCPN_PEDANTIC "Enable more compiler warnings" OFF)
 
 set(OCPN_PACKAGE_RELEASE "1" CACHE STRING "Package release number")
@@ -281,280 +285,290 @@ set(OCPN_TARGET_TUPLE "" CACHE STRING
   "List of target;version;arch like flatpak;20.08;aarch64 [\"\"]"
 )
 
-if (MSVC OR MINGW)
+if(MSVC OR MINGW)
   option(OCPN_USE_CRASHREPORT "Enable crash reporting" ON)
-else ()
+else()
   set(OCPN_USE_CRASHREPORT FALSE)
-endif ()	
+endif()
 
-if (NOT WIN32 AND NOT APPLE AND NOT QT_ANDROID)
+if(NOT WIN32 AND NOT APPLE AND NOT QT_ANDROID)
   find_library(GTK2U NAMES wx_gtk2u_core)
-  if (GTK2U)
-    option(OCPN_FORCE_GTK3 "Force the build to use GTK3 [OFF]" "OFF")
-  else ()
-    option(OCPN_FORCE_GTK3 "Force the build to use GTK3 [ON]" "ON")
-  endif ()
-endif ()
 
-if (WIN32 OR APPLE OR QT_ANDROID)
+  if(GTK2U)
+    option(OCPN_FORCE_GTK3 "Force the build to use GTK3 [OFF]" "OFF")
+  else()
+    option(OCPN_FORCE_GTK3 "Force the build to use GTK3 [ON]" "ON")
+  endif()
+endif()
+
+if(WIN32 OR APPLE OR QT_ANDROID)
   set(PA_DEFAULT "OFF")
-else ()
+else()
   set(PA_DEFAULT "ON")
-endif ()
+endif()
+
 option(
   OCPN_ENABLE_PORTAUDIO "Use portaudio(3) to play sounds if available"
   ${PA_DEFAULT}
 )
 
-if (LINUX)
-	option(
-		OCPN_ENABLE_PORTAUDIO "Use portaudio(3) to play sounds if available"
-		${PA_DEFAULT}
-	)
+if(LINUX)
+  option(
+    OCPN_ENABLE_PORTAUDIO "Use portaudio(3) to play sounds if available"
+    ${PA_DEFAULT}
+  )
 
-	cmake_dependent_option(
-		OCPN_ENABLE_SNDFILE "Use libsndfile for portaudio if available."
-		ON "OCPN_ENABLE_PORTAUDIO" ON
-	)	
+  cmake_dependent_option(
+    OCPN_ENABLE_SNDFILE "Use libsndfile for portaudio if available."
+    ON "OCPN_ENABLE_PORTAUDIO" ON
+  )
 
-	if (${CMAKE_VERSION} VERSION_LESS 3.14)
-	  set(OCPN_BUILD_TEST OFF)
-	else ()
-	  option(OCPN_BUILD_TEST "Enable test subproject build" ON)
-	endif ()
-	
-	set(
-		OCPN_WXWIDGETS_FORCE_VERSION
-		CACHE STRING "Force usage of a specific wxWidgets version."
-	)
+  if(${CMAKE_VERSION} VERSION_LESS 3.14)
+    set(OCPN_BUILD_TEST OFF)
+  else()
+    option(OCPN_BUILD_TEST "Enable test subproject build" ON)
+  endif()
 
-	set(
-		OCPN_WXWIDGETS_OPTIONS
-		CACHE STRING "Additional flags to wxWidgets_CONFIG_OPTIONS"
-	)
+  set(
+    OCPN_WXWIDGETS_FORCE_VERSION
+    CACHE STRING "Force usage of a specific wxWidgets version."
+  )
 
-	if (CMAKE_VERSION VERSION_GREATER 3.4)
-		option(OCPN_ENABLE_CLANG_TIDY "Add clang-tidy automatically to builds" OFF)
-		set(ENABLE_SANITIZER "none" CACHE STRING "Add clang sanitizer to the build")
-	endif ()
+  set(
+    OCPN_WXWIDGETS_OPTIONS
+    CACHE STRING "Additional flags to wxWidgets_CONFIG_OPTIONS"
+  )
 
-	if (CMAKE_VERSION VERSION_GREATER 3.9)
-		option(OCPN_ENABLE_CPPCHECK "Add cppcheck automatically to builds" OFF)
-	endif ()
+  if(CMAKE_VERSION VERSION_GREATER 3.4)
+    option(OCPN_ENABLE_CLANG_TIDY "Add clang-tidy automatically to builds" OFF)
+    set(ENABLE_SANITIZER "none" CACHE STRING "Add clang sanitizer to the build")
+  endif()
 
-	if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
-		set(
-			CMAKE_BUILD_TYPE RelWithDebInfo
-			CACHE
-			STRING
-			"Choose type of build: None Debug Release RelWithDebInfo MinSizeRel."
-			FORCE
-		)
-		
-		set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
-	endif (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+  if(CMAKE_VERSION VERSION_GREATER 3.9)
+    option(OCPN_ENABLE_CPPCHECK "Add cppcheck automatically to builds" OFF)
+  endif()
 
-	option(OCPN_USE_EXTERN_CURL "Use external libcurl" OFF)
+  if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+    set(
+      CMAKE_BUILD_TYPE RelWithDebInfo
+      CACHE
+      STRING
+      "Choose type of build: None Debug Release RelWithDebInfo MinSizeRel."
+      FORCE
+    )
 
-	if (NOT CMAKE_INSTALL_PREFIX)
-		set(CMAKE_INSTALL_PREFIX ${TENTATIVE_PREFIX})
-	endif (NOT CMAKE_INSTALL_PREFIX)
+    set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
+  endif(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 
-	set(BUNDLED_LIBS_DEFAULT "OFF")	
+  option(OCPN_USE_EXTERN_CURL "Use external libcurl" OFF)
 
-	set(OCPN_USE_BUNDLED_LIBS ${BUNDLED_LIBS_DEFAULT} CACHE STRING "Use bundled libraries instead of system's [ON, OFF or comma-sep list]")
-	set(OCPN_RELEASE "" CACHE STRING "Hardcoded value for build number when using OCPN_CI_BUILD")
+  if(NOT CMAKE_INSTALL_PREFIX)
+    set(CMAKE_INSTALL_PREFIX ${TENTATIVE_PREFIX})
+  endif(NOT CMAKE_INSTALL_PREFIX)
 
-	option(OCPN_USE_NEWSERIAL "Use new serial communication implementation" ON)
-	option(OCPN_USE_CURL "Use Curl libraries" ON)
-	option(OCPN_USE_SVG "Use SVG graphics via wxSVG or wxBitmapBundle" ON)
-	option(OCPN_USE_WEBVIEW "Use wxWidget's webview addon if available" ON)
-	option(OCPN_USE_LZMA "Use LZMA for chart compression" ON)
-	option(OCPN_CI_BUILD "Use CI build versioning rules" OFF)
-	option(OCPN_USE_SYSTEM_LIBARCHIVE "Use the libarchive version provided by the system on MacOS" ON)
-endif (LINUX)
+  set(BUNDLED_LIBS_DEFAULT "OFF")
+
+  set(OCPN_USE_BUNDLED_LIBS ${BUNDLED_LIBS_DEFAULT} CACHE STRING "Use bundled libraries instead of system's [ON, OFF or comma-sep list]")
+  set(OCPN_RELEASE "" CACHE STRING "Hardcoded value for build number when using OCPN_CI_BUILD")
+
+  option(OCPN_USE_NEWSERIAL "Use new serial communication implementation" ON)
+  option(OCPN_USE_CURL "Use Curl libraries" ON)
+  option(OCPN_USE_SVG "Use SVG graphics via wxSVG or wxBitmapBundle" ON)
+  option(OCPN_USE_WEBVIEW "Use wxWidget's webview addon if available" ON)
+  option(OCPN_USE_LZMA "Use LZMA for chart compression" ON)
+  option(OCPN_CI_BUILD "Use CI build versioning rules" OFF)
+  option(OCPN_USE_SYSTEM_LIBARCHIVE "Use the libarchive version provided by the system on MacOS" ON)
+endif(LINUX)
 
 add_definitions(-D__OCPN_USE_GLEW__)
 
-if (LINUX)
-	set(cmd_snd_default ON)
+if(LINUX)
+  set(cmd_snd_default ON)
 
-	option(
-		OCPN_ENABLE_SYSTEM_CMD_SOUND
-		"Use aplay(1), afplay(1) etc. to play sounds if available" ${cmd_snd_default}
-	)
-	set(OCPN_SOUND_CMD "" CACHE STRING
-		"Hardcoded value for CLI command used in SystemCmdSound backend"
-	)
+  option(
+    OCPN_ENABLE_SYSTEM_CMD_SOUND
+    "Use aplay(1), afplay(1) etc. to play sounds if available" ${cmd_snd_default}
+  )
+  set(OCPN_SOUND_CMD "" CACHE STRING
+    "Hardcoded value for CLI command used in SystemCmdSound backend"
+  )
 
-	macro (USE_BUNDLED_LIB _result library)
-		if ("${OCPN_USE_BUNDLED_LIBS}" STREQUAL "")
-			set(OCPN_USE_BUNDLED_LIBS "ON")
-		endif ()
-		if (${OCPN_USE_BUNDLED_LIBS} STREQUAL "OFF")
-			set(${_result} "OFF")
-		elseif (${OCPN_USE_BUNDLED_LIBS} STREQUAL "ON")
-			set(${_result} "ON")
-		elseif (",${OCPN_USE_BUNDLED_LIBS}," MATCHES ",${library},")
-			set(${_result} "ON")
-		else ()
-			set(${_result} "OFF")
-		endif ()
-	endmacro (USE_BUNDLED_LIB)
+  macro(USE_BUNDLED_LIB _result library)
+    if("${OCPN_USE_BUNDLED_LIBS}" STREQUAL "")
+      set(OCPN_USE_BUNDLED_LIBS "ON")
+    endif()
 
-	include(GetArch)
-	getarch()
-	message(STATUS "*** Host Build Architecture is ${ARCH}")
+    if(${OCPN_USE_BUNDLED_LIBS} STREQUAL "OFF")
+      set(${_result} "OFF")
+    elseif(${OCPN_USE_BUNDLED_LIBS} STREQUAL "ON")
+      set(${_result} "ON")
+    elseif(",${OCPN_USE_BUNDLED_LIBS}," MATCHES ",${library},")
+      set(${_result} "ON")
+    else()
+      set(${_result} "OFF")
+    endif()
+  endmacro(USE_BUNDLED_LIB)
 
-	message(STATUS "Setting C++11 standard via cmake standard mechanism")
-	###############
-	# set(OBJ_VISIBILITY "-fvisibility=hidden")	
-	###############
-	if (CMAKE_VERSION VERSION_GREATER 3.4)
-		if (OCPN_ENABLE_CLANG_TIDY)
-			find_program(
-				CLANG_TIDY_EXE
-				NAMES "clang-tidy"
-				PATHS /usr/local/opt/llvm/bin
-			)
+  include(GetArch)
+  getarch()
+  message(STATUS "*** Host Build Architecture is ${ARCH}")
 
-			if (CLANG_TIDY_EXE)
-				message(STATUS "clang-tidy found: ${CLANG_TIDY_EXE}")
+  message(STATUS "Setting C++11 standard via cmake standard mechanism")
 
-				set(CLANG_TIDY_CHECKS "-*,performance-*")
-				set(
-					CMAKE_CXX_CLANG_TIDY
-					"${CLANG_TIDY_EXE};-checks=${CLANG_TIDY_CHECKS};-header-filter='${CMAKE_SOURCE_DIR}/*'"
-					CACHE STRING ""
-					FORCE
-				)
-			else ()
-				message(AUTHOR_WARNING "clang-tidy not found!")
-				set(CMAKE_CXX_CLANG_TIDY "" CACHE STRING "" FORCE) # delete it
-			endif ()
-		endif ()
-	endif ()
+  # ##############
+  # set(OBJ_VISIBILITY "-fvisibility=hidden")
+  # ##############
+  if(CMAKE_VERSION VERSION_GREATER 3.4)
+    if(OCPN_ENABLE_CLANG_TIDY)
+      find_program(
+        CLANG_TIDY_EXE
+        NAMES "clang-tidy"
+        PATHS /usr/local/opt/llvm/bin
+      )
 
-	if (CMAKE_VERSION VERSION_GREATER 3.4)		
-		set_property(
-			CACHE ENABLE_SANITIZER
-			PROPERTY STRINGS none address memory thread undefined
-		)
-		if (NOT "${ENABLE_SANITIZER}" MATCHES "none")
-			add_compile_options(-fsanitize=${ENABLE_SANITIZER})
-		endif ()
-	endif ()
+      if(CLANG_TIDY_EXE)
+        message(STATUS "clang-tidy found: ${CLANG_TIDY_EXE}")
 
-	if (CMAKE_VERSION VERSION_GREATER 3.9)
-		if (OCPN_ENABLE_CPPCHECK)
-			find_program(CPPCHECK_EXECUTABLE NAMES "cppcheck")
-			set(CMAKE_CXX_CPPCHECK ${CPPCHECK_EXECUTABLE})
-		endif ()
-	endif ()
-
-	add_compile_options(
-                "-Wall"
-                "-Warray-bounds=0"
+        set(CLANG_TIDY_CHECKS "-*,performance-*")
+        set(
+          CMAKE_CXX_CLANG_TIDY
+          "${CLANG_TIDY_EXE};-checks=${CLANG_TIDY_CHECKS};-header-filter='${CMAKE_SOURCE_DIR}/*'"
+          CACHE STRING ""
+          FORCE
         )
-	if (NOT OCPN_PEDANTIC)		
-		add_compile_options(
-			"-Wno-unused"
-			"-fexceptions"
-			"-rdynamic"
-			"-fno-strict-aliasing"
-			"-Wno-deprecated-declarations"
-		)
-	endif ()
+      else()
+        message(AUTHOR_WARNING "clang-tidy not found!")
+        set(CMAKE_CXX_CLANG_TIDY "" CACHE STRING "" FORCE) # delete it
+      endif()
+    endif()
+  endif()
 
-	if (CMAKE_BUILD_TYPE MATCHES "Debug")
-		add_compile_options("-O0")
-	endif ()
+  if(CMAKE_VERSION VERSION_GREATER 3.4)
+    set_property(
+      CACHE ENABLE_SANITIZER
+      PROPERTY STRINGS none address memory thread undefined
+    )
 
-	add_definitions(" -DPREFIX=\\\"${CMAKE_INSTALL_PREFIX}\\\"")
+    if(NOT "${ENABLE_SANITIZER}" MATCHES "none")
+      add_compile_options(-fsanitize=${ENABLE_SANITIZER})
+    endif()
+  endif()
 
-	set(
-		LINUX_LIB_PATHS
-		/usr/local/lib
-		/usr/local/lib64
-		/usr/lib/i386-linux-gnu
-		/usr/lib/x86_64-linux-gnu
-		/usr/lib
-		/usr/lib64
-	)
+  if(CMAKE_VERSION VERSION_GREATER 3.9)
+    if(OCPN_ENABLE_CPPCHECK)
+      find_program(CPPCHECK_EXECUTABLE NAMES "cppcheck")
+      set(CMAKE_CXX_CPPCHECK ${CPPCHECK_EXECUTABLE})
+    endif()
+  endif()
 
-	if (EXISTS /etc/debian_version AND NOT DEFINED CMAKE_INSTALL_LIBDIR)
-		set(CMAKE_INSTALL_LIBDIR "lib")
-	endif ()
+  add_compile_options(
+    "-Wall"
+    "-Warray-bounds=0"
+  )
 
-	message(STATUS "CMAKE_INSTALL_LIBDIR2 ${CMAKE_INSTALL_LIBDIR}")
-	include(GNUInstallDirs)
-	message(STATUS "CMAKE_INSTALL_LIBDIR3  ${CMAKE_INSTALL_LIBDIR}")
+  if(NOT OCPN_PEDANTIC)
+    add_compile_options(
+      "-Wno-unused"
+      "-fexceptions"
+      "-rdynamic"
+      "-fno-strict-aliasing"
+      "-Wno-deprecated-declarations"
+    )
+  endif()
 
-	set(PREFIX_BIN ${CMAKE_INSTALL_BINDIR})
-	set(PREFIX_INCLUDE ${CMAKE_INSTALL_INCLUDEDIR})
-	set(PREFIX_DATA ${CMAKE_INSTALL_DATADIR})
-	set(PREFIX_PKGDATA ${CMAKE_INSTALL_DATADIR}/${PACKAGE_NAME})
-	set(PREFIX_LIB "${CMAKE_INSTALL_FULL_LIBDIR}")
+  if(CMAKE_BUILD_TYPE MATCHES "Debug")
+    add_compile_options("-O0")
+  endif()
 
-	include(${CMAKE_SOURCE_DIR}/VERSION.cmake)
+  add_definitions(" -DPREFIX=\\\"${CMAKE_INSTALL_PREFIX}\\\"")
 
-	string(TIMESTAMP VERSION_DATE "%Y-%m-%d")
-	string(TIMESTAMP UNIX_TIMESTAMP "%s")
-	if (OCPN_CI_BUILD)
-		include(Utils)
+  set(
+    LINUX_LIB_PATHS
+    /usr/local/lib
+    /usr/local/lib64
+    /usr/lib/i386-linux-gnu
+    /usr/lib/x86_64-linux-gnu
+    /usr/lib
+    /usr/lib64
+  )
 
-		commit_id(COMMIT)
-		build_num(BUILD_NUMBER)
-		if (NOT "${OCPN_RELEASE}" STREQUAL "")
-			set(BUILD_NUMBER ${OCPN_RELEASE})
-		endif ()
+  if(EXISTS /etc/debian_version AND NOT DEFINED CMAKE_INSTALL_LIBDIR)
+    set(CMAKE_INSTALL_LIBDIR "lib")
+  endif()
 
-		set(VERSION_TAIL "+${COMMIT}")
-		if (NOT "${BUILD_NUMBER}" STREQUAL "")
-			set(VERSION_TAIL "-${BUILD_NUMBER}${VERSION_TAIL}")
-		endif ()
-	endif ()
+  message(STATUS "CMAKE_INSTALL_LIBDIR2 ${CMAKE_INSTALL_LIBDIR}")
+  include(GNUInstallDirs)
+  message(STATUS "CMAKE_INSTALL_LIBDIR3  ${CMAKE_INSTALL_LIBDIR}")
 
-	set(
-		PACKAGE_VERSION
-		"${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}${VERSION_TAIL}"
-	)
-	message(STATUS "Building version ${PACKAGE_VERSION}")
+  set(PREFIX_BIN ${CMAKE_INSTALL_BINDIR})
+  set(PREFIX_INCLUDE ${CMAKE_INSTALL_INCLUDEDIR})
+  set(PREFIX_DATA ${CMAKE_INSTALL_DATADIR})
+  set(PREFIX_PKGDATA ${CMAKE_INSTALL_DATADIR}/${PACKAGE_NAME})
+  set(PREFIX_LIB "${CMAKE_INSTALL_FULL_LIBDIR}")
 
-	include(OcpnFindGtk)
+  include(${CMAKE_SOURCE_DIR}/VERSION.cmake)
 
-	if (ARCH MATCHES "arm*")
-		add_definitions(-DocpnARM)
-		if (ARCH STREQUAL "armhf")
-			add_definitions(-DocpnARMHF)
-		endif ()
-	endif ()
+  string(TIMESTAMP VERSION_DATE "%Y-%m-%d")
+  string(TIMESTAMP UNIX_TIMESTAMP "%s")
 
-	if(DEFINED _wx_selected_config)
-		if(_wx_selected_config MATCHES "androideabi-qt")
-			INCLUDE_DIRECTORIES( ${CMAKE_SOURCE_DIR}/libs/glshim/include/GLES )
-		endif (_wx_selected_config MATCHES "androideabi-qt")
-	endif (DEFINED _wx_selected_config)
+  if(OCPN_CI_BUILD)
+    include(Utils)
 
-	if (OCPN_USE_WEBVIEW)
-		set(wxWidgets_FIND_COMPONENTS net xml html adv aui core base webview)
-	else ()
-		set(wxWidgets_FIND_COMPONENTS net xml html adv aui core base)
-	endif ()
-endif ()
+    commit_id(COMMIT)
+    build_num(BUILD_NUMBER)
 
-if (OPENGLES_FOUND)
+    if(NOT "${OCPN_RELEASE}" STREQUAL "")
+      set(BUILD_NUMBER ${OCPN_RELEASE})
+    endif()
+
+    set(VERSION_TAIL "+${COMMIT}")
+
+    if(NOT "${BUILD_NUMBER}" STREQUAL "")
+      set(VERSION_TAIL "-${BUILD_NUMBER}${VERSION_TAIL}")
+    endif()
+  endif()
+
+  set(
+    PACKAGE_VERSION
+    "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}${VERSION_TAIL}"
+  )
+  message(STATUS "Building version ${PACKAGE_VERSION}")
+
+  include(OcpnFindGtk)
+
+  if(ARCH MATCHES "arm*")
+    add_definitions(-DocpnARM)
+
+    if(ARCH STREQUAL "armhf")
+      add_definitions(-DocpnARMHF)
+    endif()
+  endif()
+
+  if(DEFINED _wx_selected_config)
+    if(_wx_selected_config MATCHES "androideabi-qt")
+      INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/libs/glshim/include/GLES)
+    endif(_wx_selected_config MATCHES "androideabi-qt")
+  endif(DEFINED _wx_selected_config)
+
+  if(OCPN_USE_WEBVIEW)
+    set(wxWidgets_FIND_COMPONENTS net xml html adv aui core base webview)
+  else()
+    set(wxWidgets_FIND_COMPONENTS net xml html adv aui core base)
+  endif()
+endif()
+
+if(OPENGLES_FOUND)
   set(wxWidgets_FIND_COMPONENTS ${wxWidgets_FIND_COMPONENTS} gl)
-endif ()
+endif()
 
-if (NOT OPENGLES_FOUND)
-  if (OCPN_USE_GL)
+if(NOT OPENGLES_FOUND)
+  if(OCPN_USE_GL)
     find_package(OpenGL)
-  else (OCPN_USE_GL)
+  else(OCPN_USE_GL)
     message(STATUS "OpenGL disabled by option USE_GL...")
-  endif (OCPN_USE_GL)
+  endif(OCPN_USE_GL)
 
-  if (OPENGL_FOUND)
+  if(OPENGL_FOUND)
     set(wxWidgets_FIND_COMPONENTS gl ${wxWidgets_FIND_COMPONENTS})
     include_directories(${OPENGL_INCLUDE_DIR})
 
@@ -565,140 +579,144 @@ if (NOT OPENGLES_FOUND)
     add_definitions(-DocpnUSE_GLSL)
 
     # We need to remove GLU from the OPENGL_LIBRARIES list
-    foreach (_currentLibFile ${OPENGL_LIBRARIES})
-    # MESSAGE (STATUS "    Lib File: " ${_currentLibFile})
-    set(UCNAME ${_currentLibFile})
-    string(TOUPPER ${UCNAME} UCNAME)
-    if (NOT ${UCNAME} MATCHES "(.*)GLU(.*)")
-      set(
-      REVISED_OPENGL_LIBRARIES ${_currentLibFile}
-      ${REVISED_OPENGL_LIBRARIES}
-      )
-    endif ()
-    endforeach (_currentLibFile)
+    foreach(_currentLibFile ${OPENGL_LIBRARIES})
+      # MESSAGE (STATUS "    Lib File: " ${_currentLibFile})
+      set(UCNAME ${_currentLibFile})
+      string(TOUPPER ${UCNAME} UCNAME)
+
+      if(NOT ${UCNAME} MATCHES "(.*)GLU(.*)")
+        set(
+          REVISED_OPENGL_LIBRARIES ${_currentLibFile}
+          ${REVISED_OPENGL_LIBRARIES}
+        )
+      endif()
+    endforeach(_currentLibFile)
 
     set(OPENGL_LIBRARIES ${REVISED_OPENGL_LIBRARIES})
     message(STATUS "    Revised GL Lib: " ${OPENGL_LIBRARIES})
 
-  else (OPENGL_FOUND)
+  else(OPENGL_FOUND)
     message(STATUS "OpenGL not found...")
-  endif (OPENGL_FOUND)
-endif ()
+  endif(OPENGL_FOUND)
+endif()
 
 # configure GLEW
-if (OPENGL_FOUND)
-  if (CMAKE_HOST_WIN32)    
+if(OPENGL_FOUND)
+  if(CMAKE_HOST_WIN32)
     message("+++******************GLEW: include directories*********************+++")
     include_directories(
       "${CMAKE_CURRENT_SOURCE_DIR}/cache/buildwin/include/glew"
     )
-    link_libraries(${CMAKE_SOURCE_DIR}/cache/buildwin/glew32.lib )
-  else (CMAKE_HOST_WIN32)
+    link_libraries(${CMAKE_SOURCE_DIR}/cache/buildwin/glew32.lib)
+  else(CMAKE_HOST_WIN32)
     message("******************GLEW: include directories*********************")
-    if ("${DEB_DISTRIBUTION}" STREQUAL "bionic")
+
+    if("${DEB_DISTRIBUTION}" STREQUAL "bionic")
       message(STATUS "Using GLEW_STATIC")
       set(GLEW_USE_STATIC_LIBS ON)
-    endif ("${DEB_DISTRIBUTION}" STREQUAL "bionic")
+    endif("${DEB_DISTRIBUTION}" STREQUAL "bionic")
 
     find_package(GLEW REQUIRED)
     include_directories(${GLEW_INCLUDE_DIRS})
-    link_libraries(${GLEW_LIBRARIES})    
-  endif (CMAKE_HOST_WIN32)
-endif (OPENGL_FOUND)
+    link_libraries(${GLEW_LIBRARIES})
+  endif(CMAKE_HOST_WIN32)
+endif(OPENGL_FOUND)
 
-if (LINUX)
-	set(wxWidgets_USE_DEBUG OFF)
-	set(wxWidgets_USE_UNICODE ON)
-	set(wxWidgets_USE_UNIVERSAL OFF)
-	set(wxWidgets_USE_STATIC OFF)
+if(LINUX)
+  set(wxWidgets_USE_DEBUG OFF)
+  set(wxWidgets_USE_UNICODE ON)
+  set(wxWidgets_USE_UNIVERSAL OFF)
+  set(wxWidgets_USE_STATIC OFF)
 
-	if (OCPN_WXWIDGETS_FORCE_VERSION)
-      	set (wxWidgets_CONFIG_OPTIONS --version=${OCPN_WXWIDGETS_FORCE_VERSION})
-  	endif ()
-	
-	if (GTK2_FOUND)
-      message("-----------GTK 2 FOUND-----------")
-	  	set(wxWidgets_CONFIG_OPTIONS ${wxWidgets_CONFIG_OPTIONS} --toolkit=gtk2)
-	elseif (GTK3_FOUND)
-      message("-----------GTK 3 FOUND-----------")
-	  	set(wxWidgets_CONFIG_OPTIONS ${wxWidgets_CONFIG_OPTIONS} --toolkit=gtk3)
-	endif ()
+  if(OCPN_WXWIDGETS_FORCE_VERSION)
+    set(wxWidgets_CONFIG_OPTIONS --version=${OCPN_WXWIDGETS_FORCE_VERSION})
+  endif()
 
-	find_package(wxWidgets COMPONENTS ${wxWidgets_FIND_COMPONENTS})
-	if (wxWidgets_FOUND AND OCPN_USE_WEBVIEW)
-		message(STATUS "Found wxWidgets webview add-on")
-		add_definitions(-DwxUSE_WEBVIEW=1 -DHAVE_WEBVIEW)
-	else ()
-		add_definitions(-DwxUSE_WEBVIEW=0)
-		list(REMOVE_ITEM wxWidgets_FIND_COMPONENTS webview)
-		message(STATUS "Could not find wxWidgets webview add-on")
-		find_package(wxWidgets COMPONENTS ${wxWidgets_FIND_COMPONENTS})
-	endif ()
+  if(GTK2_FOUND)
+    message("-----------GTK 2 FOUND-----------")
+    set(wxWidgets_CONFIG_OPTIONS ${wxWidgets_CONFIG_OPTIONS} --toolkit=gtk2)
+  elseif(GTK3_FOUND)
+    message("-----------GTK 3 FOUND-----------")
+    set(wxWidgets_CONFIG_OPTIONS ${wxWidgets_CONFIG_OPTIONS} --toolkit=gtk3)
+  endif()
 
-	if (NOT wxWidgets_FOUND)
-		message (FATAL_ERROR
-		"Cannot find wxWidgets, giving up. On linux you might want to try"
-		" using -DOCPN_FORCE_GTK3."
-		)
-	endif ()
+  find_package(wxWidgets COMPONENTS ${wxWidgets_FIND_COMPONENTS})
 
-	include(${wxWidgets_USE_FILE})
+  if(wxWidgets_FOUND AND OCPN_USE_WEBVIEW)
+    message(STATUS "Found wxWidgets webview add-on")
+    add_definitions(-DwxUSE_WEBVIEW=1 -DHAVE_WEBVIEW)
+  else()
+    add_definitions(-DwxUSE_WEBVIEW=0)
+    list(REMOVE_ITEM wxWidgets_FIND_COMPONENTS webview)
+    message(STATUS "Could not find wxWidgets webview add-on")
+    find_package(wxWidgets COMPONENTS ${wxWidgets_FIND_COMPONENTS})
+  endif()
 
-	message(STATUS "Found wxWidgets...")
-	message(STATUS " wxWidgets Include: ${wxWidgets_INCLUDE_DIRS}")
-	message(STATUS " wxWidgets Libraries: ${wxWidgets_LIBRARIES}")
+  if(NOT wxWidgets_FOUND)
+    message(FATAL_ERROR
+      "Cannot find wxWidgets, giving up. On linux you might want to try"
+      " using -DOCPN_FORCE_GTK3."
+    )
+  endif()
 
-	foreach (_currentLibFile ${wxWidgets_LIBRARIES})
-		set(UCNAME ${_currentLibFile})
-		string(TOUPPER ${UCNAME} UCNAME)
-		if (NOT ${UCNAME} MATCHES "(.*)GLU(.*)")
-			set(
-				REVISED_wxWidgets_LIBRARIES ${REVISED_wxWidgets_LIBRARIES}
-				${_currentLibFile}
-			)
-		endif ()
-	endforeach (_currentLibFile)
+  include(${wxWidgets_USE_FILE})
 
-	set(wxWidgets_LIBRARIES ${REVISED_wxWidgets_LIBRARIES})
+  message(STATUS "Found wxWidgets...")
+  message(STATUS " wxWidgets Include: ${wxWidgets_INCLUDE_DIRS}")
+  message(STATUS " wxWidgets Libraries: ${wxWidgets_LIBRARIES}")
 
-	message(STATUS " Revised wxWidgets Libraries: ${wxWidgets_LIBRARIES}")
+  foreach(_currentLibFile ${wxWidgets_LIBRARIES})
+    set(UCNAME ${_currentLibFile})
+    string(TOUPPER ${UCNAME} UCNAME)
 
-	if (GTK3_FOUND)
-		set( _VERSPROG [=[
+    if(NOT ${UCNAME} MATCHES "(.*)GLU(.*)")
+      set(
+        REVISED_wxWidgets_LIBRARIES ${REVISED_wxWidgets_LIBRARIES}
+        ${_currentLibFile}
+      )
+    endif()
+  endforeach(_currentLibFile)
+
+  set(wxWidgets_LIBRARIES ${REVISED_wxWidgets_LIBRARIES})
+
+  message(STATUS " Revised wxWidgets Libraries: ${wxWidgets_LIBRARIES}")
+
+  if(GTK3_FOUND)
+    set(_VERSPROG [=[
 			#include <stdio.h>
 			#include <wx/version.h>
 			int main(int argc, char**argv) {
 			printf("%d\\n", wxMAJOR_VERSION * 10 + wxMINOR_VERSION);
 			}
 		]=])
-		set (TRY_COMPILE
-			"echo '${_VERSPROG}' > wx-32.c; cc $(${wxWidgets_CONFIG_EXECUTABLE} --cflags) wx-32.c; ./a.out")
-		execute_process(
-			COMMAND "/bin/sh" "-c" "${TRY_COMPILE}"
-			WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-			OUTPUT_VARIABLE _WX_VERSION
-			ERROR_VARIABLE _WX_ERRORS
-			OUTPUT_STRIP_TRAILING_WHITESPACE
-		)
-		if (NOT "${_WX_ERRORS}" STREQUAL "" OR "${_WX_VERSION}" STREQUAL "")
-			message(FATAL_ERROR "Cannot run wxWidgets  version test (!)")
-		elseif ("${_WX_VERSION}" LESS 32)
-			add_definitions("-DNDEBUG")
-			message(STATUS "Forcing -NDEBUG on gtk3 build (#1500).")
-		endif ()
-	endif ()
-endif ()
+    set(TRY_COMPILE
+      "echo '${_VERSPROG}' > wx-32.c; cc $(${wxWidgets_CONFIG_EXECUTABLE} --cflags) wx-32.c; ./a.out")
+    execute_process(
+      COMMAND "/bin/sh" "-c" "${TRY_COMPILE}"
+      WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+      OUTPUT_VARIABLE _WX_VERSION
+      ERROR_VARIABLE _WX_ERRORS
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
 
+    if(NOT "${_WX_ERRORS}" STREQUAL "" OR "${_WX_VERSION}" STREQUAL "")
+      message(FATAL_ERROR "Cannot run wxWidgets  version test (!)")
+    elseif("${_WX_VERSION}" LESS 32)
+      add_definitions("-DNDEBUG")
+      message(STATUS "Forcing -NDEBUG on gtk3 build (#1500).")
+    endif()
+  endif()
+endif()
 
 message(STATUS "Forcing wxWidgets_VERSION_STRING: ${wxWidgets_VERSION_STRING}")
 set(wxWidgets_VERSION_STRING "3.2.0")
 
-if (LINUX)
-	message(STATUS "")
-	message(STATUS "*** Staging to build ${PACKAGE_NAME}  ***")
-	message(STATUS "*** Build type: ${CMAKE_BUILD_TYPE}")
-	message(STATUS "*** Will install to ${CMAKE_INSTALL_PREFIX}  ***")
-endif ()
+if(LINUX)
+  message(STATUS "")
+  message(STATUS "*** Staging to build ${PACKAGE_NAME}  ***")
+  message(STATUS "*** Build type: ${CMAKE_BUILD_TYPE}")
+  message(STATUS "*** Will install to ${CMAKE_INSTALL_PREFIX}  ***")
+endif()
 
 # Library
 file(GLOB_RECURSE LIB_HEADER_FILES "include/*.h" "source/*.h")
@@ -706,16 +724,17 @@ file(GLOB_RECURSE LIB_INLINE_FILES "include/*.inl" "source/*.inl")
 file(GLOB_RECURSE LIB_SOURCE_FILES "include/*.cpp" "source/*.cpp")
 add_library(cppserver ${LIB_HEADER_FILES} ${LIB_INLINE_FILES} ${LIB_SOURCE_FILES})
 set_target_properties(cppserver PROPERTIES COMPILE_FLAGS "${PEDANTIC_COMPILE_FLAGS}")
-if (MSVC)
-  target_include_directories(cppserver 
-    PUBLIC 
+
+if(MSVC)
+  target_include_directories(cppserver
+    PUBLIC
     "${CMAKE_CURRENT_SOURCE_DIR}/include"
     "${CMAKE_CURRENT_SOURCE_DIR}/main"
     "${CMAKE_CURRENT_SOURCE_DIR}/cache/buildwxWidgets/lib/vc_dll/mswu"
     "${CMAKE_CURRENT_SOURCE_DIR}/cache/buildwxWidgets/include")
-  target_link_libraries(cppserver 
-    PUBLIC 
-    ${LINKLIBS} 
+  target_link_libraries(cppserver
+    PUBLIC
+    ${LINKLIBS}
     asio
     debug ../cache/buildwxWidgets/lib/vc_dll/wxmsw32ud_gl
     debug ../cache/buildwxWidgets/lib/vc_dll/wxbase32ud_net
@@ -735,35 +754,37 @@ if (MSVC)
     optimized ../cache/buildwxWidgets/lib/vc_dll/wxmsw32u_core
     optimized ../cache/buildwxWidgets/lib/vc_dll/wxbase32u
     optimized ../cache/buildwxWidgets/lib/vc_dll/wxmsw32u_webview
-    )
+  )
   target_compile_definitions(cppserver PUBLIC WXUSINGDLL)
-endif ()
+endif()
 
-if (LINUX)
-  target_include_directories(cppserver 
+if(LINUX)
+  target_include_directories(cppserver
     PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/main
   )
 
-  target_link_libraries(cppserver 
-    PUBLIC 
-    ${LINKLIBS} 
+  target_link_libraries(cppserver
+    PUBLIC
+    ${LINKLIBS}
     asio
   )
-endif ()
+endif()
+
 list(APPEND INSTALL_TARGETS cppserver)
 list(APPEND LINKLIBS cppserver)
 
 # Additional module components: benchmarks, examples, plugins, tests, tools and install
-if(NOT CPPSERVER_MODULE)  
+if(NOT CPPSERVER_MODULE)
   file(GLOB EXAMPLE_HEADER_FILES "main/*.h")
-  file(GLOB EXAMPLE_INLINE_FILES "main/*.inl")  
-  if (MSVC)  
-    add_executable(WMSServer ${EXAMPLE_HEADER_FILES} ${EXAMPLE_INLINE_FILES} "main/https_server.cpp")
+  file(GLOB EXAMPLE_INLINE_FILES "main/*.inl")
+
+  if(MSVC)
+    add_executable(WMSServer ${EXAMPLE_HEADER_FILES} ${EXAMPLE_INLINE_FILES} "main/WebServer.cpp")
     target_include_directories(WMSServer
       PUBLIC
-      prebuilt/include      
+      prebuilt/include
       include
       buildwin/crashrpt
       cache/buildwin/include
@@ -781,7 +802,7 @@ if(NOT CPPSERVER_MODULE)
       libs/libtess2/Include
       libs/sound/include
       libs/wxJSON/include
-      libs/tinyxml/include      
+      libs/tinyxml/include
       libs/s52plib/src
       libs/pugixml
       libs/N2KParser/include
@@ -791,7 +812,7 @@ if(NOT CPPSERVER_MODULE)
       libs/texcmp/squish
       libs/mipmap/include
       libs/lz4/src
-      libs/easywsclient      
+      libs/easywsclient
       libs/glu/include
       source
       cache/buildwxWidgets/lib/vc_dll/mswu
@@ -799,13 +820,13 @@ if(NOT CPPSERVER_MODULE)
     )
 
     target_sources(WMSServer
-      PUBLIC   
+      PUBLIC
       ${PROJECT_SOURCE_DIR}/src/about.cpp
       ${PROJECT_SOURCE_DIR}/src/AboutFrame.cpp
-      ${PROJECT_SOURCE_DIR}/src/AboutFrameImpl.cpp      
+      ${PROJECT_SOURCE_DIR}/src/AboutFrameImpl.cpp
       ${PROJECT_SOURCE_DIR}/src/base_platform.cpp
       ${PROJECT_SOURCE_DIR}/src/bbox.cpp
-      ${PROJECT_SOURCE_DIR}/src/CanvasConfig.cpp      
+      ${PROJECT_SOURCE_DIR}/src/CanvasConfig.cpp
       ${PROJECT_SOURCE_DIR}/src/canvasMenu.cpp
       ${PROJECT_SOURCE_DIR}/src/CanvasOptions.cpp
       ${PROJECT_SOURCE_DIR}/src/cat_settings.cpp
@@ -834,11 +855,11 @@ if(NOT CPPSERVER_MODULE)
       ${PROJECT_SOURCE_DIR}/src/FontDesc.cpp
       ${PROJECT_SOURCE_DIR}/src/FontMgr.cpp
       ${PROJECT_SOURCE_DIR}/src/geodesic.cpp
-      ${PROJECT_SOURCE_DIR}/src/georef.cpp      
-      ${PROJECT_SOURCE_DIR}/src/gshhs.cpp    
+      ${PROJECT_SOURCE_DIR}/src/georef.cpp
+      ${PROJECT_SOURCE_DIR}/src/gshhs.cpp
       ${PROJECT_SOURCE_DIR}/src/gui_lib.cpp
       ${PROJECT_SOURCE_DIR}/src/hyperlink.cpp
-      ${PROJECT_SOURCE_DIR}/src/IDX_entry.cpp      
+      ${PROJECT_SOURCE_DIR}/src/IDX_entry.cpp
       ${PROJECT_SOURCE_DIR}/src/kml.cpp
       ${PROJECT_SOURCE_DIR}/src/Layer.cpp
       ${PROJECT_SOURCE_DIR}/src/line_clip.cpp
@@ -863,14 +884,14 @@ if(NOT CPPSERVER_MODULE)
       ${PROJECT_SOURCE_DIR}/src/options.cpp
       ${PROJECT_SOURCE_DIR}/src/Osenc.cpp
       ${PROJECT_SOURCE_DIR}/src/own_ship.cpp
-      ${PROJECT_SOURCE_DIR}/src/piano.cpp      
+      ${PROJECT_SOURCE_DIR}/src/piano.cpp
       ${PROJECT_SOURCE_DIR}/src/pluginmanager.cpp
       ${PROJECT_SOURCE_DIR}/src/plugin_blacklist.cpp
       ${PROJECT_SOURCE_DIR}/src/plugin_cache.cpp
       ${PROJECT_SOURCE_DIR}/src/plugin_handler.cpp
       ${PROJECT_SOURCE_DIR}/src/plugin_loader.cpp
       ${PROJECT_SOURCE_DIR}/src/plugin_paths.cpp
-      ${PROJECT_SOURCE_DIR}/src/poly_math.cpp      
+      ${PROJECT_SOURCE_DIR}/src/poly_math.cpp
       ${PROJECT_SOURCE_DIR}/src/Quilt.cpp
       ${PROJECT_SOURCE_DIR}/src/RolloverWin.cpp
       ${PROJECT_SOURCE_DIR}/src/s57chart.cpp
@@ -878,7 +899,7 @@ if(NOT CPPSERVER_MODULE)
       ${PROJECT_SOURCE_DIR}/src/s57featuredefns.cpp
       ${PROJECT_SOURCE_DIR}/src/s57obj.cpp
       ${PROJECT_SOURCE_DIR}/src/s57reader.cpp
-      ${PROJECT_SOURCE_DIR}/src/s57RegistrarMgr.cpp      
+      ${PROJECT_SOURCE_DIR}/src/s57RegistrarMgr.cpp
       ${PROJECT_SOURCE_DIR}/src/safe_mode.cpp
       ${PROJECT_SOURCE_DIR}/src/semantic_vers.cpp
       ${PROJECT_SOURCE_DIR}/src/SencManager.cpp
@@ -936,7 +957,7 @@ if(NOT CPPSERVER_MODULE)
       ${PROJECT_SOURCE_DIR}/include/FontMgr.h
       ${PROJECT_SOURCE_DIR}/include/geodesic.h
       ${PROJECT_SOURCE_DIR}/include/georef.h
-      ${PROJECT_SOURCE_DIR}/include/gui_lib.h      
+      ${PROJECT_SOURCE_DIR}/include/gui_lib.h
       ${PROJECT_SOURCE_DIR}/include/gshhs.h
       ${PROJECT_SOURCE_DIR}/include/IDX_entry.h
       ${PROJECT_SOURCE_DIR}/include/kml.h
@@ -944,8 +965,8 @@ if(NOT CPPSERVER_MODULE)
       ${PROJECT_SOURCE_DIR}/include/line_clip.h
       ${PROJECT_SOURCE_DIR}/include/linmath.h
       ${PROJECT_SOURCE_DIR}/include/LLRegion.h
-      ${PROJECT_SOURCE_DIR}/include/LOD_reduce.h      
-      ${PROJECT_SOURCE_DIR}/include/logger.h      
+      ${PROJECT_SOURCE_DIR}/include/LOD_reduce.h
+      ${PROJECT_SOURCE_DIR}/include/logger.h
       ${PROJECT_SOURCE_DIR}/include/navutil.h
       ${PROJECT_SOURCE_DIR}/include/navutil_base.h
       ${PROJECT_SOURCE_DIR}/include/ocpn_frame.h
@@ -955,7 +976,7 @@ if(NOT CPPSERVER_MODULE)
       ${PROJECT_SOURCE_DIR}/include/ocpn_types.h
       ${PROJECT_SOURCE_DIR}/include/ocpn_utils.h
       ${PROJECT_SOURCE_DIR}/include/ocpndc.h
-      ${PROJECT_SOURCE_DIR}/include/OCPNPlatform.h      
+      ${PROJECT_SOURCE_DIR}/include/OCPNPlatform.h
       ${PROJECT_SOURCE_DIR}/include/OCPNRegion.h
       ${PROJECT_SOURCE_DIR}/include/ogr_s57.h
       ${PROJECT_SOURCE_DIR}/include/options.h
@@ -968,7 +989,7 @@ if(NOT CPPSERVER_MODULE)
       ${PROJECT_SOURCE_DIR}/include/plugin_handler.h
       ${PROJECT_SOURCE_DIR}/include/plugin_loader.h
       ${PROJECT_SOURCE_DIR}/include/plugin_paths.h
-      ${PROJECT_SOURCE_DIR}/include/poly_math.h      
+      ${PROJECT_SOURCE_DIR}/include/poly_math.h
       ${PROJECT_SOURCE_DIR}/include/Quilt.h
       ${PROJECT_SOURCE_DIR}/include/RolloverWin.h
       ${PROJECT_SOURCE_DIR}/include/s57.h
@@ -994,13 +1015,13 @@ if(NOT CPPSERVER_MODULE)
       ${PROJECT_SOURCE_DIR}/include/thumbwin.h
       ${PROJECT_SOURCE_DIR}/include/TTYScroll.h
       ${PROJECT_SOURCE_DIR}/include/TTYWindow.h
-      ${PROJECT_SOURCE_DIR}/include/vector2D.h      
+      ${PROJECT_SOURCE_DIR}/include/vector2D.h
       ${PROJECT_SOURCE_DIR}/include/viewport.h
       ${PROJECT_SOURCE_DIR}/include/update_mgr.h
     )
 
     target_link_libraries(WMSServer
-      PUBLIC      
+      PUBLIC
       debug ../prebuilt/libs/observable/Debug/_OBSERVABLE
       debug ../prebuilt/libs/ssl_sha1/Debug/SHA1
       debug ../prebuilt/libs/mongoose/Debug/MONGOOSE
@@ -1012,10 +1033,10 @@ if(NOT CPPSERVER_MODULE)
       debug ../prebuilt/libs/libtess2/Debug/TESS2
       debug ../prebuilt/libs/sound/Debug/SOUND
       debug ../prebuilt/libs/wxJSON/Debug/WXJSON
-      debug ../prebuilt/libs/tinyxml/Debug/TINYXML      
+      debug ../prebuilt/libs/tinyxml/Debug/TINYXML
       debug ../prebuilt/libs/s52plib/Debug/S52PLIB
       debug ../prebuilt/libs/pugixml/Debug/OCPN_PUGIXML
-      debug ../prebuilt/libs/N2KParser/Debug/N2KPARSER      
+      debug ../prebuilt/libs/N2KParser/Debug/N2KPARSER
       debug ../prebuilt/libs/texcmp/Debug/TEXCMP
       debug ../prebuilt/libs/mipmap/Debug/MIPMAP
       debug ../prebuilt/libs/lz4/Debug/LZ4
@@ -1027,7 +1048,7 @@ if(NOT CPPSERVER_MODULE)
       debug ../cache/buildwxWidgets/lib/vc_dll/wxmsw32ud_aui
       debug ../cache/buildwxWidgets/lib/vc_dll/wxmsw32ud_core
       debug ../cache/buildwxWidgets/lib/vc_dll/wxbase32ud
-      debug ../cache/buildwxWidgets/lib/vc_dll/wxmsw32ud_webview      
+      debug ../cache/buildwxWidgets/lib/vc_dll/wxmsw32ud_webview
       debug Userenv
       debug opengl32
       debug winmm
@@ -1039,13 +1060,13 @@ if(NOT CPPSERVER_MODULE)
       debug shlwapi
       debug version
       debug wsock32
-      debug setupapi.lib 
+      debug setupapi.lib
       debug ../prebuilt/lib/Debug/GLU
-      debug psapi.lib 
+      debug psapi.lib
       debug iphlpapi.lib
       debug gdiplus
       debug ../prebuilt/libs/nmea0183/Debug/NMEA0183
-      debug ../prebuilt/libs/easywsclient/Debug/EASYWSCLIENT      
+      debug ../prebuilt/libs/easywsclient/Debug/EASYWSCLIENT
       debug ../cache/buildwin/lzma
       debug ../cache/buildwin/libssl
       debug ../cache/buildwin/libcrypto
@@ -1056,7 +1077,7 @@ if(NOT CPPSERVER_MODULE)
       debug glu32.lib
       debug ../prebuilt/libs/iso8211/Debug/ISO8211
       debug ../prebuilt/libs/gdal/Debug/GDAL
-      debug ws2_32      
+      debug ws2_32
       optimized ../prebuilt/libs/observable/Release/_OBSERVABLE
       optimized ../prebuilt/libs/ssl_sha1/Release/SHA1
       optimized ../prebuilt/libs/mongoose/Release/MONGOOSE
@@ -1068,10 +1089,10 @@ if(NOT CPPSERVER_MODULE)
       optimized ../prebuilt/libs/libtess2/Release/TESS2
       optimized ../prebuilt/libs/sound/Release/SOUND
       optimized ../prebuilt/libs/wxJSON/Release/WXJSON
-      optimized ../prebuilt/libs/tinyxml/Release/TINYXML      
+      optimized ../prebuilt/libs/tinyxml/Release/TINYXML
       optimized ../prebuilt/libs/s52plib/Release/S52PLIB
       optimized ../prebuilt/libs/pugixml/Release/OCPN_PUGIXML
-      optimized ../prebuilt/libs/N2KParser/Release/N2KPARSER      
+      optimized ../prebuilt/libs/N2KParser/Release/N2KPARSER
       optimized ../prebuilt/libs/texcmp/Release/TEXCMP
       optimized ../prebuilt/libs/mipmap/Release/MIPMAP
       optimized ../prebuilt/libs/lz4/Release/LZ4
@@ -1097,26 +1118,26 @@ if(NOT CPPSERVER_MODULE)
       optimized wsock32
       optimized setupapi.lib
       optimized ../prebuilt/lib/Release/GLU
-      optimized psapi.lib 
-      optimized iphlpapi.lib      
+      optimized psapi.lib
+      optimized iphlpapi.lib
       optimized gdiplus
       optimized ../prebuilt/libs/nmea0183/Release/NMEA0183
-      optimized ../prebuilt/libs/easywsclient/Release/EASYWSCLIENT      
+      optimized ../prebuilt/libs/easywsclient/Release/EASYWSCLIENT
       optimized ../cache/buildwin/lzma
       optimized ../cache/buildwin/libssl
       optimized ../cache/buildwin/libcrypto
       optimized ../prebuilt/libs/sqlite/Release/SQLITE3
       optimized ../cache/buildwin/archive
       optimized ../cache/buildwin/libcurl
-      optimized ../cache/buildwin/zlib1      
+      optimized ../cache/buildwin/zlib1
       optimized glu32.lib
       optimized ../prebuilt/libs/iso8211/Release/ISO8211
       optimized ../prebuilt/libs/gdal/Release/GDAL
-      optimized ws2_32      
+      optimized ws2_32
     )
 
-    set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT WMSServer)    
-    target_compile_definitions(WMSServer PUBLIC PSAPI_VERSION=1)    
+    set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT WMSServer)
+    target_compile_definitions(WMSServer PUBLIC PSAPI_VERSION=1)
     target_compile_definitions(WMSServer PUBLIC TIXML_USE_STL)
     target_compile_definitions(WMSServer PUBLIC __MSVC__)
     target_compile_definitions(WMSServer PUBLIC WXUSINGDLL)
@@ -1146,7 +1167,7 @@ if(NOT CPPSERVER_MODULE)
       include/FontDesc.h
       include/FontMgr.h
       include/geodesic.h
-      include/georef.h      
+      include/georef.h
       include/gshhs.h
       include/gui_lib.h
       include/IDX_entry.h
@@ -1156,7 +1177,7 @@ if(NOT CPPSERVER_MODULE)
       include/linmath.h
       include/LLRegion.h
       include/LOD_reduce.h
-      include/logger.h      
+      include/logger.h
       include/navutil.h
       include/navutil_base.h
       include/ocpn_frame.h
@@ -1171,14 +1192,14 @@ if(NOT CPPSERVER_MODULE)
       include/ogr_s57.h
       include/options.h
       include/Osenc.h
-      include/own_ship.h      
+      include/own_ship.h
       include/piano.h
-      include/pluginmanager.h    
+      include/pluginmanager.h
       include/plugin_blacklist.h
       include/plugin_cache.h
       include/plugin_handler.h
       include/plugin_loader.h
-      include/plugin_paths.h      
+      include/plugin_paths.h
       include/poly_math.h
       include/Quilt.h
       include/RolloverWin.h
@@ -1207,13 +1228,13 @@ if(NOT CPPSERVER_MODULE)
       include/TTYWindow.h
       include/vector2D.h
       include/viewport.h
-      include/update_mgr.h      
+      include/update_mgr.h
       ${EXAMPLE_HEADER_FILES}
     )
-    
-    set(MODEL_SRC		
+
+    set(MODEL_SRC
       ${CMAKE_SOURCE_DIR}/src/base_platform.cpp
-      ${CMAKE_SOURCE_DIR}/src/chartdata_input_stream.cpp		
+      ${CMAKE_SOURCE_DIR}/src/chartdata_input_stream.cpp
       ${CMAKE_SOURCE_DIR}/src/config_vars.cpp
       ${CMAKE_SOURCE_DIR}/src/cutil.cpp
       ${CMAKE_SOURCE_DIR}/src/georef.cpp
@@ -1225,10 +1246,10 @@ if(NOT CPPSERVER_MODULE)
     )
 
     set(
-      SRCS      
+      SRCS
       src/about.cpp
       src/AboutFrame.cpp
-      src/AboutFrameImpl.cpp            
+      src/AboutFrameImpl.cpp
       src/bbox.cpp
       src/base_platform.cpp
       src/CanvasConfig.cpp
@@ -1260,9 +1281,9 @@ if(NOT CPPSERVER_MODULE)
       src/FontDesc.cpp
       src/FontMgr.cpp
       src/geodesic.cpp
-      src/georef.cpp   
+      src/georef.cpp
       src/gshhs.cpp
-      src/gui_lib.cpp   
+      src/gui_lib.cpp
       src/hyperlink.cpp
       src/IDX_entry.cpp
       src/kml.cpp
@@ -1270,7 +1291,7 @@ if(NOT CPPSERVER_MODULE)
       src/line_clip.cpp
       src/LLRegion.cpp
       src/LOD_reduce.cpp
-      src/logger.cpp      
+      src/logger.cpp
       src/mbtiles.cpp
       src/navutil.cpp
       src/navutil_base.cpp
@@ -1295,7 +1316,7 @@ if(NOT CPPSERVER_MODULE)
       src/plugin_cache.cpp
       src/plugin_handler.cpp
       src/plugin_loader.cpp
-      src/plugin_paths.cpp 
+      src/plugin_paths.cpp
       src/poly_math.cpp
       src/Quilt.cpp
       src/RolloverWin.cpp
@@ -1324,13 +1345,13 @@ if(NOT CPPSERVER_MODULE)
       src/viewport.cpp
       src/update_mgr.cpp
       main/MainApp.cpp
-      main/https_server.cpp
+      main/WebServer.cpp
     )
 
-    if (OCPN_USE_CRASHREPORT)
+    if(OCPN_USE_CRASHREPORT)
       list(APPEND HDRS include/crashprint.h)
       list(APPEND SRCS src/crashprint.cpp)
-    endif ()
+    endif()
 
     set(SRCS ${SRCS} ${MODEL_SRC})
 
@@ -1367,29 +1388,33 @@ if(NOT CPPSERVER_MODULE)
     target_link_libraries(WMSServer PUBLIC ocpn::mDNS)
 
     find_package(LIBUDEV)
-    if (LIBUDEV_FOUND)
+
+    if(LIBUDEV_FOUND)
       target_link_libraries(WMSServer PUBLIC ocpn::libudev)
       set(HAVE_LIBUDEV 1)
-    endif ()
+    endif()
 
-    if (wxWidgets_VERSION_STRING VERSION_LESS "3.1.6")
+    if(wxWidgets_VERSION_STRING VERSION_LESS "3.1.6")
       find_package(PANGO)
-      if (PANGO_FOUND)
+
+      if(PANGO_FOUND)
         target_link_libraries(WMSServer PRIVATE ocpn::pango)
         set(HAVE_PANGO 1)
-      endif ()
-    endif ()
-    
+      endif()
+    endif()
+
     find_path(HAVE_UNISTD_H NAMES unistd.h)
     find_path(HAVE_LIBGEN_H NAMES libgen.h)
     find_path(HAVE_DIRENT_H NAMES dirent.h)
     find_path(HAVE_LINUX_SERIAL_H PATH_SUFFIXES linux NAMES serial.h)
     find_path(HAVE_SYS_STAT_H PATH_SUFFIXES sys NAMES stat.h)
     find_path(HAVE_SYS_IOCTL_H PATH_SUFFIXES sys NAMES ioctl.h)
-    find_path(HAVE_FCNTL_H  NAMES fcntl.h)
-    if (NOT HAVE_FCNTL_H)
+    find_path(HAVE_FCNTL_H NAMES fcntl.h)
+
+    if(NOT HAVE_FCNTL_H)
       find_path(HAVE_SYS_FCNTL_H PATH_SUFFIXES sys NAMES fcntl.h)
-    endif ()
+    endif()
+
     find_path(HAVE_SYS_TYPES_H PATH_SUFFIXES sys NAMES types.h)
 
     check_symbol_exists(readlink unistd.h HAVE_READLINK)
@@ -1397,67 +1422,70 @@ if(NOT CPPSERVER_MODULE)
     include(OcpnFindGtk)
     target_link_libraries(WMSServer PUBLIC ocpn::gtk)
 
-    if (DEFINED _wx_selected_config)
+    if(DEFINED _wx_selected_config)
       message(STATUS "selected config ${_wx_selected_config}")
-      if (_wx_selected_config MATCHES "androideabi-qt")			
-      endif (_wx_selected_config MATCHES "androideabi-qt")
-    endif (DEFINED _wx_selected_config)
 
-    if ((_wx_selected_config MATCHES "qt-armv7"))
+      if(_wx_selected_config MATCHES "androideabi-qt")
+      endif(_wx_selected_config MATCHES "androideabi-qt")
+    endif(DEFINED _wx_selected_config)
+
+    if((_wx_selected_config MATCHES "qt-armv7"))
       set(wxWidgets_FIND_COMPONENTS base core xml html adv aui)
-    else ()
+    else()
       set(wxWidgets_FIND_COMPONENTS net xml html adv aui core base webview)
-    endif ()
+    endif()
   endif()
 
-  if (ARCH MATCHES "arm*" AND OCPN_USE_GLES_SHIM)
+  if(ARCH MATCHES "arm*" AND OCPN_USE_GLES_SHIM)
     find_path(OPENGLESv1_INCLUDE_DIR GLES/gl.h)
-    if (OPENGLESv1_INCLUDE_DIR)
+
+    if(OPENGLESv1_INCLUDE_DIR)
       message(STATUS "Found OpenGLESv1")
       add_definitions(-DocpnUSE_GL) # ocpnUSE_GLES is in config.h
 
       set(OPENGL_LIBRARIES "GL_static" "EGL" "X11" "drm")
-    endif ()
-  endif ()
+    endif()
+  endif()
 
-  if (OPENGLES_FOUND)
+  if(OPENGLES_FOUND)
     list(APPEND wxwidgets_FIND_COMPONENTS gl)
-  endif ()
+  endif()
 
-  if (NOT OPENGLES_FOUND)
-    if (OCPN_USE_GL)
+  if(NOT OPENGLES_FOUND)
+    if(OCPN_USE_GL)
       find_package(OpenGL)
-    else (OCPN_USE_GL)
+    else(OCPN_USE_GL)
       message(STATUS "OpenGL disabled by option USE_GL...")
-    endif (OCPN_USE_GL)
+    endif(OCPN_USE_GL)
 
-    if (OPENGL_FOUND)
+    if(OPENGL_FOUND)
       list(APPEND wxwidgets_FIND_COMPONENTS gl)
       target_include_directories(WMSServer PRIVATE ${OPENGL_INCLUDE_DIR})
 
       message(STATUS "Found OpenGL....")
-      if (OCPN_VERBOSE)
+
+      if(OCPN_VERBOSE)
         message(STATUS "    GL Lib: " ${OPENGL_gl_LIBRARIES})
         message(STATUS "    GL Include: " ${OPENGL_INCLUDE_DIR})
-      endif ()
+      endif()
 
       set(wxWidgets_USE_LIBS gl ${wxWidgets_USE_LIBS})
       add_definitions(-DocpnUSE_GL)
       target_link_libraries(WMSServer PRIVATE ${OPENGL_gl_LIBRARIES})
       target_include_directories(WMSServer PRIVATE ${OPENGL_INCLUDE_DIR})
-    else (OPENGL_FOUND)
+    else(OPENGL_FOUND)
       message(STATUS "OpenGL not found...")
-    endif (OPENGL_FOUND)
-  endif ()
+    endif(OPENGL_FOUND)
+  endif()
 
-  if (LINUX)
-    if (OCPN_USE_CRASHREPORT)
-      message(STATUS "Crash reporting enabled")	
-      
-      if (CMAKE_BUILD_TYPE MATCHES "Rel*")
+  if(LINUX)
+    if(OCPN_USE_CRASHREPORT)
+      message(STATUS "Crash reporting enabled")
+
+      if(CMAKE_BUILD_TYPE MATCHES "Rel*")
         message(STATUS "Using Linux crash reporting")
-      endif ()				
-    endif (OCPN_USE_CRASHREPORT)
+      endif()
+    endif(OCPN_USE_CRASHREPORT)
 
     add_subdirectory("libs/sqlite")
     target_link_libraries(WMSServer PUBLIC ocpn::sqlite)
@@ -1465,7 +1493,6 @@ if(NOT CPPSERVER_MODULE)
     add_subdirectory("libs/SQLiteCpp")
     target_link_libraries(WMSServer PUBLIC ocpn::sqlite_cpp)
 
-    
     find_package(BZip2 REQUIRED)
     target_include_directories(WMSServer PUBLIC ${BZIP2_INCLUDE_DIR})
     target_link_libraries(WMSServer PUBLIC ${BZIP2_LIBRARIES})
@@ -1473,65 +1500,68 @@ if(NOT CPPSERVER_MODULE)
     target_include_directories(WMSServer PUBLIC ${ZLIB_INCLUDE_DIR})
     target_link_libraries(WMSServer PUBLIC ${ZLIB_LIBRARY})
     find_package(X11)
-    if (X11_FOUND)
+
+    if(X11_FOUND)
       target_link_libraries(WMSServer PUBLIC ${X11_LIBRARIES})
       set(OCPN_HAVE_X11 ON)
-    endif ()
-        
-    find_package(TinyXML)			    
+    endif()
 
-    if (OCPN_USE_LZMA)
+    find_package(TinyXML)
+
+    if(OCPN_USE_LZMA)
       find_package(LibLZMA)
-      if (LIBLZMA_FOUND)
+
+      if(LIBLZMA_FOUND)
         message(STATUS "Building with lzma support: ${LIBLZMA_LIBRARIES}")
         target_include_directories(WMSServer PUBLIC ${LIBLZMA_INCLUDE_DIRS})
-      else (LIBLZMA_FOUND)
+      else(LIBLZMA_FOUND)
         message(STATUS "lzma library not found")
-      endif (LIBLZMA_FOUND)
-    endif (OCPN_USE_LZMA)
+      endif(LIBLZMA_FOUND)
+    endif(OCPN_USE_LZMA)
 
-    if (OCPN_USE_CURL)
+    if(OCPN_USE_CURL)
       set(OCPN_USE_EXTERN_CURL ON)
-      
-      if (OCPN_USE_EXTERN_CURL)
+
+      if(OCPN_USE_EXTERN_CURL)
         find_package(CURL REQUIRED)
         message(STATUS "ocpn: using external curl libraries...")
         message(STATUS "  curl includes: " ${CURL_INCLUDE_DIRS})
         message(STATUS "  curl libraries: " ${CURL_LIBRARIES})
 
         target_include_directories(WMSServer PUBLIC ${CURL_INCLUDE_DIRS})
-      else (OCPN_USE_EXTERN_CURL)
+      else(OCPN_USE_EXTERN_CURL)
         include("Curl")
         message(STATUS "Using bundled curl library...")
-      endif (OCPN_USE_EXTERN_CURL)
+      endif(OCPN_USE_EXTERN_CURL)
 
       pkg_search_module(SYS_WXCURL libwxcurl wxcurl)
       use_bundled_lib(USE_BUNDLED_WXCURL wxcurl)
-      if (SYS_WXCURL_FOUND AND NOT USE_BUNDLED_WXCURL)
+
+      if(SYS_WXCURL_FOUND AND NOT USE_BUNDLED_WXCURL)
         message(STATUS "Building with system wxcurl")
         target_include_directories(
           WMSServer
           PRIVATE ${CURL_INCLUDE_DIRS} ${SYS_WXCURL_INCLUDE_DIR}
         )
         target_link_libraries(WMSServer PRIVATE ${SYS_WXCURL_LIBRARIES})
-      else ()
+      else()
         message(STATUS "Building with bundled wxcurl")
         include("Curl")
         add_subdirectory("libs/wxcurl")
         target_link_libraries(WMSServer PRIVATE ocpn::wxcurl)
-      endif ()		
+      endif()
 
       target_link_libraries(WMSServer PUBLIC ${CURL_LIBRARIES})
-    endif (OCPN_USE_CURL)
+    endif(OCPN_USE_CURL)
 
-    if (OCPN_USE_NEWSERIAL)
+    if(OCPN_USE_NEWSERIAL)
       add_subdirectory("libs/serial")
       target_link_libraries(WMSServer PRIVATE ocpn::serial)
       message(STATUS "Using new serial library...")
-    endif (OCPN_USE_NEWSERIAL)
-  endif ()
-  
-  if (OPENGL_FOUND)
+    endif(OCPN_USE_NEWSERIAL)
+  endif()
+
+  if(OPENGL_FOUND)
     target_sources(
       ${PACKAGE_NAME}
       PRIVATE
@@ -1544,19 +1574,22 @@ if(NOT CPPSERVER_MODULE)
       src/glChartCanvas.cpp
       src/glTextureManager.cpp
     )
-  endif ()
-  
-  if (LINUX)
+  endif()
+
+  if(LINUX)
     add_subdirectory(libs/glu)
     set(OPENGL_LIBRARIES "GLU_static" ${OPENGL_LIBRARIES})
-    if (OCPN_VERBOSE)
-       message(STATUS "    Revised GL Lib (with local): " ${OPENGL_LIBRARIES})
-    endif ()
-  
+
+    if(OCPN_VERBOSE)
+      message(STATUS "    Revised GL Lib (with local): " ${OPENGL_LIBRARIES})
+    endif()
+
     find_package(OcpnLibarchive)
-    if (NOT TARGET libarchive)
+
+    if(NOT TARGET libarchive)
       message(FATAL:_ERROR "No libarchive!!!")
-    endif ()
+    endif()
+
     target_link_libraries(WMSServer PUBLIC ocpn::libarchive)
 
     add_subdirectory(libs/libtess2)
@@ -1592,8 +1625,8 @@ if(NOT CPPSERVER_MODULE)
       include/poly_math.h
       include/s57chart.h
       include/s57RegistrarMgr.h
-      include/SencManager.h	  
-      include/vector2D.h      
+      include/SencManager.h
+      include/vector2D.h
       src/bbox.cpp
       src/cm93.cpp
       src/line_clip.cpp
@@ -1624,13 +1657,13 @@ if(NOT CPPSERVER_MODULE)
       observable::observable
     )
 
-    if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang|GNU")  # Apple is AppleClang
+    if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang|GNU") # Apple is AppleClang
       target_compile_options(S57ENC PUBLIC -fvisibility=default)
-    endif ()
+    endif()
 
-    if (OCPN_USE_CURL)
+    if(OCPN_USE_CURL)
       target_link_libraries(S57ENC PUBLIC ocpn::wxcurl)
-    endif ()
+    endif()
 
     add_subdirectory(libs/iso8211)
     target_link_libraries(S57ENC PUBLIC ocpn::iso8211)
@@ -1641,117 +1674,125 @@ if(NOT CPPSERVER_MODULE)
     add_subdirectory(libs/N2KParser)
     target_link_libraries(WMSServer PUBLIC ocpn::N2KParser)
 
-    if (OCPN_USE_LZMA AND LIBLZMA_FOUND)
+    if(OCPN_USE_LZMA AND LIBLZMA_FOUND)
       target_include_directories(S57ENC PUBLIC ${LIBLZMA_INCLUDE_DIR})
       target_link_libraries(S57ENC PUBLIC ${LIBLZMA_LIBRARY})
-    endif ()
+    endif()
 
-    target_link_libraries(S57ENC PUBLIC ocpn::pugixml)    
+    target_link_libraries(S57ENC PUBLIC ocpn::pugixml)
     target_link_libraries(S57ENC PUBLIC ocpn::s52plib)
 
     target_include_directories(S57ENC PUBLIC ${CMAKE_SOURCE_DIR}/include)
-##############
+
+    # #############
     # set_property(TARGET S57ENC PROPERTY COMPILE_FLAGS "${OBJ_VISIBILITY}")
-#############
+    # ############
     target_link_libraries(WMSServer PUBLIC S57ENC)
 
-  if (OPENGL_FOUND)
-    add_subdirectory("libs/texcmp")
-    target_link_libraries(WMSServer PUBLIC ocpn::texcmp)
+    if(OPENGL_FOUND)
+      add_subdirectory("libs/texcmp")
+      target_link_libraries(WMSServer PUBLIC ocpn::texcmp)
 
-    add_subdirectory("libs/mipmap")
-    target_link_libraries(WMSServer PUBLIC ocpn::mipmap)
-  endif (OPENGL_FOUND)
+      add_subdirectory("libs/mipmap")
+      target_link_libraries(WMSServer PUBLIC ocpn::mipmap)
+    endif(OPENGL_FOUND)
 
     pkg_search_module(LZ4 liblz4 lz4)
     USE_BUNDLED_LIB(USE_BUNDLED_LZ4 lz4)
-    if (LZ4_FOUND AND NOT USE_BUNDLED_LZ4)
+
+    if(LZ4_FOUND AND NOT USE_BUNDLED_LZ4)
       message(STATUS "Building with system lz4")
       include_directories(${LZ4_INCLUDE_DIR})
-      if (COMMAND target_link_directories)
+
+      if(COMMAND target_link_directories)
         target_link_directories(TEXCMP PUBLIC ${LZ4_LIBRARY_DIRS})
-      else ()
+      else()
         link_directories(${LZ4_LIBRARY_DIRS})
-      endif ()
+      endif()
+
       target_link_libraries(WMSServer PUBLIC ${LZ4_LIBRARIES})
-    else ()
+    else()
       message(STATUS "Building with bundled lz4")
       add_subdirectory("libs/lz4")
       target_link_libraries(WMSServer PUBLIC LZ4)
-    endif ()
-    
+    endif()
+
     find_path(LIBELF_INCLUDE_DIR NAMES libelf.h gelf.h PATH_SUFFIXES libelf)
     find_library(LIBELF_LIBRARY NAMES elf)
-    if (LIBELF_INCLUDE_DIR AND LIBELF_LIBRARY)
+
+    if(LIBELF_INCLUDE_DIR AND LIBELF_LIBRARY)
       message(STATUS "Found LibELF...")
       message(STATUS "    ELF Lib: ${LIBELF_INCLUDE_DIR}")
       message(STATUS "    ELF Include: ${LIBELF_LIBRARY}")
       target_include_directories(WMSServer PUBLIC "${LIBELF_INCLUDE_DIR}")
       target_link_libraries(WMSServer PUBLIC "${LIBELF_LIBRARY}")
 
-      set(USE_LIBELF ON)   # => config.h
-    else ()
+      set(USE_LIBELF ON) # => config.h
+    else()
       message(
         WARNING
         "Did not found LibELF, plugin compatibility check will be simplified."
       )
-    endif ()
+    endif()
 
     include(TargetSetup)
-    if ("${wxWidgets_LIBRARIES}" MATCHES "gtk3u")
-      if (${PKG_TARGET_VERSION} VERSION_LESS 22.04)
-        if (NOT ${PKG_TARGET} MATCHES "-gtk3")
-        string(REPLACE ubuntu ubuntu-gtk3 PKG_TARGET ${PKG_TARGET})
-        endif ()
-      endif ()
+
+    if("${wxWidgets_LIBRARIES}" MATCHES "gtk3u")
+      if(${PKG_TARGET_VERSION} VERSION_LESS 22.04)
+        if(NOT ${PKG_TARGET} MATCHES "-gtk3")
+          string(REPLACE ubuntu ubuntu-gtk3 PKG_TARGET ${PKG_TARGET})
+        endif()
+      endif()
+
       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__WXGTK3__")
-    endif ()
+    endif()
+
     configure_file(${CMAKE_SOURCE_DIR}/cmake/in-files/config.h.in ${CMAKE_BINARY_DIR}/include/config.h)
     include_directories(BEFORE "${CMAKE_BINARY_DIR}/include")
 
     target_link_libraries(WMSServer PRIVATE ${wxWidgets_LIBRARIES})
-    
+
     target_link_libraries(
       WMSServer
       PRIVATE ${OPENGL_LIBRARIES} ${GETTEXT_LIBRARY} SQLITE_CPP
     )
-    
+
     message(STATUS "Did not find x11 libraries")
     message(
       STATUS "support for transparent toolbar in opengl mode not detected"
     )
-    
+
     add_subdirectory("libs/nmea0183")
     target_link_libraries(WMSServer PUBLIC ocpn::nmea0183)
 
     add_subdirectory("libs/easywsclient")
     target_link_libraries(WMSServer PUBLIC ocpn::easywsclient)
-	
-    if (CMAKE_VERSION VERSION_GREATER 3.4)
-      if (NOT "${ENABLE_SANITIZER}" MATCHES "none")
+
+    if(CMAKE_VERSION VERSION_GREATER 3.4)
+      if(NOT "${ENABLE_SANITIZER}" MATCHES "none")
         target_link_libraries(${PACKAGE_NAME}
           PRIVATE -fsanitize=${ENABLE_SANITIZER}
         )
-      endif ()
-    endif ()
+      endif()
+    endif()
 
-    if (LIBLZMA_FOUND)
+    if(LIBLZMA_FOUND)
       target_link_libraries(WMSServer PUBLIC ${LIBLZMA_LIBRARY})
-    endif (LIBLZMA_FOUND)
+    endif(LIBLZMA_FOUND)
 
     target_link_libraries(WMSServer PRIVATE dl)
     set_target_properties(WMSServer PROPERTIES LINK_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-rpath,$ORIGIN/Core")
-  endif ()
+  endif()
 
   set_target_properties(WMSServer PROPERTIES COMPILE_FLAGS "${PEDANTIC_COMPILE_FLAGS}")
   target_link_libraries(WMSServer PUBLIC ${LINKLIBS})
-  
+
   add_subdirectory(plugins)
+
   # Install *.pdb files
   if(MSVC)
     foreach(INSTALL_TARGET_PDB ${INSTALL_TARGETS_PDB})
       install(FILES $<TARGET_PDB_FILE:${INSTALL_TARGET_PDB}> DESTINATION "${PROJECT_SOURCE_DIR}/bin")
     endforeach()
   endif()
-
 endif()

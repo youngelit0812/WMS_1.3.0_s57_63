@@ -10,15 +10,25 @@ Implementation of a Web Map Server v1.3.0
 - Othere request is dismissed with 404 status code.
 - User could get s57 ENC and s63 Map Images.
 - Parameters are as follows.
-  LAYERS : TEXT, DEPTHS, BLLABELS, LIGHTS, LDESCR, AINFO, SLVIS, GRID.
-  FORMAT : image/png or image/jpg
-  CRS : 4326
-  BBOX : The region configured by min and max value of latitude and longitude(ex : min latitude, min longitude, max latitude, max longitude)
-  WIDTH : Image width
-  HEIGHT : Image height
-  REQUEST : GetMap
-  VERSION : 1.3.0
-  SERVICE : WMS
+  
+  ***LAYERS*** : `TEXT`, `DEPTHS`, `BLLABELS`, `LIGHTS`, `LDESCR`, `AINFO`, `SLVIS`, `GRID`.
+  
+  ***FORMAT*** : `image/png` or `image/jpg`
+  
+  ***CRS*** : `EPSG:4326`
+  
+  ***BBOX*** : The region configured by min and max value of latitude and longitude. (ex : `49, 50, 49.5, 50.5`)
+  
+  ***WIDTH*** : Image width
+  
+  ***HEIGHT*** : Image height
+  
+  ***REQUEST*** : `GetMap`
+  
+  ***VERSION*** : `1.3.0`
+  
+  ***SERVICE*** : `WMS`
+  
 
 ## Requirements
 
@@ -35,12 +45,17 @@ Optional:
 * [Visual Studio](https://www.visualstudio.com)
 
 #### Environment
-Environment File Path : ./env/config.json
+***Environment File Path*** : `./env/config.json`
 
 #### Description
-The Web Map Server is real time service server.
+The Web Map Server is real time service WEB server.
 Users could browse the maps with combination of several parameters.
 The lighthouses and buoys, several constructions could be distincted by combination of parameters.
-For example, if you want to see the buoys only, you could remove all Layer parameters except the BLLABELS.
+For example, if you want to see the buoys only, you could remove all Layer parameters except the ~~BLLABELS~~.
 As you can see with the result image, on the map, only buoys would be displayed.
-How efficient way to browse map!
+
+***How efficient way to browse map!***
+
+![s57ENC](snapshots/s57.png)
+
+![s63_pi](snapshots/s63.png)

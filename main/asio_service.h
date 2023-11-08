@@ -1,11 +1,3 @@
-/*!
-    \file asio_service.h
-    \brief Asio service example
-    \author Ivan Shynkarenka
-    \date 15.01.2017
-    \copyright MIT License
-*/
-
 #include "server/asio/service.h"
 
 class AsioService : public CppServer::Asio::Service

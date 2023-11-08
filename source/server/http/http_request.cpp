@@ -1,11 +1,3 @@
-/*!
-    \file http_request.cpp
-    \brief HTTP request implementation
-    \author Ivan Shynkarenka
-    \date 07.02.2019
-    \copyright MIT License
-*/
-
 #include "server/http/http_request.h"
 
 #include "string/string_utils.h"

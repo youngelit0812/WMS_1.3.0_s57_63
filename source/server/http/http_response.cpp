@@ -1,11 +1,3 @@
-/*!
-    \file http_response.cpp
-    \brief HTTP response implementation
-    \author Ivan Shynkarenka
-    \date 15.02.2019
-    \copyright MIT License
-*/
-
 #include "server/http/http_response.h"
 
 #include "errors/exceptions.h"
@@ -16,8 +8,6 @@
 	#include <unistd.h>
 #endif
 #include <cassert>
-
-#define DELAY_FOR_RESPONSE		15
 
 namespace CppServer {
 namespace HTTP {
@@ -411,41 +401,28 @@ HTTPResponse& HTTPResponse::MakeGetMapResponse(std::string sImgFilePath, bool bP
 
 	std::ifstream file;	
 
-	int nDelayIndex = 0;
-	while (nDelayIndex < DELAY_FOR_RESPONSE) {
-		file.open(sImgFilePath, std::ios::binary);
+    file.open(sImgFilePath, std::ios::binary);
 
-		if (file.good()) {
-			std::ostringstream image_stream;
-			image_stream << file.rdbuf();
-			std::string image_data = image_stream.str();
+    if (file.good()) {
+        std::ostringstream image_stream;
+        image_stream << file.rdbuf();
+        std::string image_data = image_stream.str();
 
-			// Construct HTTP response header
-			SetBegin(200);
-			if (bPNGFlag) SetContentType("image/png");
-			else SetContentType("image/jpeg");
-			SetHeader("Content-Length", std::to_string(image_data.length()));
+        // Construct HTTP response header
+        SetBegin(200);
+        if (bPNGFlag) SetContentType("image/png");
+        else SetContentType("image/jpeg");
+        SetHeader("Content-Length", std::to_string(image_data.length()));
 
-			// Write HTTP response header and image data to response body
-			SetBody(image_data);
-			break;
-		}
-		else {
-			printf("Wait for rendered image to display...\n");
-#if defined(_WIN32) || defined(_WIN64)			
-			::_sleep(150);
-#else
-			usleep(150 * 1000);
-#endif
-			nDelayIndex++;
-		}
-	}
-	
-	if (nDelayIndex >= 5) {	
+        // Write HTTP response header and image data to response body
+        SetBody(image_data);
+    } else {		
 		SetBegin(400);
 		SetContentType("text/plain");
 		SetBody("404 Page Not Found.");
 	}
+
+    file.close();
 
 	return *this;
 }

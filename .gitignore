@@ -9,3 +9,9 @@
 /bin
 /Append_data/s63_files/*.fpr
 /.vs
+*.bak
+/.vscode
+/.editorconfig
+/Append_data/s63_files/OCPNsenc.exe
+/Append_data/s63_files/OCPNsenc
+/Append_data/wmsserver.conf
