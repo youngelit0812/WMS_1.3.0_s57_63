@@ -1,0 +1,59 @@
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@v8.1.0/ol.css">
+    <script src="https://cdn.jsdelivr.net/npm/ol@8.1.0/dist/ol.js"></script>
+  </head>
+  <body>
+    <h3>Geoserver OpenLayers Demo</h3>
+    <div id="map"></div>
+    <script>
+        var projection = new ol.proj.get('EPSG:4326');
+	var  projExtent = projection.getExtent();
+	projExtent = [-180,-85,180,85];
+	const startResolution = ol.extent.getWidth(projExtent) / 256;
+
+	const resolutions = new Array(22);
+	for (let i = 0, ii = resolutions.length; i < ii; ++i) {
+	  resolutions[i] = startResolution / Math.pow(2, i);
+	}
+	const tileGrid = new ol.tilegrid.TileGrid({
+	  extent: projExtent,
+	  resolutions: resolutions,
+	  tileSize: [256, 256],
+	});
+
+	var tileLayer =  new ol.layer.Tile({
+	    source: new ol.source.TileWMS({
+	      url: 'http://localhost:8080/wms',
+	      params: {'LAYERS': 'lights'},
+	      tileGrid: tileGrid,
+	    }),
+	  });
+
+        var imageLayer = new ol.layer.Image({
+            source: new ol.source.ImageWMS({
+                url: 'http://localhost:8080/wms',
+                projection: projection,
+//                imageExtent: extent,
+                params: {
+                   layers: 'lights',
+                }
+            })
+        });
+
+	var extent = [40.24,49.7,40.38,50.1];
+        var map = new ol.Map({  //Initialize map
+            target: 'map',
+            layers: [
+                // imageLayer,
+				tileLayer
+            ],
+            view: new ol.View({
+                projection: projection,
+                center: ol.extent.getCenter(extent),
+                zoom: 1
+            })
+        });
+    </script>
+  </body>
+</html>
