@@ -5836,11 +5836,12 @@ void ChartCanvas::GenerateImageFile(wxMemoryDC *pMemDC, std::string &sIMGFilePat
 				}
 			}
 
-			xImage.Blur(3);
+			if (!bPNGFlag) xImage.Blur(3);
 			wxFileOutputStream xFileOutput(sIMGFilePath);
 			if (xFileOutput.IsOk())
 			{
-				xImage.SaveFile(xFileOutput, wxBITMAP_TYPE_JPEG);
+				if (bPNGFlag) xImage.SaveFile(xFileOutput, wxBITMAP_TYPE_PNG);
+				else xImage.SaveFile(xFileOutput, wxBITMAP_TYPE_JPEG);
 			}
 
 			xImage.Destroy();

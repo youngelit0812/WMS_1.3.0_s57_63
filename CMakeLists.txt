@@ -15,7 +15,7 @@ project(WMSServer)
 set(OPENGLES_FOUND "NO")
 set(OPENGL_FOUND "YES")
 
-# add_definitions(-DPRINTLOG_DEBUG)
+add_definitions(-DPRINTLOG_DEBUG)
 # Global properties
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
@@ -147,10 +147,7 @@ if(MSVC)
     ${CMAKE_SOURCE_DIR}/Append_data/s63_files
     ${CMAKE_BINARY_DIR}/Release/s63_files)
 
-  file(COPY ${CMAKE_SOURCE_DIR}/Append_data/navobj.xml DESTINATION ${CMAKE_BINARY_DIR}/Release)
   file(COPY ${CMAKE_SOURCE_DIR}/Append_data/wmsserver.conf DESTINATION ${CMAKE_BINARY_DIR}/Release)
-  file(COPY ${CMAKE_SOURCE_DIR}/Append_data/MMSINAME.CSV DESTINATION ${CMAKE_BINARY_DIR}/Release)
-  file(COPY ${CMAKE_SOURCE_DIR}/Append_data/crashrpt_lang.ini DESTINATION ${CMAKE_BINARY_DIR}/Release)
 
   execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory
     ${CMAKE_SOURCE_DIR}/Append_libs/Debug
@@ -184,10 +181,7 @@ if(MSVC)
     ${CMAKE_SOURCE_DIR}/Append_data/s63_files
     ${CMAKE_BINARY_DIR}/Debug/s63_files)
 
-  file(COPY ${CMAKE_SOURCE_DIR}/Append_data/navobj.xml DESTINATION ${CMAKE_BINARY_DIR}/Debug)
   file(COPY ${CMAKE_SOURCE_DIR}/Append_data/wmsserver.conf DESTINATION ${CMAKE_BINARY_DIR}/Debug)
-  file(COPY ${CMAKE_SOURCE_DIR}/Append_data/MMSINAME.CSV DESTINATION ${CMAKE_BINARY_DIR}/Debug)
-  file(COPY ${CMAKE_SOURCE_DIR}/Append_data/crashrpt_lang.ini DESTINATION ${CMAKE_BINARY_DIR}/Debug)
 endif()
 
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/ENC_IMGs)
@@ -237,10 +231,7 @@ file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/SENC)
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/ENCs)
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/lib/plugins)
 
-file(COPY ${CMAKE_SOURCE_DIR}/Append_data/navobj.xml DESTINATION ${CMAKE_BINARY_DIR})
 file(COPY ${CMAKE_SOURCE_DIR}/Append_data/wmsserver.conf DESTINATION ${CMAKE_BINARY_DIR})
-file(COPY ${CMAKE_SOURCE_DIR}/Append_data/MMSINAME.CSV DESTINATION ${CMAKE_BINARY_DIR})
-file(COPY ${CMAKE_SOURCE_DIR}/Append_data/crashrpt_lang.ini DESTINATION ${CMAKE_BINARY_DIR})
 
 # OpenSSL libraries
 message(STATUS "OpenSSL version: ${OPENSSL_VERSION} ${OPENSSL_INCLUDE_DIR} ${OPENSSL_LIBRARIES}")

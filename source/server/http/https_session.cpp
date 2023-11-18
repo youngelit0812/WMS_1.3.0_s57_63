@@ -8,126 +8,126 @@ extern std::mutex g_mtx;
 extern std::condition_variable g_cv;
 
 namespace CppServer {
-namespace HTTP {
+    namespace HTTP {
 
-HTTPSSession::HTTPSSession(const std::shared_ptr<HTTPSServer>& server)
-	: Asio::SSLSession(server),
-	_cache(server->cache())
-{
-	m_pConfig = server->GetConfig();
-}
+        HTTPSSession::HTTPSSession(const std::shared_ptr<HTTPSServer>& server)
+            : Asio::SSLSession(server),
+            _cache(server->cache())
+        {
+            m_pConfig = server->GetConfig();
+        }
 
-void HTTPSSession::onReceived(const void* buffer, size_t size)
-{
-    // Receive HTTP request header
-    if (_request.IsPendingHeader())
-    {
-        if (_request.ReceiveHeader(buffer, size))
-            onReceivedRequestHeader(_request);
+        void HTTPSSession::onReceived(const void* buffer, size_t size)
+        {
+            // Receive HTTP request header
+            if (_request.IsPendingHeader())
+            {
+                if (_request.ReceiveHeader(buffer, size))
+                    onReceivedRequestHeader(_request);
 
-        size = 0;
-    }
+                size = 0;
+            }
 
-    // Check for HTTP request error
-    if (_request.error())
-    {
-        onReceivedRequestError(_request, "Invalid HTTP request!");
-        _request.Clear();
-        Disconnect();
-        return;
-    }
+            // Check for HTTP request error
+            if (_request.error())
+            {
+                onReceivedRequestError(_request, "Invalid HTTP request!");
+                _request.Clear();
+                Disconnect();
+                return;
+            }
 
-    // Receive HTTP request body
-    if (_request.ReceiveBody(buffer, size))
-    {
-        onReceivedRequestInternal(_request);
-        _request.Clear();
-        return;
-    }
+            // Receive HTTP request body
+            if (_request.ReceiveBody(buffer, size))
+            {
+                onReceivedRequestInternal(_request);
+                _request.Clear();
+                return;
+            }
 
-    // Check for HTTP request error
-    if (_request.error())
-    {
-        onReceivedRequestError(_request, "Invalid HTTP request!");
-        _request.Clear();
-        Disconnect();
-        return;
-    }
-}
+            // Check for HTTP request error
+            if (_request.error())
+            {
+                onReceivedRequestError(_request, "Invalid HTTP request!");
+                _request.Clear();
+                Disconnect();
+                return;
+            }
+        }
 
-void HTTPSSession::onDisconnected()
-{
-    // Receive HTTP request body
-    if (_request.IsPendingBody())
-    {
-        onReceivedRequestInternal(_request);
-        _request.Clear();
-        return;
-    }
-}
+        void HTTPSSession::onDisconnected()
+        {
+            // Receive HTTP request body
+            if (_request.IsPendingBody())
+            {
+                onReceivedRequestInternal(_request);
+                _request.Clear();
+                return;
+            }
+        }
 
-void HTTPSSession::onReceivedRequestInternal(const HTTPRequest& request)
-{
-    // Try to get the cached response
-    if (request.method() == "GET")
-    {
-		std::string_view url = request.url();
+        void HTTPSSession::onReceivedRequestInternal(const HTTPRequest& request)
+        {
+            // Try to get the cached response
+            if (request.method() == "GET")
+            {
+                std::string_view url = request.url();
 
-		std::unordered_map<std::string, std::string> umParameters;
-		std::string sTrippedURL = CppCommon::Encoding::URLParser(url, umParameters);
+                std::unordered_map<std::string, std::string> umParameters;
+                std::string sTrippedURL = CppCommon::Encoding::URLParser(url, umParameters);
 
-		for (auto itemParam : umParameters) {
-			printf("parameter key : %s, value : %s\n", itemParam.first.c_str(), itemParam.second.c_str());
-		}
+                for (auto itemParam : umParameters) {
+                    printf("parameter key : %s, value : %s\n", itemParam.first.c_str(), itemParam.second.c_str());
+                }
 
-		if (!sTrippedURL.empty()) {
-			try {
-				Environments* pConfig = (Environments*)m_pConfig;
+                if (!sTrippedURL.empty()) {
+                    try {
+                        Environments* pConfig = (Environments*)m_pConfig;
 
-				std::string sImageFormat = umParameters.at("format");
+                        std::string sImageFormat = umParameters.at("format");
 
-				if (sImageFormat.empty()) {
-					SendResponseAsync(response().MakeGetMapResponse("", false));
-					return;
-				}
+                        if (sImageFormat.empty()) {
+                            SendResponseAsync(response().MakeGetMapResponse("", false));
+                            return;
+                        }
 
-				if ((sImageFormat.find(PNG_FILE_EXTENSION) == std::string::npos && sImageFormat.find(JPEG_FILE_EXTENSION) == std::string::npos) || pConfig->sIMGDirPath.empty()) {
-					SendResponseAsync(response().MakeGetMapResponse("", false));
-					return;
-				}
+                        if ((sImageFormat.find(PNG_FILE_EXTENSION) == std::string::npos && sImageFormat.find(JPEG_FILE_EXTENSION) == std::string::npos) || pConfig->sIMGDirPath.empty()) {
+                            SendResponseAsync(response().MakeGetMapResponse("", false));
+                            return;
+                        }
 
-				bool bPNGImageFlag = true;
-				if (sImageFormat.find(JPEG_FILE_EXTENSION) != std::string::npos) bPNGImageFlag = false;
+                        bool bPNGImageFlag = true;
+                        if (sImageFormat.find(JPEG_FILE_EXTENSION) != std::string::npos) bPNGImageFlag = false;
 
-				std::string sIMGFilePathPrefix = pConfig->sIMGDirPath + getCurrentDateTimeMicrosecond();
-				std::string sIMGFilePath = bPNGImageFlag ? sIMGFilePathPrefix + PNG_FILE_EXTENSION : sIMGFilePathPrefix + JPEG_FILE_EXTENSION;
+                        std::string sIMGFilePathPrefix = pConfig->sIMGDirPath + getCurrentDateTimeMicrosecond();
+                        std::string sIMGFilePath = bPNGImageFlag ? sIMGFilePathPrefix + PNG_FILE_EXTENSION : sIMGFilePathPrefix + JPEG_FILE_EXTENSION;
 
-				std::string sMessage("");
-				sMessage += "|" + umParameters.at("bbox") + "|" + umParameters.at("width") + "|" + umParameters.at("height")
-					+ "|" + umParameters.at("layers") + "|" + sIMGFilePath + "|" + (bPNGImageFlag ? "1" : "0");
+                        std::string sMessage("");
+                        sMessage += "|" + umParameters.at("bbox") + "|" + umParameters.at("width") + "|" + umParameters.at("height")
+                            + "|" + umParameters.at("layers") + "|" + sIMGFilePath + "|" + (bPNGImageFlag ? "1" : "0");
 
-				g_messageQueue.push(sMessage);
-				g_cv.notify_one();
+                        g_messageQueue.push(sMessage);
+                        g_cv.notify_one();
 #if defined(_WIN32) || defined(_WIN64)				
-				::_sleep(5);
+                        ::_sleep(1);
 #else
-				usleep(5 * 1000);
+                        usleep(1 * 1000);
 #endif
-				std::unique_lock<std::mutex> lockNotifyHttps(g_mtx);
+                        std::unique_lock<std::mutex> lockNotifyHttps(g_mtx);
 
-				SendResponseAsync(response().MakeGetMapResponse(sIMGFilePath, bPNGImageFlag));
-			}
-			catch (std::exception const& ex) {
-				SendResponseAsync(response().MakeGetMapResponse("", false));
-			}
+                        SendResponseAsync(response().MakeGetMapResponse(sIMGFilePath, bPNGImageFlag));
+                    }
+                    catch (std::exception const& ex) {
+                        SendResponseAsync(response().MakeGetMapResponse("", false));
+                    }
 
-			return;
-		}
-    }
+                    return;
+                }
+            }
 
-    // Process the request
-    onReceivedRequest(request);
-}
+            // Process the request
+            onReceivedRequest(request);
+        }
 
-} // namespace HTTP
+    } // namespace HTTP
 } // namespace CppServer

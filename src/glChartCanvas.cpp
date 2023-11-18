@@ -2907,10 +2907,8 @@ void glChartCanvas::DrawGLCanvasData(std::string &sIMGFilePath, bool bPNGFlag, i
 	m_pParentCanvas->UpdateCanvasS52PLIBConfig();
 
 	m_in_glpaint++;
-#ifdef __linux	
 	glClear(GL_COLOR_BUFFER_BIT);
 	glFlush();
-#endif
 	Render();
 	GenerateImageFile(sIMGFilePath, bPNGFlag);
 	m_in_glpaint--;
@@ -2952,12 +2950,13 @@ void glChartCanvas::GenerateImageFile(std::string &sIMGFilePath, bool bPNGFlag)
 				}
 			}
 
-			xImage.Blur(3);
+			if (!bPNGFlag) xImage.Blur(3);
 
 			wxFileOutputStream xFileOutput(sIMGFilePath);
 			if (xFileOutput.IsOk())
 			{
-				xImage.SaveFile(xFileOutput, wxBITMAP_TYPE_JPEG);
+				if (bPNGFlag) xImage.SaveFile(xFileOutput, wxBITMAP_TYPE_PNG);
+				else xImage.SaveFile(xFileOutput, wxBITMAP_TYPE_JPEG);
 			}
 			// Unmap the buffer
 			delete[] pixels;
@@ -2992,6 +2991,7 @@ void glChartCanvas::Render()
 
 #ifdef __WXOSX__
 	// Support scaled HDPI displays.
+	printf("glCC: Render 1\n");
 	m_displayScale = GetContentScaleFactor();
 #endif
 
@@ -3022,9 +3022,8 @@ void glChartCanvas::Render()
 	// Take a copy for use later by DC
 	m_glcanvas_width = gl_width;
 	m_glcanvas_height = gl_height;
-#ifdef PRINTLOG_DEBUG
+
 	printf("glCC: w:%d, h:%d", gl_width, gl_height);
-#endif
 	// Avoid some harmonic difficulties with odd-size glCanvas
 	bool b_odd = false;
 	if (gl_height & 1)
@@ -3353,8 +3352,15 @@ void glChartCanvas::Render()
 							 color.Blue() / 256., 1.0);
 				glClear(GL_COLOR_BUFFER_BIT);
 
-        		OCPNRegion rscreen_region(VPoint.rv_rect);
-		        RenderCharts(m_gldc, rscreen_region);
+				int nVRScrLeft = VPoint.rv_rect.GetLeft();
+				int nVRScrTop = VPoint.rv_rect.GetTop();
+				int nVRScrRight = VPoint.rv_rect.GetRight();
+				int nVRScrBottm = VPoint.rv_rect.GetBottom();
+
+				// if ((nVRScrRight - nVRScrLeft) % 2 > 0) nVRScrRight++;
+				OCPNRegion rscreen_region(nVRScrLeft, nVRScrTop, nVRScrRight, nVRScrBottm);
+				printf("glCC : render chart 2 : %d,%d,%d,%d", nVRScrLeft, nVRScrTop, nVRScrRight, nVRScrBottm);
+				RenderCharts(m_gldc, rscreen_region);
 
 				m_cache_page = !m_cache_page; /* page flip */
 

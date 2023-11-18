@@ -353,8 +353,8 @@ void toDMM(double a, char *bufp, int bufplen) {
 /****************************************************************************/
 void toSM(double lat, double lon, double lat0, double lon0, double *x,
           double *y) {
-    toEQUIRECT(lat, lon, lat0, lon0, x, y);
-    return;
+    /*toEQUIRECT(lat, lon, lat0, lon0, x, y);
+    return;*/
 
   double xlon = lon;
 
@@ -378,7 +378,7 @@ void toSM(double lat, double lon, double lat0, double lon0, double *x,
 }
 
 double toSMcache_y30(double lat0) {
-  return lat0;
+  //return lat0;
   const double z = WGS84_semimajor_axis_meters * mercator_k0;
   const double s0 = sin(lat0 * DEGREE);
   const double y30 = (.5 * log((1 + s0) / (1 - s0))) * z;
@@ -388,8 +388,8 @@ double toSMcache_y30(double lat0) {
 void toSMcache(double lat, double lon, double y30, double lon0, double *x,
                double *y) {
 
-    toEQUIRECT(lat, lon, y30, lon0, x, y);
-    return;
+    /*toEQUIRECT(lat, lon, y30, lon0, x, y);
+    return;*/
 
   double xlon = lon;
 
